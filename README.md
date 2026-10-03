@@ -9,10 +9,9 @@ playback to that addon, so Sasta TV must be installed and signed in on the same 
 ## Install
 
 1. In Kodi, open **Settings → System → Add-ons** and turn on **Unknown sources**.
-2. Download the repository installer to the device:
-   `https://github.com/yeshvantbhavnasi/kodi-stream/raw/main/repository.stream-1.0.0.zip`
-   (on a Fire TV, the Downloader app can fetch this address).
-3. In Kodi, open **Add-ons → Install from zip file** and choose the downloaded file.
+2. Open **Settings → File manager → Add source**, choose **<None>**, and enter
+   `https://raw.githack.com/yeshvantbhavnasi/kodi-stream/main/` (keep the final slash). Name it `stream`.
+3. Open **Add-ons → Install from zip file → stream** and choose `repository.stream-1.0.0.zip`.
 4. Open **Add-ons → Install from repository → Stream Repository → Program add-ons → Stream** and install it.
 
 Updates then arrive through the repository.
