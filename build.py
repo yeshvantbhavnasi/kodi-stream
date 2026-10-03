@@ -27,6 +27,10 @@ def build():
                     path = os.path.join(folder, name)
                     if not any(s in path for s in SKIP):
                         z.write(path, os.path.relpath(path, ROOT))
+        # Kodi shows these in the repository listing before the addon is installed.
+        for art in ('icon.png', 'fanart.jpg'):
+            if os.path.exists(os.path.join(ROOT, addon, art)):
+                shutil.copy(os.path.join(ROOT, addon, art), os.path.join(out, addon, art))
         if addon.startswith('repository.'):
             # Copy at the top level too: this is the file people install first.
             for old in os.listdir(ROOT):
