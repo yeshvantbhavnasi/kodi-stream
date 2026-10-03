@@ -47,6 +47,29 @@ you follow, and (optionally) a few titles you already like. The answers can be c
 - **Sports** decide which sections the Sports tab lists first. Live events are always shown.
 - **Genres and liked titles** feed the recommendations.
 
+### Profiles
+
+**Settings → Switch or add profile** creates more profiles. Each profile has its own history, resume points, My List,
+likes, setup answers and recommendations, stored in its own database file. With more than one profile, Stream asks
+"Who's watching?" when it opens.
+
+A **kids profile** shows only children's titles and kids TV channels, searches only the kids section, and has a
+brighter look. It can be given a PIN that is needed to leave it.
+
+### Ratings, reviews and trailers
+
+Stream looks titles up on The Movie Database (TMDb) in the background and caches the result on the device:
+
+- a rating on the poster and in the description line, shown as a star and a number (TMDb's score, or IMDb's when an
+  OMDb key is entered in the settings);
+- genres in the description line;
+- a poster and description for titles the catalogue lists without them;
+- **Rating, reviews and trailer** in the hold-OK menu: overview, user reviews, and the trailer. Trailers play through
+  Kodi's YouTube add-on, which must be installed.
+
+Titles are matched by name and year, so an obscure or unusually named title may get no match or, rarely, the wrong one.
+A shared read-only TMDb key is built into the addon; you can enter your own under Settings.
+
 ### Episodes
 
 Inside a show, episodes are listed in order. Watched episodes are ticked, a part-watched episode shows where it
@@ -75,7 +98,7 @@ Sasta TV addon then starts the player exactly as if the title had been clicked i
 
 ### The database
 
-Everything Stream remembers lives in one SQLite file, `stream.db`, in Kodi's addon data folder for `script.stream`.
+Everything Stream remembers lives in SQLite files in Kodi's addon data folder for `script.stream`: `stream.db` for the first profile and `stream-<name>.db` for each further profile.
 
 | Table | What it holds | Written when |
 |---|---|---|
@@ -85,6 +108,7 @@ Everything Stream remembers lives in one SQLite file, `stream.db`, in Kodi's add
 | `mylist` | Titles saved to My List | **Add to My List** / **Remove from My List** |
 | `suggestions` | Every batch of recommendations: rank, title, reason, which engine produced it, dismissed flag | A recommendation run finishes; **Not interested** sets the dismissed flag |
 | `events` | The interaction log: played, stopped (with percent watched), finished, listed, unlisted, liked, disliked, dismissed, searched | Each of those actions happens |
+| `metadata` | Looked-up details per title: rating, genres, poster, overview, reviews, trailer | A title is first looked up on TMDb; refreshed after 30 days |
 | `meta` | Small bookkeeping values: the setup answers (languages, genres, sports) and when recommendations last ran | As needed |
 
 ### How recent views reach the screen
@@ -162,9 +186,10 @@ asks the AI to pick matching titles from the local index. Those appear first, ma
 
 | Situation | Data sent | To |
 |---|---|---|
-| No AI keys | Nothing beyond what the Sasta TV addon itself requests | - |
+| No AI keys | Title names for ratings lookups (next rows); nothing else beyond what the Sasta TV addon itself requests | - |
 | Bedrock key set | Your interaction events, candidate titles and descriptions, search requests of three or more words | Amazon Bedrock, in the region you choose |
 | Jev key set | A summary of recent activity or the search request, plus candidate titles and descriptions | TypeSafe's Jev service |
+| Always (ratings lookups) | Title names and years, one title at a time | The Movie Database (TMDb); OMDb as well if an OMDb key is set |
 
 Keys are stored as plain text in Kodi's addon settings on that device and are never written to Kodi's log.
 

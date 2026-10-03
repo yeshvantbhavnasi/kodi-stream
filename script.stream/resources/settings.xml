@@ -7,4 +7,8 @@
         <setting id="bedrock_model" type="text" label="Bedrock model ID" default="anthropic.claude-opus-5-5"/>
         <setting id="jev_key" type="text" option="hidden" label="Jev (TypeSafe) API key" default=""/>
     </category>
+    <category label="Ratings and trailers">
+        <setting id="tmdb_key" type="text" option="hidden" label="Your own TMDb API key (optional; a shared key is built in)" default=""/>
+        <setting id="omdb_key" type="text" option="hidden" label="OMDb API key (IMDb rating, optional)" default=""/>
+    </category>
 </settings>

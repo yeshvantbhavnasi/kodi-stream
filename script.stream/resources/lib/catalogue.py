@@ -68,15 +68,26 @@ def _save(path, data):
 
 
 _cache.update(_load(_cache_path, {}))
-state = _load(_state_path, {})
-state.setdefault('affinity', {})
 db.init()
-for _old in reversed(state.pop('recent', [])):
-    db.add_history(_old['item'], _old['parent'], _old.get('group'))
+state = {}
+
+
+def load_state():
+    """Per-profile preferences (how often each language is played, last live language)."""
+    state.clear()
+    saved = db.meta('state')
+    if saved is None and db.ACTIVE == 'default':
+        saved = _load(_state_path, {})  # carried over from versions that kept this in a file
+        saved.pop('recent', None)
+    state.update(saved or {})
+    state.setdefault('affinity', {})
 
 
 def save_state():
-    _save(_state_path, state)
+    db.set_meta('state', state)
+
+
+load_state()
 
 
 def rpc(method, params=None):
@@ -195,6 +206,13 @@ def warm_index():
     """Once a day, make sure the first page of every main section is in the local database."""
     if time.time() - db.meta('indexed_at', 0) < 24 * 3600:
         return
+    if db.KIDS:
+        try:
+            index(URLS['kids'], get_dir(URLS['kids']))
+        except Exception as e:
+            log('warm failed: {0}'.format(e))
+        db.set_meta('indexed_at', time.time())
+        return
     for root in (URLS['movies'], URLS['web_series']):
         try:
             for folder in [f for f in get_dir(root) if f['t'] == 'folder']:
@@ -259,6 +277,8 @@ def search(query):
             for item in entry['items']:
                 if item['t'] == 'search' and item['url'] not in sources:
                     sources.append(item['url'])
+    if db.KIDS:
+        return _search_sources(query, [s for s in sources if 'cGx1cy1raWRz' in s])  # the kids section only
     chosen = [s for s in sources if db.lang_match(_source_language(s))]
     if chosen and len(chosen) < len(sources):
         hits = _search_sources(query, chosen)

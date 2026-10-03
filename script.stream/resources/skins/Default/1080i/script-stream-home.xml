@@ -3,11 +3,12 @@
     <defaultcontrol always="false">100</defaultcontrol>
     <controls>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>
+        <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label><visible>Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130)</visible></control>
         <control type="group">
             <visible>Control.HasFocus(200) | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130)] + String.IsEmpty(Window.Property(status))]</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(200).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(200).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(200).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(200).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(200).ListItem.Property(meta)]</label></control>
@@ -15,8 +16,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(201)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(201).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(201).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(201).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(201).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(201).ListItem.Property(meta)]</label></control>
@@ -24,8 +25,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(202)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(202).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(202).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(202).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(202).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(202).ListItem.Property(meta)]</label></control>
@@ -33,8 +34,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(203)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(203).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(203).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(203).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(203).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(203).ListItem.Property(meta)]</label></control>
@@ -42,8 +43,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(204)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(204).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(204).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(204).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(204).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(204).ListItem.Property(meta)]</label></control>
@@ -51,8 +52,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(205)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(205).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(205).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(205).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(205).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(205).ListItem.Property(meta)]</label></control>
@@ -60,8 +61,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(206)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(206).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(206).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(206).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(206).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(206).ListItem.Property(meta)]</label></control>
@@ -69,8 +70,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(207)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(207).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(207).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(207).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(207).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(207).ListItem.Property(meta)]</label></control>
@@ -78,8 +79,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(208)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(208).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(208).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(208).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(208).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(208).ListItem.Property(meta)]</label></control>
@@ -87,8 +88,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(209)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(209).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(209).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(209).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(209).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(209).ListItem.Property(meta)]</label></control>
@@ -96,8 +97,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(210)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(210).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(210).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(210).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(210).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(210).ListItem.Property(meta)]</label></control>
@@ -105,8 +106,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(211)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(211).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(211).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(211).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(211).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(211).ListItem.Property(meta)]</label></control>
@@ -114,8 +115,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(212)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(212).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(212).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(212).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(212).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(212).ListItem.Property(meta)]</label></control>
@@ -123,8 +124,8 @@
         </control>
         <control type="group">
             <visible>Control.HasFocus(213)</visible>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(213).ListItem.Art(thumb)]</texture><fadetime>300</fadetime></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(213).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(213).ListItem.Art(thumb)]</texture></control>
             <control type="label"><left>60</left><top>120</top><width>1380</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(213).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>195</top><width>1380</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(213).ListItem.Property(meta)]</label></control>
@@ -154,6 +155,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -166,6 +169,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -189,6 +194,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -201,6 +208,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -224,6 +233,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -236,6 +247,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -259,6 +272,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -271,6 +286,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -294,6 +311,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -306,6 +325,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -329,6 +350,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -341,6 +364,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -364,6 +389,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -376,6 +403,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -399,6 +428,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -411,6 +442,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -434,6 +467,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -446,6 +481,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -469,6 +506,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -481,6 +520,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -504,6 +545,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -516,6 +559,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -539,6 +584,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -551,6 +598,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -574,6 +623,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -586,6 +637,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
@@ -608,6 +661,8 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
                     </itemlayout>
@@ -620,13 +675,16 @@
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
+                        <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
                 </control>
             </control>
         </control>
-        <control type="label"><left>60</left><top>26</top><width>220</width><height>50</height><font>font36_title</font><textcolor>FFE50914</textcolor><label>[B]STREAM[/B]</label></control>
+        <control type="label"><left>60</left><top>26</top><width>220</width><height>50</height><font>font36_title</font><textcolor>FFE50914</textcolor><label>[B]STREAM[/B]</label><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+        <control type="label"><left>60</left><top>26</top><width>230</width><height>50</height><font>font36_title</font><textcolor>FFFFD640</textcolor><label>[B]KIDS[/B]</label><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="list" id="100">
             <left>290</left><top>24</top><width>1200</width><height>56</height>
             <orientation>horizontal</orientation>
@@ -634,12 +692,21 @@
             <onright>120</onright>
             <onleft>noop</onleft>
             <onup>noop</onup>
-            <itemlayout width="150" height="56">
+            <itemlayout width="150" height="56" condition="String.IsEmpty(Window.Property(kids))">
                 <control type="label"><left>0</left><top>0</top><width>150</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>
             </itemlayout>
-            <focusedlayout width="150" height="56">
-                <control type="image"><left>0</left><top>50</top><width>110</width><height>4</height><texture colordiffuse="FFE50914">white.png</texture></control>
+            <focusedlayout width="150" height="56" condition="String.IsEmpty(Window.Property(kids))">
+                <control type="image"><left>0</left><top>50</top><width>110</width><height>4</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+                <control type="image"><left>0</left><top>48</top><width>130</width><height>6</height><texture colordiffuse="FFFFD640">white.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
                 <control type="label"><left>0</left><top>0</top><width>150</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+            </focusedlayout>
+            <itemlayout width="290" height="56" condition="!String.IsEmpty(Window.Property(kids))">
+                <control type="label"><left>0</left><top>0</top><width>290</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>
+            </itemlayout>
+            <focusedlayout width="290" height="56" condition="!String.IsEmpty(Window.Property(kids))">
+                <control type="image"><left>0</left><top>50</top><width>110</width><height>4</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+                <control type="image"><left>0</left><top>48</top><width>130</width><height>6</height><texture colordiffuse="FFFFD640">white.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
+                <control type="label"><left>0</left><top>0</top><width>290</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
             </focusedlayout>
         </control>
         <control type="image"><left>1490</left><top>28</top><width>290</width><height>48</height><texture colordiffuse="33FFFFFF">white.png</texture><visible>!Control.HasFocus(120)</visible></control>

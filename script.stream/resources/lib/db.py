@@ -9,6 +9,9 @@ import xbmcvfs
 
 PROFILE = xbmcvfs.translatePath(xbmcaddon.Addon('script.stream').getAddonInfo('profile'))
 PATH = os.path.join(PROFILE, 'stream.db')
+PROFILES_PATH = os.path.join(PROFILE, 'profiles.json')
+KIDS = False        # True while a kids profile is active: only kids titles are shown anywhere
+ACTIVE = 'default'
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS titles (
@@ -27,6 +30,7 @@ CREATE TABLE IF NOT EXISTS suggestions (
     id INTEGER PRIMARY KEY AUTOINCREMENT, batch REAL, rank INTEGER, name TEXT, reason TEXT,
     source TEXT, item TEXT, parent TEXT, grp TEXT, dismissed INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS metadata (name TEXT PRIMARY KEY, data TEXT, fetched_at REAL);
 CREATE TABLE IF NOT EXISTS ratings (
     name TEXT PRIMARY KEY, value INTEGER, item TEXT, parent TEXT, grp TEXT, rated_at REAL);
 CREATE TABLE IF NOT EXISTS events (
@@ -40,6 +44,34 @@ def _connect():
     conn = sqlite3.connect(PATH, timeout=15)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+# ---------- viewer profiles: each has its own database file ----------
+
+def list_profiles():
+    try:
+        with open(PROFILES_PATH, 'r', encoding='utf-8') as f:
+            profiles = json.load(f)
+    except Exception:
+        profiles = []
+    return profiles or [{'id': 'default', 'name': 'Me', 'kids': False, 'pin': ''}]
+
+
+def save_profiles(profiles):
+    if not os.path.isdir(PROFILE):
+        os.makedirs(PROFILE)
+    with open(PROFILES_PATH, 'w', encoding='utf-8') as f:
+        json.dump(profiles, f)
+
+
+def use_profile(profile):
+    """Switch every later read and write to this profile's own history, lists, ratings and suggestions."""
+    global PATH, KIDS, ACTIVE
+    ACTIVE = profile['id']
+    KIDS = bool(profile.get('kids'))
+    name = 'stream.db' if ACTIVE == 'default' else 'stream-{0}.db'.format(ACTIVE)
+    PATH = os.path.join(PROFILE, name)
+    init()
 
 
 def play_key(item):
@@ -102,7 +134,8 @@ def candidates(limit=120, groups=None):
     """Indexed titles the viewer has not played, newest first, preferring the given languages."""
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM titles WHERE kind != 'Kids' AND name NOT IN (SELECT name FROM watched) AND name NOT IN (SELECT series FROM watched) AND name NOT IN (SELECT name FROM ratings) "
+            "SELECT * FROM titles WHERE kind {0} 'Kids' AND name NOT IN (SELECT name FROM watched) ".format('=' if KIDS else '!=') +
+            "AND name NOT IN (SELECT series FROM watched) AND name NOT IN (SELECT name FROM ratings) "
             'AND name NOT IN (SELECT name FROM suggestions WHERE dismissed=1) '
             'ORDER BY first_seen DESC, rowid ASC LIMIT 2000').fetchall()
     preferred = [g.lower() for g in (groups or [])]
@@ -333,3 +366,17 @@ def only_chosen(entries, name_of):
     chosen = chosen_languages()
     kept = [e for e in entries if lang_match(name_of(e), chosen)]
     return kept or list(entries)
+
+
+# ---------- cached ratings, posters, reviews and trailers ----------
+
+def get_metadata(name):
+    """(data, age in seconds) or None when the title has never been looked up."""
+    with _connect() as conn:
+        row = conn.execute('SELECT data, fetched_at FROM metadata WHERE name=?', (name,)).fetchone()
+    return (json.loads(row['data']), time.time() - row['fetched_at']) if row else None
+
+
+def put_metadata(name, data):
+    with _connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO metadata VALUES (?,?,?)', (name, json.dumps(data), time.time()))

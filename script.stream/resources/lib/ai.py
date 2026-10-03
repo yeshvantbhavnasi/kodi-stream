@@ -82,6 +82,9 @@ def _describe(entry):
     text = item['name']
     if entry.get('group'):
         text += ' [{0}]'.format(entry['group'])
+    genres = _genres(item['name'])
+    if genres:
+        text += ' {' + ', '.join(genres[:3]) + '}'
     if item.get('plot'):
         text += ' - ' + item['plot'][:160]
     return text
@@ -160,6 +163,12 @@ GENRES = {
 }
 
 
+def _genres(name):
+    """Genres already looked up for a title; empty when it has not been looked up."""
+    cached = db.get_metadata(name)
+    return (cached[0] or {}).get('genres', []) if cached else []
+
+
 def _profile_lines():
     """What the viewer told us directly: languages, genres, liked and disliked titles."""
     profile = db.meta('profile') or {}
@@ -183,9 +192,16 @@ def _local_order(pool):
     words = [w for g in profile.get('genres', []) for w in GENRES.get(g, [])]
     liked_groups = {(e.get('group') or '').lower() for e in db.rated(1)}
 
+    # Genres of what was watched or liked (from looked-up details) pull similar titles up the list.
+    taste = {}
+    for entry in db.recent(30) + db.rated(1):
+        for genre in _genres(entry.get('series') or entry['item']['name']):
+            taste[genre] = taste.get(genre, 0) + 1
+
     def score(entry):
         text = (entry['item']['name'] + ' ' + entry['item'].get('plot', '')).lower()
-        return sum(1 for w in words if w in text) + (1 if (entry.get('group') or '').lower() in liked_groups else 0)
+        match = sum(min(taste.get(g, 0), 3) for g in _genres(entry['item']['name']))
+        return match + sum(1 for w in words if w in text) + (1 if (entry.get('group') or '').lower() in liked_groups else 0)
 
     buckets = {}
     for entry in sorted(pool, key=lambda e: -score(e)):
@@ -201,7 +217,10 @@ def recommend(top_groups, force=False):
              or db.meta('recs_dirty', False))
     if not (force or stale):
         return False
-    pool = db.only_chosen(db.candidates(400, top_groups), lambda e: e.get('group'))[:120]
+    pool = db.candidates(400, top_groups)
+    if not db.KIDS:
+        pool = db.only_chosen(pool, lambda e: e.get('group'))
+    pool = pool[:120]
     if not pool:
         return False
     pool = _local_order(pool)
@@ -220,7 +239,8 @@ def recommend(top_groups, force=False):
     if stated:
         intro = 'What the household told us:\n' + '\n'.join('- ' + line for line in stated) + '\n\n' + intro
         goal += '. ' + ' '.join(stated)[:600]
-    picks, source = _pick(goal, RECOMMENDER, intro, pool, PICKS)
+    system = RECOMMENDER + (' This is a children\'s profile: every pick must be suitable for young children.' if db.KIDS else '')
+    picks, source = _pick(goal, system, intro, pool, PICKS)
     if source == 'local':
         for p in picks:
             if p['entry'].get('group'):

@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.join(ADDON_PATH, 'resources', 'lib'))
 import ai  # noqa: E402
 import catalogue as cat  # noqa: E402
 import db  # noqa: E402
+import meta  # noqa: E402
 
 ROWS = 14
 ROW_LIMIT = 40
@@ -33,6 +34,8 @@ START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
 
 TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'), ('sports', 'Sports'),
         ('kids', 'Kids'), ('mylist', 'My List')]
+KIDS_TABS = [('home', 'Home'), ('kids', 'Movies and Shows'), ('live', 'Kids TV'), ('mylist', 'My List')]
+CURRENT = {'profile': None}  # the viewer profile in use
 
 # Sports the viewer can follow, and the words that identify each in the catalogue's section names.
 SPORTS = {
@@ -81,7 +84,8 @@ def notify(text, ms=3000):
 
 
 def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False, label=None, series=None):
-    clean, tag, note = quality_of(item['name']) if item['t'] == 'play' else (item['name'], '', '')
+    titled = item['t'] == 'play' and not cat.is_live(item)  # channel names such as '... 4K' are not release tags
+    clean, tag, note = quality_of(item['name']) if titled else (item['name'], '', '')
     li = xbmcgui.ListItem(label=label or clean)
     li.setProperty('tag', tag)
     if item.get('img'):
@@ -137,6 +141,9 @@ def follow(key, name, group, kind, live):
     player, monitor = xbmc.Player(), xbmc.Monitor()
     position = duration = 0
     seen_fullscreen, away, tick = False, 0, 0
+    for _ in range(40):
+        if player.isPlayingVideo() or PLAY['cancel'] or monitor.waitForAbort(0.5):
+            break
     while player.isPlayingVideo():
         if PLAY['cancel']:
             player.stop()
@@ -261,6 +268,98 @@ def start(li):
     threading.Thread(target=follow, args=(key, label, group, kind, live), daemon=True).start()
 
 
+def is_title(li):
+    """True for movies and shows from the catalogue (not channels, episodes, tiles or 'See all')."""
+    return (li.getProperty('t') in ('play', 'folder') and not li.getProperty('logo') and not li.getProperty('series')
+            and li.getLabel() != 'See all ›' and bool(cat.section_of(li.getProperty('parent'))[0]))
+
+
+def apply_details(li, data):
+    """Put a looked-up rating, and a poster or description when the catalogue had none, onto a tile."""
+    if not data:
+        return
+    rating = meta.rating_text(data)
+    genres = ', '.join(data.get('genres', [])[:2])
+    if not li.getProperty('tagged'):
+        # Rating and genres lead the description line: "IMDb 7.4 · Action, Thriller · Telugu".
+        li.setProperty('tagged', '1')
+        li.setProperty('rating', rating)
+        li.setProperty('genres', genres)
+        line = ' · '.join(x for x in (rating, genres, li.getProperty('meta')) if x)
+        li.setProperty('meta', line)
+    if not li.getArt('thumb') and data.get('poster'):
+        li.setArt({'thumb': data['poster']})
+    if not li.getProperty('plot') and data.get('overview'):
+        li.setProperty('plot', data['overview'])
+
+
+def enrich(control, still_wanted, limit):
+    """Look up ratings for the first tiles of a row or grid, one at a time, while that screen is still showing."""
+    if not meta.enabled():
+        return
+    try:
+        for n in range(min(control.size(), limit)):
+            if not still_wanted():
+                return
+            li = control.getListItem(n)
+            if is_title(li):
+                apply_details(li, meta.lookup(li.getProperty('name'), li.getProperty('t') == 'folder'))
+    except Exception as e:
+        cat.log('enrich stopped: {0}'.format(e))
+
+
+def play_trailer(video_id, title):
+    if not xbmc.getCondVisibility('System.HasAddon(plugin.video.youtube)'):
+        xbmcgui.Dialog().ok('Stream', 'Trailers play through Kodi\'s YouTube add-on.\n'
+                                      'Install "YouTube" from Add-ons > Install from repository > Video add-ons, then try again.')
+        return
+    PLAY['since'], PLAY['cancel'] = time.time(), False
+    xbmc.Player().play('plugin://plugin.video.youtube/play/?video_id=' + video_id)
+    threading.Thread(target=follow, args=(None, title + ' (trailer)', None, 'Trailer', True), daemon=True).start()
+
+
+def details(li):
+    """Rating, overview, reviews and trailer for a title."""
+    name = li.getProperty('name') or li.getLabel()
+    if not meta.enabled():
+        xbmcgui.Dialog().ok('Stream', 'Ratings, reviews and trailers are switched off because no TMDb key is available.')
+        return
+    busy = xbmcgui.DialogProgressBG()
+    busy.create('Stream', 'Looking up ' + name + '…')
+    try:
+        data = meta.lookup(name, li.getProperty('t') == 'folder')
+    finally:
+        busy.close()
+    if not data:
+        notify('No details found for this title')
+        return
+    apply_details(li, data)
+    facts = [meta.rating_text(data) + (' (IMDb)' if data.get('imdb_rating') else '')]
+    if data.get('runtime'):
+        facts.append('{0} min'.format(data['runtime']))
+    facts.append(', '.join(data.get('genres', [])[:3]))
+    heading = '{0}  ·  {1}'.format(data.get('title') or name, '  ·  '.join(f for f in facts if f))
+    reviews = data.get('reviews') or []
+    while True:
+        options = [('overview', 'Read the overview')]
+        if data.get('trailer'):
+            options.append(('trailer', 'Play trailer'))
+        if reviews:
+            options.append(('reviews', 'Read reviews ({0})'.format(len(reviews))))
+        choice = xbmcgui.Dialog().select(heading, [label for _, label in options])
+        if choice < 0:
+            return
+        action = options[choice][0]
+        if action == 'overview':
+            xbmcgui.Dialog().textviewer(data.get('title') or name, data.get('overview') or 'No overview available.')
+        elif action == 'reviews':
+            text = '\n\n'.join('[B]{0}[/B]\n{1}'.format(r['author'] or 'Review', r['text']) for r in reviews)
+            xbmcgui.Dialog().textviewer('Reviews · ' + (data.get('title') or name), text)
+        else:
+            play_trailer(data['trailer'], data.get('title') or name)
+            return
+
+
 def activate(li, trail=()):
     """Click handling shared by the home rows and the grid. Returns True when the viewer asked for Home."""
     kind = li.getProperty('t')
@@ -288,6 +387,8 @@ def context_menu(li, in_grid):
                ('list', 'Remove from My List' if listed else 'Add to My List'),
                ('like', 'Remove like' if rating > 0 else 'Like'),
                ('dislike', 'Remove dislike' if rating < 0 else 'Dislike')]
+    if is_title(li):
+        options.insert(1, ('info', 'Rating, reviews and trailer'))
     if li.getProperty('suggestion'):
         options.append(('dismiss', 'Not interested'))
     if in_grid:
@@ -298,6 +399,9 @@ def context_menu(li, in_grid):
     action = options[choice][0]
     if action == 'open':
         return 'home' if activate(li) else None
+    if action == 'info':
+        details(li)
+        return None
     if action == 'list':
         added = db.toggle_mylist(item, parent, group)
         db.log_event('listed' if added else 'unlisted', item['name'], group, section)
@@ -372,6 +476,37 @@ def onboarding(first_run):
     return True
 
 
+def add_profile():
+    dialog = xbmcgui.Dialog()
+    name = dialog.input('Name for the new profile')
+    if not name:
+        return None
+    kids = dialog.yesno('Stream', 'Is this a kids profile?\nKids profiles only show children\'s titles and channels.')
+    pin = dialog.input('PIN needed to leave this kids profile (optional)', type=xbmcgui.INPUT_NUMERIC) if kids else ''
+    profiles = db.list_profiles()
+    base = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-') or 'profile'
+    pid, n = base, 2
+    while any(p['id'] == pid for p in profiles) or pid == 'default':
+        pid, n = '{0}-{1}'.format(base, n), n + 1
+    profile = {'id': pid, 'name': name, 'kids': bool(kids), 'pin': pin or ''}
+    db.save_profiles(profiles + [profile])
+    return profile
+
+
+def choose_profile(force=False):
+    """Ask who is watching. With a single profile and no reason to ask, that profile is used straight away."""
+    profiles = db.list_profiles()
+    if len(profiles) == 1 and not force:
+        return profiles[0]
+    labels = [p['name'] + ('  [COLOR FF888888]Kids[/COLOR]' if p.get('kids') else '') for p in profiles]
+    choice = xbmcgui.Dialog().select("Who's watching?", labels + ['+ Add a profile'])
+    if choice < 0:
+        return None
+    if choice == len(profiles):
+        return add_profile() or choose_profile(True)
+    return profiles[choice]
+
+
 def sport_match(name):
     """True when a sports section belongs to a sport the viewer follows (or when none were chosen)."""
     chosen = (db.meta('profile') or {}).get('sports', [])
@@ -406,6 +541,7 @@ class Grid(xbmcgui.WindowXML):
         if self.ready:
             return
         self.ready = True
+        self.setProperty('kids', '1' if db.KIDS else '')
         self.setProperty('title', ' · '.join(self.trail) if self.trail else self.title)
         self.panel = self.getControl(PANEL)
         if self.entries is not None:
@@ -474,6 +610,8 @@ class Grid(xbmcgui.WindowXML):
                 if upnext:
                     self.setProperty('status', 'Up next: ' + titles[upnext].getProperty('name'))
         self.loading = False
+        if first_page:
+            enrich(self.panel, lambda: True, 24)
 
     def refresh_marks(self):
         """After playback, redraw an episode list so watched ticks and the next episode are current."""
@@ -553,8 +691,10 @@ class Home(xbmcgui.WindowXML):
         self.ready = True
         self.token = 0
         self.touched = False
+        self.switch = False
+        self.setProperty('kids', '1' if db.KIDS else '')
         tabs = []
-        for key, label in TABS:
+        for key, label in (KIDS_TABS if db.KIDS else TABS):
             li = xbmcgui.ListItem(label=label)
             li.setProperty('key', key)
             tabs.append(li)
@@ -610,17 +750,54 @@ class Home(xbmcgui.WindowXML):
                  plot='Change the languages, genres and sports you chose at setup, and pick more titles you like.'),
             tile('Liked and disliked titles', 'setting', action='ratings',
                  plot='See everything you have marked with Like or Dislike. Hold OK on any title to rate it.'),
-            tile('AI keys and options', 'setting', action='keys',
-                 plot='Enter an Amazon Bedrock key (Claude) and an optional Jev key. Stream works without them.'),
+            tile('Keys for AI and ratings', 'setting', action='keys',
+                 plot='Enter a Bedrock key (Claude) and optional Jev key for recommendations, and a TMDb key for ratings, reviews and trailers. Stream works without them.'),
             tile('Refresh recommendations', 'setting', action='refresh', meta='Last built with: ' + engine,
                  plot='Build a new Recommended for You row now.'),
             tile('Clear recommendations', 'setting', action='clear_recs', plot='Remove the saved recommendations.'),
             tile('Clear watch history', 'setting', action='clear_history',
                  plot='Forget everything played, including resume points and watched episodes.'),
+            tile('Switch or add profile', 'setting', action='switch', meta='Now: ' + (CURRENT['profile'] or {}).get('name', ''),
+                 plot='Each profile has its own history, My List, likes and recommendations. A kids profile shows only children\'s titles.'),
         ]
+
+    def kids_live_rows(self):
+        root = [f for f in cat.get_dir(cat.URLS['live']) if f['t'] == 'folder' and f['name'].lower() == 'kids']
+        if not root:
+            return []
+        folders = [f for f in cat.get_dir(root[0]['url']) if f['t'] == 'folder']
+        return [('dir', cat.title_case(f['name']) + ' Channels', f['url'], 'Kids', None) for f in folders[:ROWS - 2]]
+
+    def kids_specs(self, key):
+        """Rows for a kids profile: children's titles and channels only."""
+        titles = ('dir', 'Movies and Shows', cat.URLS['kids'], 'Kids', None)
+        if key == 'home':
+            rows = []
+            for title, entries in (('Continue Watching', db.continue_watching()), ('Recently Played', db.recent(30))):
+                if entries:
+                    rows.append(('items', title, [entry_item(e) for e in entries]))
+            picks = db.suggestions()
+            if picks:
+                rows.insert(1 if rows else 0, ('items', 'Recommended for You',
+                                               [entry_item(p, meta=p['reason'], suggestion=True) for p in picks]))
+            return rows + [titles] + self.kids_live_rows()
+        if key == 'kids':
+            return [titles]
+        if key == 'live':
+            return self.kids_live_rows()
+        if key == 'mylist':
+            saved = db.mylist()
+            return [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
+        if key == 'settings':
+            return [('items', 'Settings', [tile('Switch profile', 'setting', action='switch',
+                                                 meta='Now: ' + (CURRENT['profile'] or {}).get('name', ''),
+                                                 plot='Choose who is watching.')])]
+        return []
 
     def specs(self, key):
         """Rows for a tab: ('items', title, [ListItem]) or ('dir', title, url, group, only)."""
+        if db.KIDS:
+            return self.kids_specs(key)
         u = cat.URLS
         english = db.lang_match('english')
         english_movies = [('dir', 'English Movies', u['english_movies'], 'English', None)] if english else []
@@ -732,6 +909,9 @@ class Home(xbmcgui.WindowXML):
                 slot += 1
         except Exception as e:
             cat.log('tab failed: {0}'.format(e))
+        # Ratings arrive after the rows are on screen, so browsing never waits for them.
+        for n in range(slot):
+            enrich(self.getControl(FIRST_ROW + n), lambda: token == self.token, 40 if db.KIDS else 12)
         if slot == 0 and token == self.token:
             empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.'}
             self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
@@ -791,7 +971,10 @@ class Home(xbmcgui.WindowXML):
         return made
 
     def run_setting(self, action):
-        if action == 'profile':
+        if action == 'switch':
+            self.switch = True
+            self.close()
+        elif action == 'profile':
             if onboarding(False):
                 self.refresh_recommendations()
                 self.go_home()
@@ -880,8 +1063,29 @@ if __name__ == '__main__':
     except Exception:
         xbmcgui.Dialog().ok('Stream', 'Install the Sasta TV addon and sign in to it first.')
     else:
-        if db.meta('profile') is None:
-            onboarding(True)
-        window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
-        window.doModal()
-        del window
+        current = None
+        while True:
+            # Leaving a kids profile can be protected by a PIN.
+            if current and current.get('kids') and current.get('pin'):
+                if xbmcgui.Dialog().input('PIN to leave ' + current['name'], type=xbmcgui.INPUT_NUMERIC) != current['pin']:
+                    notify('Wrong PIN')
+                    profile = current
+                else:
+                    profile = choose_profile(True) or current
+            else:
+                profile = choose_profile(force=current is not None)
+                if profile is None:
+                    if current is None:
+                        break
+                    profile = current
+            current = CURRENT['profile'] = profile
+            db.use_profile(profile)
+            cat.load_state()
+            if not profile.get('kids') and db.meta('profile') is None:
+                onboarding(True)
+            window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
+            window.doModal()
+            again = getattr(window, 'switch', False)
+            del window
+            if not again:
+                break
