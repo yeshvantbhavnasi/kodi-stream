@@ -22,6 +22,7 @@ Updates then arrive through the repository.
 |---|---|
 | Move around | Arrow keys or the remote's direction pad; OK opens or plays |
 | Go back one level | Back: rows → tabs → Home tab → exit |
+| Close Stream | The **Exit** tab, or Back from the Home tab |
 | Jump to Home from any inner screen | Choose the **⌂ Home** tile at the start of the list, or hold OK and pick **Go to Home** |
 | Add or remove a title from My List | Hold OK (or press the menu key) on the title and pick **Add to My List** / **Remove from My List** |
 | Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |

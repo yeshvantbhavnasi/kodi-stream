@@ -24,7 +24,7 @@ ACTION_BACK = (9, 10, 92)  # parent dir, previous menu, nav back
 ACTION_CONTEXT = 117
 
 TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'), ('kids', 'Kids'),
-        ('mylist', 'My List'), ('search', 'Search'), ('settings', 'Settings')]
+        ('mylist', 'My List'), ('search', 'Search'), ('settings', 'Settings'), ('exit', 'Exit')]
 
 # Set when the viewer chooses "Home" inside a nested screen; every open grid closes on seeing it.
 NAV = {'home': False}
@@ -462,6 +462,8 @@ class Home(xbmcgui.WindowXML):
                 self.search()
             elif key == 'settings':
                 self.settings()
+            elif key == 'exit':
+                self.close()
             else:
                 self.load_tab(key)
         elif FIRST_ROW <= control_id < FIRST_ROW + ROWS:

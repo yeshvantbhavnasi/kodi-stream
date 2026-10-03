@@ -545,15 +545,15 @@
         </control>
         <control type="label"><left>60</left><top>26</top><width>220</width><height>50</height><font>font36_title</font><textcolor>FFE50914</textcolor><label>[B]STREAM[/B]</label></control>
         <control type="list" id="100">
-            <left>300</left><top>24</top><width>1500</width><height>56</height>
+            <left>300</left><top>24</top><width>1600</width><height>56</height>
             <orientation>horizontal</orientation>
             <ondown>9000</ondown>
-            <itemlayout width="190" height="56">
-                <control type="label"><left>0</left><top>0</top><width>190</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFB3B3B3</textcolor><label>$INFO[ListItem.Label]</label></control>
+            <itemlayout width="176" height="56">
+                <control type="label"><left>0</left><top>0</top><width>176</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFB3B3B3</textcolor><label>$INFO[ListItem.Label]</label></control>
             </itemlayout>
-            <focusedlayout width="190" height="56">
-                <control type="image"><left>0</left><top>50</top><width>150</width><height>4</height><texture colordiffuse="FFE50914">white.png</texture><visible>Control.HasFocus(100)</visible></control>
-                <control type="label"><left>0</left><top>0</top><width>190</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+            <focusedlayout width="176" height="56">
+                <control type="image"><left>0</left><top>50</top><width>140</width><height>4</height><texture colordiffuse="FFE50914">white.png</texture><visible>Control.HasFocus(100)</visible></control>
+                <control type="label"><left>0</left><top>0</top><width>176</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
             </focusedlayout>
         </control>
     </controls>
