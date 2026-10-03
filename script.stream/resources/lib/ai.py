@@ -111,12 +111,6 @@ def _pick(goal_for_jev, system, prompt_intro, pool, count):
                 return chosen[:count], 'llm+jev' if source == 'jev' else 'llm'
         except Exception as e:
             log('Claude step skipped: {0}'.format(e))
-    if source == 'local':
-        # No AI key: take turns across languages and types so the row is not all one kind.
-        buckets = {}
-        for cid in order:
-            buckets.setdefault((ids[cid].get('group'), ids[cid].get('kind')), []).append(cid)
-        order = [cid for group in zip_longest(*buckets.values()) for cid in group if cid]
     return [{'entry': ids[cid], 'reason': ''} for cid in order[:count]], source
 
 
@@ -145,24 +139,75 @@ RECOMMENDER = (
     'You are given one household\'s interaction history as a time-ordered sequence of events. Each event has a date, '
     'time of day, an action (played, stopped with percent watched, finished, listed, unlisted, dismissed, searched), '
     'a title, and its language and type. Treat it like a sequence model would: recent events matter most, finishing or '
-    'listing a title is a strong positive signal, stopping early or dismissing is a negative one, and searches show intent. '
+    'listing or liking a title is a strong positive signal, stopping early, dismissing or disliking is a negative one, and searches show intent. '
+    'When the household has stated languages, genres, likes or dislikes, respect them. '
     'Predict the next several titles this household will choose to play from the candidate list - not just the single most '
     'likely next one, so cover their main languages and moods and include one or two plausible stretches. '
     'New titles have no history; judge them from title, language, year and description.')
+
+
+GENRES = {
+    'Action': ['action', 'fight', 'war', 'mission', 'gangster', 'revenge', 'battle'],
+    'Comedy': ['comedy', 'funny', 'hilarious', 'laugh', 'comic', 'quirky'],
+    'Drama': ['drama', 'emotional', 'struggle', 'journey', 'life of'],
+    'Romance': ['love', 'romance', 'romantic', 'wedding', 'marriage', 'couple'],
+    'Thriller & Crime': ['thriller', 'murder', 'crime', 'police', 'investigat', 'detective', 'mystery', 'killer', 'heist'],
+    'Horror': ['horror', 'ghost', 'haunted', 'spirit', 'paranormal', 'supernatural'],
+    'Family': ['family', 'father', 'mother', 'children', 'brother', 'sister'],
+    'Sci-fi & Fantasy': ['sci-fi', 'future', 'alien', 'fantasy', 'magic', 'myth', 'superhero'],
+    'Reality & Talk': ['reality', 'contest', 'host', 'talk show', 'game show'],
+    'Devotional & Mythology': ['god', 'goddess', 'divine', 'devotion', 'temple', 'mytholog'],
+}
+
+
+def _profile_lines():
+    """What the viewer told us directly: languages, genres, liked and disliked titles."""
+    profile = db.meta('profile') or {}
+    lines = []
+    if profile.get('languages'):
+        lines.append('Languages they chose: ' + ', '.join(profile['languages']))
+    if profile.get('genres'):
+        lines.append('Genres they chose: ' + ', '.join(profile['genres']))
+    liked = [_describe(e)[:100] for e in db.rated(1)[:25]]
+    disliked = [_describe(e)[:100] for e in db.rated(-1)[:25]]
+    if liked:
+        lines.append('Titles they marked as liked: ' + '; '.join(liked))
+    if disliked:
+        lines.append('Titles they marked as disliked (avoid similar): ' + '; '.join(disliked))
+    return lines
+
+
+def _local_order(pool):
+    """No AI key: score by chosen genres (keywords in the description), then spread across languages and types."""
+    profile = db.meta('profile') or {}
+    words = [w for g in profile.get('genres', []) for w in GENRES.get(g, [])]
+    liked_groups = {(e.get('group') or '').lower() for e in db.rated(1)}
+
+    def score(entry):
+        text = (entry['item']['name'] + ' ' + entry['item'].get('plot', '')).lower()
+        return sum(1 for w in words if w in text) + (1 if (entry.get('group') or '').lower() in liked_groups else 0)
+
+    buckets = {}
+    for entry in sorted(pool, key=lambda e: -score(e)):
+        buckets.setdefault((entry.get('group'), entry.get('kind')), []).append(entry)
+    return [e for group in zip_longest(*buckets.values()) for e in group if e]
 
 
 def recommend(top_groups, force=False):
     """Build and store a new batch of suggestions when the last one is stale. Returns True if a batch was saved."""
     plays = db.history_count()
     last = db.meta('recs', {})
-    stale = time.time() - last.get('at', 0) > REFRESH_AFTER or plays - last.get('plays', 0) >= 3
+    stale = (time.time() - last.get('at', 0) > REFRESH_AFTER or plays - last.get('plays', 0) >= 3
+             or db.meta('recs_dirty', False))
     if not (force or stale):
         return False
-    pool = db.candidates(120, top_groups)
+    pool = db.only_chosen(db.candidates(400, top_groups), lambda e: e.get('group'))[:120]
     if not pool:
         return False
+    pool = _local_order(pool)
     timeline = _timeline()
     watched = db.recent(30)
+    stated = _profile_lines()
     if timeline:
         intro = 'Interaction history, oldest first:\n' + '\n'.join(timeline)
         goal = 'The title this household plays next. Recent activity: ' + '; '.join(timeline[-12:])
@@ -172,6 +217,9 @@ def recommend(top_groups, force=False):
     else:
         intro = 'There is no history yet. Favour widely appealing, well-regarded titles across the main languages.'
         goal = 'A widely appealing, well-regarded recent title'
+    if stated:
+        intro = 'What the household told us:\n' + '\n'.join('- ' + line for line in stated) + '\n\n' + intro
+        goal += '. ' + ' '.join(stated)[:600]
     picks, source = _pick(goal, RECOMMENDER, intro, pool, PICKS)
     if source == 'local':
         for p in picks:
@@ -179,6 +227,7 @@ def recommend(top_groups, force=False):
                 p['reason'] = 'New in {0}'.format(p['entry']['group'].title())
     db.save_suggestions(picks, source)
     db.set_meta('recs', {'at': time.time(), 'plays': plays, 'source': source})
+    db.set_meta('recs_dirty', False)
     log('saved {0} suggestions via {1}'.format(len(picks), source))
     return True
 

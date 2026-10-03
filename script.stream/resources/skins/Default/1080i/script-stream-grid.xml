@@ -7,6 +7,10 @@
         <control type="label"><left>1180</left><top>30</top><width>680</width><height>60</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
         <control type="textbox"><left>60</left><top>92</top><width>1800</width><height>70</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR]  $INFO[Container(50).ListItem.Property(plot)]</label></control>
         <control type="panel" id="50">
+            <onleft>noop</onleft>
+            <onright>noop</onright>
+            <onup>noop</onup>
+            <ondown>noop</ondown>
             <left>60</left><top>180</top><width>1810</width><height>900</height>
             <orientation>vertical</orientation>
             <scrolltime tween="quadratic">200</scrolltime>
@@ -16,6 +20,8 @@
                         <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
+                        <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
             </itemlayout>
@@ -26,6 +32,8 @@
                         <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(logo))</visible></control>
                         <control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>
+                        <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
+                        <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
             </focusedlayout>

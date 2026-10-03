@@ -18,12 +18,17 @@ CREATE INDEX IF NOT EXISTS titles_name ON titles(name);
 CREATE TABLE IF NOT EXISTS history (
     name TEXT PRIMARY KEY, item TEXT, parent TEXT, grp TEXT,
     played_at REAL, plays INTEGER DEFAULT 1, position REAL DEFAULT 0, duration REAL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS watched (
+    key TEXT PRIMARY KEY, name TEXT, label TEXT, series TEXT, item TEXT, parent TEXT, grp TEXT,
+    played_at REAL, plays INTEGER DEFAULT 1, position REAL DEFAULT 0, duration REAL DEFAULT 0, done INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS mylist (
     name TEXT PRIMARY KEY, item TEXT, parent TEXT, grp TEXT, added_at REAL);
 CREATE TABLE IF NOT EXISTS suggestions (
     id INTEGER PRIMARY KEY AUTOINCREMENT, batch REAL, rank INTEGER, name TEXT, reason TEXT,
     source TEXT, item TEXT, parent TEXT, grp TEXT, dismissed INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS ratings (
+    name TEXT PRIMARY KEY, value INTEGER, item TEXT, parent TEXT, grp TEXT, rated_at REAL);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL, action TEXT, name TEXT, grp TEXT, kind TEXT, detail TEXT);
 '''
@@ -37,13 +42,37 @@ def _connect():
     return conn
 
 
+def play_key(item):
+    """Stable identity for something playable. Live links carry expiring signatures, so those go by name."""
+    url = item.get('url', '')
+    if 'vendor1play.php' in url or '.m3u8' in url:
+        return 'live:' + item['name']
+    return url.split('?')[0]
+
+
 def init():
     with _connect() as conn:
         conn.executescript(SCHEMA)
+        # One-time move from the older name-keyed history table.
+        old = conn.execute("SELECT COUNT(*) FROM history").fetchone()[0]
+        if old and not conn.execute("SELECT COUNT(*) FROM watched").fetchone()[0]:
+            for r in conn.execute('SELECT * FROM history').fetchall():
+                item = json.loads(r['item'])
+                conn.execute('INSERT OR REPLACE INTO watched (key, name, label, series, item, parent, grp, played_at, plays, position, duration, done) '
+                             'VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+                             (play_key(item), r['name'], r['name'], '', r['item'], r['parent'], r['grp'], r['played_at'], r['plays'],
+                              r['position'], r['duration'], 1 if r['duration'] and r['position'] >= r['duration'] * 0.9 else 0))
+            conn.execute('DELETE FROM history')
 
 
 def _entry(row):
-    return {'item': json.loads(row['item']), 'parent': row['parent'], 'group': row['grp']}
+    entry = {'item': json.loads(row['item']), 'parent': row['parent'], 'group': row['grp']}
+    keys = row.keys()
+    if 'label' in keys and row['label']:
+        entry['label'] = row['label']
+    if 'series' in keys and row['series']:
+        entry['series'] = row['series']
+    return entry
 
 
 def meta(key, default=None):
@@ -73,7 +102,7 @@ def candidates(limit=120, groups=None):
     """Indexed titles the viewer has not played, newest first, preferring the given languages."""
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM titles WHERE kind != 'Kids' AND name NOT IN (SELECT name FROM history) "
+            "SELECT * FROM titles WHERE kind != 'Kids' AND name NOT IN (SELECT name FROM watched) AND name NOT IN (SELECT series FROM watched) AND name NOT IN (SELECT name FROM ratings) "
             'AND name NOT IN (SELECT name FROM suggestions WHERE dismissed=1) '
             'ORDER BY first_seen DESC, rowid ASC LIMIT 2000').fetchall()
     preferred = [g.lower() for g in (groups or [])]
@@ -88,6 +117,14 @@ def find_titles(text, limit=60):
     return [_entry(r) for r in rows]
 
 
+def find_names(text, limit=40):
+    """Indexed titles whose name contains the text, names that start with it first."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT * FROM titles WHERE name LIKE ? ORDER BY CASE WHEN name LIKE ? THEN 0 ELSE 1 END, first_seen DESC LIMIT ?",
+                            ('%' + text + '%', text + '%', limit)).fetchall()
+    return [_entry(r) for r in rows]
+
+
 def title_count():
     with _connect() as conn:
         return conn.execute('SELECT COUNT(*) FROM titles').fetchone()[0]
@@ -95,49 +132,61 @@ def title_count():
 
 # ---------- history ----------
 
-def add_history(item, parent, group):
+def add_history(item, parent, group, series=None, label=None):
     with _connect() as conn:
         conn.execute(
-            'INSERT INTO history (name, item, parent, grp, played_at) VALUES (?,?,?,?,?) '
-            'ON CONFLICT(name) DO UPDATE SET item=excluded.item, parent=excluded.parent, grp=excluded.grp, '
-            'played_at=excluded.played_at, plays=plays+1',
-            (item['name'], json.dumps(item), parent, group, time.time()))
+            'INSERT INTO watched (key, name, label, series, item, parent, grp, played_at) VALUES (?,?,?,?,?,?,?,?) '
+            'ON CONFLICT(key) DO UPDATE SET item=excluded.item, parent=excluded.parent, grp=excluded.grp, '
+            'label=excluded.label, series=excluded.series, played_at=excluded.played_at, plays=plays+1',
+            (play_key(item), item['name'], label or item['name'], series or '', json.dumps(item), parent, group, time.time()))
 
 
-def update_progress(name, position, duration):
+def update_progress(key, position, duration):
+    """Save where playback is. A title counts as watched once 90% of it has played."""
+    done = 1 if duration > 0 and position >= duration * 0.9 else 0
     with _connect() as conn:
-        conn.execute('UPDATE history SET position=?, duration=? WHERE name=?', (position, duration, name))
+        conn.execute('UPDATE watched SET position=?, duration=?, done=MAX(done, ?) WHERE key=?', (position, duration, done, key))
 
 
-def progress(name):
+def progress(key):
     with _connect() as conn:
-        row = conn.execute('SELECT position, duration FROM history WHERE name=?', (name,)).fetchone()
-    return (row['position'], row['duration']) if row else (0, 0)
+        row = conn.execute('SELECT position, duration, done FROM watched WHERE key=?', (key,)).fetchone()
+    return (row['position'], row['duration'], bool(row['done'])) if row else (0, 0, False)
+
+
+def progress_for(keys):
+    """{key: (position, duration, done)} for the given keys, used to mark episodes in a listing."""
+    if not keys:
+        return {}
+    with _connect() as conn:
+        rows = conn.execute('SELECT key, position, duration, done FROM watched WHERE key IN ({0})'.format(','.join('?' * len(keys))),
+                            list(keys)).fetchall()
+    return {r['key']: (r['position'], r['duration'], bool(r['done'])) for r in rows}
 
 
 def recent(limit=30):
     with _connect() as conn:
-        rows = conn.execute('SELECT * FROM history ORDER BY played_at DESC LIMIT ?', (limit,)).fetchall()
+        rows = conn.execute('SELECT * FROM watched ORDER BY played_at DESC LIMIT ?', (limit,)).fetchall()
     return [_entry(r) for r in rows]
 
 
 def continue_watching(limit=20):
-    """Titles stopped part-way: past the first minute and before the last 5%."""
+    """Titles stopped part-way: past the first minute and not yet watched to the end."""
     with _connect() as conn:
         rows = conn.execute(
-            'SELECT * FROM history WHERE position > 60 AND duration > 0 AND position < duration * 0.95 '
+            "SELECT * FROM watched WHERE position > 60 AND duration > 0 AND done = 0 AND key NOT LIKE 'live:%' "
             'ORDER BY played_at DESC LIMIT ?', (limit,)).fetchall()
     return [_entry(r) for r in rows]
 
 
 def history_count():
     with _connect() as conn:
-        return conn.execute('SELECT COALESCE(SUM(plays), 0) FROM history').fetchone()[0]
+        return conn.execute('SELECT COALESCE(SUM(plays), 0) FROM watched').fetchone()[0]
 
 
 def clear_history():
     with _connect() as conn:
-        conn.execute('DELETE FROM history')
+        conn.execute('DELETE FROM watched')
 
 
 # ---------- My List ----------
@@ -172,6 +221,8 @@ def save_suggestions(picks, source):
     with _connect() as conn:
         conn.executemany('INSERT INTO suggestions (batch, rank, name, reason, source, item, parent, grp) '
                          'VALUES (?,?,?,?,?,?,?,?)', rows)
+        # Keep the five most recent batches; dismissed titles stay hidden through their own flag in those rows.
+        conn.execute('DELETE FROM suggestions WHERE batch NOT IN (SELECT DISTINCT batch FROM suggestions ORDER BY batch DESC LIMIT 5)')
     return batch
 
 
@@ -180,7 +231,7 @@ def suggestions():
     with _connect() as conn:
         rows = conn.execute(
             'SELECT * FROM suggestions WHERE batch=(SELECT MAX(batch) FROM suggestions) AND dismissed=0 '
-            'AND name NOT IN (SELECT name FROM history) ORDER BY rank').fetchall()
+            'AND name NOT IN (SELECT name FROM watched) AND name NOT IN (SELECT series FROM watched) ORDER BY rank').fetchall()
     return [dict(_entry(r), reason=r['reason'], source=r['source']) for r in rows]
 
 
@@ -208,3 +259,77 @@ def events(limit=80):
     with _connect() as conn:
         rows = conn.execute('SELECT * FROM events ORDER BY id DESC LIMIT ?', (limit,)).fetchall()
     return [dict(r) for r in reversed(rows)]
+
+
+# ---------- likes and dislikes ----------
+
+def rate(item, parent, group, value):
+    """value: 1 like, -1 dislike, 0 clears the rating."""
+    with _connect() as conn:
+        if value == 0:
+            conn.execute('DELETE FROM ratings WHERE name=?', (item['name'],))
+        else:
+            conn.execute('INSERT OR REPLACE INTO ratings VALUES (?,?,?,?,?,?)',
+                         (item['name'], value, json.dumps(item), parent, group, time.time()))
+
+
+def rating(name):
+    with _connect() as conn:
+        row = conn.execute('SELECT value FROM ratings WHERE name=?', (name,)).fetchone()
+    return row['value'] if row else 0
+
+
+def rated(value):
+    """Titles the viewer liked (1) or disliked (-1), newest first."""
+    with _connect() as conn:
+        rows = conn.execute('SELECT * FROM ratings WHERE value=? ORDER BY rated_at DESC', (value,)).fetchall()
+    return [_entry(r) for r in rows]
+
+
+def titles_in(groups, limit=40):
+    """A spread of indexed titles from the given languages, for the first-run picker."""
+    wanted = [g.lower() for g in groups]
+    with _connect() as conn:
+        rows = conn.execute("SELECT * FROM titles WHERE kind != 'Kids' ORDER BY first_seen DESC, rowid ASC").fetchall()
+    buckets = {}
+    for r in rows:
+        key = (r['grp'] or '').lower()
+        if not wanted or key in wanted:
+            buckets.setdefault((key, r['kind']), []).append(r)
+    out = []
+    depth = 0
+    while len(out) < limit and any(len(b) > depth for b in buckets.values()):
+        out += [b[depth] for b in buckets.values() if len(b) > depth]
+        depth += 1
+    return [_entry(r) for r in out[:limit]]
+
+
+# ---------- language preference ----------
+
+LANGUAGES = ['Hindi', 'Telugu', 'Tamil', 'Malayalam', 'Kannada', 'Marathi', 'Gujarati', 'Punjabi', 'Bengali', 'Urdu', 'English']
+# Catalogue sections use different names for the same language, and file dubbed films separately.
+ALIASES = {'hindi': ['hindi', 'south dubbed', 'english dubbed'], 'bengali': ['bengali', 'bangla'], 'urdu': ['urdu', 'pakistani']}
+
+
+def chosen_languages():
+    return [g.lower() for g in (meta('profile') or {}).get('languages', [])]
+
+
+def lang_match(name, chosen=None):
+    """True when a section or title language is one the viewer chose (or when nothing was chosen)."""
+    chosen = chosen_languages() if chosen is None else chosen
+    if not chosen:
+        return True
+    name = (name or '').lower().strip()
+    for lang in chosen:
+        for alias in ALIASES.get(lang, [lang]):
+            if name == alias or (alias != 'english' and alias in name):
+                return True
+    return False
+
+
+def only_chosen(entries, name_of):
+    """Keep entries in the chosen languages; if that leaves nothing, show everything rather than an empty screen."""
+    chosen = chosen_languages()
+    kept = [e for e in entries if lang_match(name_of(e), chosen)]
+    return kept or list(entries)

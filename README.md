@@ -18,17 +18,46 @@ Updates then arrive through the repository.
 
 ## Using it
 
+Everything works with the remote's direction pad, OK and Back; no mouse or pointer is needed.
+
 | Action | How |
 |---|---|
-| Move around | Arrow keys or the remote's direction pad; OK opens or plays |
-| Go back one level | Back: rows → tabs → Home tab → exit |
-| Close Stream | The ✕ button at the top right, or Back from the Home tab |
-| Jump to Home from any inner screen | Choose the **⌂ Home** tile at the start of the list, or hold OK and pick **Go to Home** |
-| Add or remove a title from My List | Hold OK (or press the menu key) on the title and pick **Add to My List** / **Remove from My List** |
+| Move around | Direction pad. Up and Down move between rows, Left and Right along a row. Lists stop at their edges instead of wrapping |
+| Switch section | Move along the top bar: Home, Movies, Shows, Live TV, Sports, Kids, My List. The section appears as soon as it is highlighted; Down moves into it |
+| Search | The search bar at the top right. OK opens the keyboard |
+| Settings | The gear icon at the top right |
+| Close Stream | The ✕ icon at the top right, or Back from the Home section (it asks first) |
+| Go back one level | Back: rows → top bar → Home section → exit |
+| Jump to Home from any inner screen | The **⌂ Home** tile at the start of the list, or hold OK and pick **Go to Home** |
+| Cancel a stream that is starting | Back while the "Starting…" message is showing |
+| Stop a stream and keep browsing | Back while the video is playing. The stream stops and you return to where you were |
+| Add or remove a title from My List | Hold OK (or press the menu key) on the title |
+| Like or dislike a title | Hold OK on the title and pick **Like** or **Dislike** |
 | Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |
 | Resume a title | Play it again; Stream offers **Resume from…** or **Start from the beginning** |
-| Search | **Search** tab; a request of three or more words also asks the AI when a key is set |
-| Enter AI keys, refresh or clear data | **Settings** tab |
+
+### First-run setup
+
+The first time Stream opens it asks four questions: which languages you watch, what you like to watch, which sports
+you follow, and (optionally) a few titles you already like. The answers can be changed later from
+**Settings → My languages, sports and likes**.
+
+- **Languages** decide what is shown. Movies, Shows and Live TV list only the chosen languages. If a section has
+  nothing in those languages, it shows everything rather than an empty screen.
+- **Sports** decide which sections the Sports tab lists first. Live events are always shown.
+- **Genres and liked titles** feed the recommendations.
+
+### Episodes
+
+Inside a show, episodes are listed in order. Watched episodes are ticked, a part-watched episode shows where it
+stopped, and the list opens on the next episode to watch. Recently Played and Continue Watching show the show's name
+with the episode.
+
+### Quality tags
+
+Titles the provider marks as cinema recordings or other release types (PreDVD, HDCAM, DVDRip, 4K and similar) carry a
+red tag on the poster, and the description line says when a copy is a cinema recording with lower picture and sound
+quality.
 
 ## How it works
 
@@ -51,22 +80,23 @@ Everything Stream remembers lives in one SQLite file, `stream.db`, in Kodi's add
 | Table | What it holds | Written when |
 |---|---|---|
 | `titles` | The catalogue index: name, language, type, description, poster and where it was listed | A movie or show listing is fetched, and once a day for the first page of every main section |
-| `history` | One row per title played: last played time, play count, position and duration | A title starts playing; position is updated every 5 seconds during playback |
+| `watched` | One row per title or episode played: last played time, play count, position, duration, whether it was finished, and the show it belongs to | A title starts playing; position is saved every 5 seconds during playback |
+| `ratings` | Titles marked Like or Dislike | **Like** / **Dislike** in the hold-OK menu, and the titles picked at setup |
 | `mylist` | Titles saved to My List | **Add to My List** / **Remove from My List** |
 | `suggestions` | Every batch of recommendations: rank, title, reason, which engine produced it, dismissed flag | A recommendation run finishes; **Not interested** sets the dismissed flag |
-| `events` | The interaction log: played, stopped (with percent watched), finished, listed, unlisted, dismissed, searched | Each of those actions happens |
-| `meta` | Small bookkeeping values, such as when recommendations last ran | As needed |
+| `events` | The interaction log: played, stopped (with percent watched), finished, listed, unlisted, liked, disliked, dismissed, searched | Each of those actions happens |
+| `meta` | Small bookkeeping values: the setup answers (languages, genres, sports) and when recommendations last ran | As needed |
 
 ### How recent views reach the screen
 
-1. You press OK on a title. Stream adds or updates its row in `history` (time played, play count) and writes a
+1. You press OK on a title. Stream adds or updates its row in `watched` (time played, play count) and writes a
    `played` event.
-2. While it plays, a background watcher reads the player's position every 5 seconds and saves it to that `history`
+2. While it plays, a background watcher reads the player's position every 5 seconds and saves it to that `watched`
    row. Live channels are not tracked this way, since they have no position.
 3. When playback stops, Stream writes a `stopped` event with the percent watched, or `finished` at 90% or more.
 4. The next time the Home tab loads, it queries the database:
-   - **Continue Watching** shows `history` rows stopped after the first minute and before the last 5%.
-   - **Recently Played** shows the 30 most recent `history` rows, newest first.
+   - **Continue Watching** shows `watched` rows stopped after the first minute and not yet finished (90% played).
+   - **Recently Played** shows the 30 most recent `watched` rows, newest first; the row never grows beyond 30.
 5. Languages you play most are counted (`state.json`) and their rows move to the top of each tab.
 
 ### How My List works
@@ -85,12 +115,15 @@ Every run starts the same way: Stream takes up to 120 candidate titles from `tit
 dismissed, preferring your most-played languages. Kids titles are left out of the pool. What happens next depends on
 which keys are set.
 
-**Without any AI key.** Stream takes turns across languages and types (for example Hindi movies, Telugu movies, Hindi
-web series) so the row is varied, and picks the first 15. Each is labelled "New in <language>". Nothing leaves the
-device.
+Candidates are limited to the languages chosen at setup, and anything played, liked, disliked or dismissed is left out.
+
+**Without any AI key.** Stream scores candidates by the genres chosen at setup (matching words in each description)
+and by the languages of liked titles, then takes turns across languages and types so the row is varied, and picks the
+first 15. Each is labelled "New in <language>". Nothing leaves the device.
 
 **With a Bedrock key (Claude).** Claude is the recommendation engine. Stream sends it:
 
+- what you told it at setup and since: chosen languages and genres, liked titles and disliked titles;
 - your interaction history as a time-ordered list of events, one per line, for example
   `2026-10-03 Sat evening | stopped | Sardar 2 (2026) [Telugu, Movies] | watched 85%`;
 - the candidate list, each with name, language and a short description.
@@ -112,12 +145,15 @@ so the row is always filled. The Settings tab shows which engine produced the la
 
 ### How search works
 
-A search runs the query against every section of the catalogue that has a search box (each movie and web-series
-language, English titles, kids). The results are merged into one list and ordered by:
+A search first looks in the local index, then asks the provider's search in the sections for your chosen languages.
+Only if that finds nothing does it widen to every language. The results are one list, ordered by:
 
 1. how closely the title matches (exact title, then starts with the query, then contains it as a word);
-2. your most-played languages;
+2. your languages;
 3. release year, newest first.
+
+After the direct matches come **Related** titles: other titles whose name or description contains the words you
+typed. If nothing matches at all, the list shows your current recommendations instead of an empty screen.
 
 When a key is set and the query is three or more words (for example "feel-good Telugu family comedy"), Stream also
 asks the AI to pick matching titles from the local index. Those appear first, marked "Best match" with a reason.

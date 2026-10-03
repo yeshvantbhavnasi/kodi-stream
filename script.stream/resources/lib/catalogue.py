@@ -34,6 +34,7 @@ URLS = {
     'kids': 'http://sastatv.com/secured/php/fetchXclusiveS3.php?bkt=cGx1cy1raWRz',
     'live': 'https://sastatv.com/secured/php/fetchXML.php?id=live-root2-beta',
     'fresh': 'https://sastatv.com/secured/php/fetchXML.php?id=newlyadded',
+    'sports': 'https://sastatv.com/secured/php/fetchXML.php?id=live-grp-sports',
 }
 BUCKETS = {'desimovies': 'Movies', 'desiwebseries': 'Web Series', 'desitvshows': 'TV Shows',
            'plus-vod': 'English TV', 'plus-kids': 'Kids'}
@@ -120,6 +121,8 @@ def classify(entry, index):
     url = entry.get('file') or ''
     name = clean(entry.get('title') or entry.get('label'))
     art = entry.get('art') or {}
+    if not name:
+        return None
     item = {'t': 'play', 'name': name, 'url': url, 'i': index + 1}
     img = _image(entry.get('thumbnail')) or _image(art.get('thumb')) or _image(art.get('poster'))
     if img and not GENERIC_IMG.search(img):
@@ -207,7 +210,10 @@ def warm_index():
 
 
 def top_groups():
-    return [g for g, _ in sorted(state['affinity'].items(), key=lambda p: -p[1])]
+    """Languages in order of preference: the ones chosen at setup first, then by how often they are played."""
+    chosen = [g.lower() for g in (db.meta('profile') or {}).get('languages', [])]
+    played = [g for g, _ in sorted(state['affinity'].items(), key=lambda p: -p[1]) if g not in chosen]
+    return chosen + played
 
 
 def _refresh_quietly(url):
@@ -240,14 +246,29 @@ def _b64(value):
         return ''
 
 
+def _source_language(base):
+    params = parse_qs(urlparse(base).query)
+    return _b64(params.get('lang', [''])[0]) or 'english'
+
+
 def search(query):
-    """Run the query against every section that offers a search entry. Returns [(title, parent, items)]."""
+    """Run the query against the sections in the viewer's languages; widen to every section only if that finds nothing."""
     with _lock:
         sources = []
         for entry in _cache.values():
             for item in entry['items']:
                 if item['t'] == 'search' and item['url'] not in sources:
                     sources.append(item['url'])
+    chosen = [s for s in sources if db.lang_match(_source_language(s))]
+    if chosen and len(chosen) < len(sources):
+        hits = _search_sources(query, chosen)
+        if hits:
+            return hits
+        sources = [s for s in sources if s not in chosen]
+    return _search_sources(query, sources)
+
+
+def _search_sources(query, sources):
     results = [None] * len(sources)
 
     def run(n, base):
@@ -265,8 +286,8 @@ def search(query):
         results[n] = (title, url, items)
 
     threads = [threading.Thread(target=run, args=(n, base), daemon=True) for n, base in enumerate(sources)]
-    for group in range(0, len(threads), 4):
-        batch = threads[group:group + 4]
+    for group in range(0, len(threads), 6):
+        batch = threads[group:group + 6]
         for t in batch:
             t.start()
         for t in batch:
@@ -330,11 +351,11 @@ def play_url(parent, item):
     return SASTA + '?' + '&'.join('{0}={1}'.format(k, quote(str(v), safe='')) for k, v in parts)
 
 
-def play(parent, item, group=None):
+def play(parent, item, group=None, series=None, label=None):
     target = play_url(parent, item)
     if not target:
         return False
-    db.add_history(item, parent, group)
+    db.add_history(item, parent, group, series, label)
     if group:
         key = group.lower()
         state['affinity'][key] = state['affinity'].get(key, 0) + 1
@@ -351,6 +372,15 @@ def play(parent, item, group=None):
 
 
 def by_affinity(folders):
-    """Languages the viewer plays most come first; ties keep the provider's order."""
-    ranked = sorted(enumerate(folders), key=lambda p: (-state['affinity'].get(p[1]['name'].lower(), 0), p[0]))
+    """Preferred languages come first; ties keep the provider's order."""
+    order = top_groups()
+
+    def rank(name):
+        return order.index(name.lower()) if name.lower() in order else len(order)
+    ranked = sorted(enumerate(folders), key=lambda p: (rank(p[1]['name']), p[0]))
     return [f for _, f in ranked]
+
+
+def natural_key(name):
+    """Sort key that orders 'Episode 2' before 'Episode 10'."""
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r'(\d+)', name)]
