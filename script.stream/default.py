@@ -7,7 +7,7 @@ import xbmcaddon
 import xbmcgui
 import xbmcvfs
 
-ADDON = xbmcaddon.Addon()
+ADDON = xbmcaddon.Addon('script.stream')
 ADDON_PATH = xbmcvfs.translatePath(ADDON.getAddonInfo('path'))
 sys.path.insert(0, os.path.join(ADDON_PATH, 'resources', 'lib'))
 
@@ -430,7 +430,7 @@ class Home(xbmcgui.WindowXML):
             'AI keys and options', 'Refresh recommendations now (last: {0})'.format(engine),
             'Clear recommendations', 'Clear watch history'])
         if choice == 0:
-            xbmcaddon.Addon().openSettings()
+            xbmcaddon.Addon('script.stream').openSettings()
         elif choice == 1:
             busy = xbmcgui.DialogProgressBG()
             busy.create('Stream', 'Building recommendations…')

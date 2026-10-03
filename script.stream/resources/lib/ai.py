@@ -16,7 +16,7 @@ PICKS = 15
 
 
 def _setting(key):
-    return xbmcaddon.Addon().getSetting(key).strip()
+    return xbmcaddon.Addon('script.stream').getSetting(key).strip()
 
 
 def enabled():

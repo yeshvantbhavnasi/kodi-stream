@@ -7,7 +7,7 @@ import time
 import xbmcaddon
 import xbmcvfs
 
-PROFILE = xbmcvfs.translatePath(xbmcaddon.Addon().getAddonInfo('profile'))
+PROFILE = xbmcvfs.translatePath(xbmcaddon.Addon('script.stream').getAddonInfo('profile'))
 PATH = os.path.join(PROFILE, 'stream.db')
 
 SCHEMA = '''

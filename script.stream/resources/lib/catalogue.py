@@ -13,7 +13,7 @@ import xbmcvfs
 
 import db
 
-ADDON = xbmcaddon.Addon()
+ADDON = xbmcaddon.Addon('script.stream')
 PROFILE = xbmcvfs.translatePath(ADDON.getAddonInfo('profile'))
 SASTA = 'plugin://plugin.video.sastatv/'
 
