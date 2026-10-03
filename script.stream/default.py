@@ -18,13 +18,14 @@ import db  # noqa: E402
 ROWS = 14
 ROW_LIMIT = 40
 TABS_ID = 100
+CLOSE_ID = 110
 FIRST_ROW = 200
 PANEL = 50
 ACTION_BACK = (9, 10, 92)  # parent dir, previous menu, nav back
 ACTION_CONTEXT = 117
 
 TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'), ('kids', 'Kids'),
-        ('mylist', 'My List'), ('search', 'Search'), ('settings', 'Settings'), ('exit', 'Exit')]
+        ('mylist', 'My List'), ('search', 'Search'), ('settings', 'Settings')]
 
 # Set when the viewer chooses "Home" inside a nested screen; every open grid closes on seeing it.
 NAV = {'home': False}
@@ -456,14 +457,14 @@ class Home(xbmcgui.WindowXML):
             self.go_home()
 
     def onClick(self, control_id):
-        if control_id == TABS_ID:
+        if control_id == CLOSE_ID:
+            self.close()
+        elif control_id == TABS_ID:
             key = self.getControl(TABS_ID).getSelectedItem().getProperty('key')
             if key == 'search':
                 self.search()
             elif key == 'settings':
                 self.settings()
-            elif key == 'exit':
-                self.close()
             else:
                 self.load_tab(key)
         elif FIRST_ROW <= control_id < FIRST_ROW + ROWS:
@@ -479,7 +480,7 @@ class Home(xbmcgui.WindowXML):
         focus = self.getFocusId()
         if action.getId() in ACTION_BACK:
             # Back climbs one level at a time: rows -> tabs -> Home tab -> exit.
-            if focus != TABS_ID:
+            if focus not in (TABS_ID, CLOSE_ID):
                 self.setFocusId(TABS_ID)
             elif self.tab != 'home':
                 self.go_home()
