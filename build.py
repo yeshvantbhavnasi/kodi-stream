@@ -33,13 +33,9 @@ def build():
                 if old.startswith(addon + '-') and old.endswith('.zip'):
                     os.remove(os.path.join(ROOT, old))
             shutil.copy(target, ROOT)
-            link = os.path.basename(target)
     index = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<addons>\n' + '\n'.join(entries) + '\n</addons>\n'
     open(os.path.join(out, 'addons.xml'), 'w', encoding='utf-8').write(index)
     open(os.path.join(out, 'addons.xml.md5'), 'w').write(hashlib.md5(index.encode('utf-8')).hexdigest())
-    # Kodi's file manager reads plain links from this page when the site is added as a source.
-    open(os.path.join(ROOT, 'index.html'), 'w').write(
-        '<!DOCTYPE html>\n<html><body>\n<h1>Stream repository for Kodi</h1>\n<a href="{0}">{0}</a>\n</body></html>\n'.format(link))
 
 
 if __name__ == '__main__':
