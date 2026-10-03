@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <category label="AI">
+        <setting id="ai_enabled" type="bool" label="Use AI for recommendations and search" default="true"/>
+        <setting id="bedrock_token" type="text" option="hidden" label="Amazon Bedrock API key" default=""/>
+        <setting id="bedrock_region" type="text" label="Bedrock region" default="us-east-1"/>
+        <setting id="bedrock_model" type="text" label="Bedrock model ID" default="anthropic.claude-opus-5-5"/>
+        <setting id="jev_key" type="text" option="hidden" label="Jev (TypeSafe) API key" default=""/>
+    </category>
+</settings>

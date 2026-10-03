@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addons>
+<addon id="script.stream" name="Stream" version="0.2.1" provider-name="local">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+        <import addon="script.module.requests"/>
+    </requires>
+    <extension point="xbmc.python.script" library="default.py">
+        <provides>video executable</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en_GB">Poster-row home screen for the Sasta TV addon</summary>
+        <description lang="en_GB">Browse the Sasta TV catalogue in rows of posters, grouped by type and language. Playback is handled by the Sasta TV addon, which must be installed and signed in.</description>
+        <platform>all</platform>
+        <assets>
+            <icon>icon.png</icon>
+            <fanart>fanart.jpg</fanart>
+        </assets>
+    </extension>
+</addon>
+<addon id="repository.stream" name="Stream Repository" version="1.0.0" provider-name="yeshvantbhavnasi">
+    <extension point="xbmc.addon.repository" name="Stream Repository">
+        <dir>
+            <info compressed="false">https://raw.githubusercontent.com/yeshvantbhavnasi/kodi-stream/main/zips/addons.xml</info>
+            <checksum>https://raw.githubusercontent.com/yeshvantbhavnasi/kodi-stream/main/zips/addons.xml.md5</checksum>
+            <datadir zip="true">https://raw.githubusercontent.com/yeshvantbhavnasi/kodi-stream/main/zips/</datadir>
+        </dir>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en_GB">Repository for the Stream addon</summary>
+        <description lang="en_GB">Installs the Stream addon and keeps it up to date.</description>
+        <platform>all</platform>
+        <assets>
+            <icon>icon.png</icon>
+        </assets>
+    </extension>
+</addon>
+</addons>
