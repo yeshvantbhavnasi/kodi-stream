@@ -64,6 +64,24 @@ def save_profiles(profiles):
         json.dump(profiles, f)
 
 
+def last_profile():
+    """The profile used last time, or None on a first run or if it has since been removed."""
+    try:
+        with open(os.path.join(PROFILE, 'last_profile.json'), 'r') as f:
+            wanted = json.load(f)['id']
+    except Exception:
+        return None
+    return next((p for p in list_profiles() if p['id'] == wanted), None)
+
+
+def remember_profile(profile):
+    try:
+        with open(os.path.join(PROFILE, 'last_profile.json'), 'w') as f:
+            json.dump({'id': profile['id']}, f)
+    except Exception:
+        pass
+
+
 def use_profile(profile):
     """Switch every later read and write to this profile's own history, lists, ratings and suggestions."""
     global PATH, KIDS, ACTIVE

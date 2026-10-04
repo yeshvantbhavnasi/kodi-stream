@@ -57,9 +57,8 @@ you follow, and (optionally) a few titles you already like. The answers can be c
 
 ### Profiles
 
-**Settings → Switch or add profile** creates more profiles. Each profile has its own history, resume points, My List,
-likes, setup answers and recommendations, stored in its own database file. With more than one profile, Stream asks
-"Who's watching?" when it opens.
+The person icon on the top bar, or **Settings → Switch or add profile**, switches profile or creates a new one. Each profile has its own history, resume points, My List,
+likes, setup answers and recommendations, stored in its own database file. Stream opens with the profile used last time; it only asks "Who's watching?" when you choose to switch.
 
 A **kids profile** shows only children's titles and kids TV channels, searches only the kids section, and has a
 brighter look. It can be given a PIN that is needed to leave it.

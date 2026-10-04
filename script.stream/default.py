@@ -26,7 +26,8 @@ TABS_ID = 100
 CLOSE_ID = 110
 SEARCH_ID = 120
 GEAR_ID = 130
-TOP_BAR = (TABS_ID, CLOSE_ID, SEARCH_ID, GEAR_ID)
+PROFILE_ID = 140
+TOP_BAR = (TABS_ID, CLOSE_ID, SEARCH_ID, GEAR_ID, PROFILE_ID)
 FIRST_ROW = 200
 PANEL = 50
 ACTION_LEFT, ACTION_RIGHT = 1, 2
@@ -897,7 +898,7 @@ class Home(xbmcgui.WindowXML):
                  plot='Email the latest activity log so a problem can be investigated. It includes what was opened and played. '
                       'A report is also sent automatically after a crash unless that is switched off under Keys and options.'),
             tile('Switch or add profile', 'setting', action='switch', meta='Now: ' + (CURRENT['profile'] or {}).get('name', ''),
-                 plot='Each profile has its own history, My List, likes and recommendations. A kids profile shows only children\'s titles.'),
+                 plot='Stream opens with the profile used last. Each profile has its own history, My List, likes and recommendations. A kids profile shows only children\'s titles.'),
         ]
 
     def kids_live_rows(self):
@@ -1168,6 +1169,9 @@ class Home(xbmcgui.WindowXML):
             self.search()
         elif control_id == GEAR_ID:
             self.load_tab('settings')
+        elif control_id == PROFILE_ID:
+            self.switch = True
+            self.close()
         elif control_id == TABS_ID:
             key = self.selected_tab()
             if key == self.tab and self.getProperty('row0.title'):
@@ -1243,7 +1247,28 @@ def run():
         # First run on this device: let the maintainer know there is a new installation (no activity log attached).
         threading.Thread(target=report.send, args=('new install',), kwargs={'with_log': False, 'limited': False}, daemon=True).start()
     current = None
+    # Open with the profile used last time; the picker only appears when the viewer asks to switch.
+    remembered = db.last_profile()
     while True:
+        if current is None and remembered:
+            profile, remembered = remembered, None
+            current = CURRENT['profile'] = profile
+            audit.event('profile', kids=bool(profile.get('kids')), remembered=True)
+            db.use_profile(profile)
+            cat.load_state()
+            window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
+            xbmcgui.Window(10000).setProperty('script.stream.running', str(time.time()))
+            try:
+                window.doModal()
+            finally:
+                xbmcgui.Window(10000).clearProperty('script.stream.running')
+            audit.event('window_closed')
+            again = getattr(window, 'switch', False)
+            window.finish()
+            del window
+            if not again:
+                break
+            continue
         # Leaving a kids profile can be protected by a PIN.
         if current and current.get('kids') and current.get('pin'):
             if xbmcgui.Dialog().input('PIN to leave ' + current['name'], type=xbmcgui.INPUT_NUMERIC) != current['pin']:
@@ -1258,6 +1283,7 @@ def run():
                     break
                 profile = current
         current = CURRENT['profile'] = profile
+        db.remember_profile(profile)
         audit.event('profile', kids=bool(profile.get('kids')))
         db.use_profile(profile)
         cat.load_state()
