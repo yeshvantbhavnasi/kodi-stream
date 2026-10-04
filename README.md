@@ -50,7 +50,7 @@ The first time Stream opens it asks four questions: which languages you watch, w
 you follow, and (optionally) a few titles you already like. The answers can be changed later from
 **Settings → My languages, sports and likes**.
 
-- **Languages** decide what is shown. Movies, Shows and Live TV list only the chosen languages. If a section has
+- **Languages** decide what is shown, and in what order: setup asks which language comes first, and its rows lead every section. Movies, Shows and Live TV list only the chosen languages. If a section has
   nothing in those languages, it shows everything rather than an empty screen.
 - **Sports** decide which sections the Sports tab lists first. Live events are always shown.
 - **Genres and liked titles** feed the recommendations.

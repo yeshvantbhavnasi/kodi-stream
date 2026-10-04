@@ -142,7 +142,9 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     li.setProperty('meta', meta)
     if item['t'] == 'play' and cat.is_live(item):
         li.setProperty('logo', '1')
+        li.setProperty('card', '1')  # channels are drawn as square cards rather than posters
     li.setProperty('t', item['t'])
+    li.setProperty('hint', ('OK  Play' if item['t'] == 'play' else 'OK  Open') + '     Hold OK  More options')
     li.setProperty('url', item.get('url', ''))
     li.setProperty('i', str(item.get('i', 1)))
     li.setProperty('parent', parent or '')
@@ -163,6 +165,8 @@ def entry_item(entry, **kwargs):
 def tile(label, kind, **props):
     li = xbmcgui.ListItem(label=label)
     li.setProperty('t', kind)
+    li.setProperty('card', '1')
+    li.setProperty('hint', 'OK  Choose')
     for key, value in props.items():
         li.setProperty(key, value)
     return li
@@ -520,6 +524,19 @@ def onboarding(first_run):
         if first_run:
             db.set_meta('profile', {'languages': [], 'genres': [], 'sports': []})
         return first_run
+    if len(languages) > 1:
+        # The rows follow this order: the main language first, then the rest as listed.
+        previous = profile.get('languages', [])
+        start = languages.index(previous[0]) if previous and previous[0] in languages else 0
+        first = dialog.select('Which language should come first?', languages, preselect=start)
+        if first > 0:
+            languages.insert(0, languages.pop(first))
+        if len(languages) > 2:
+            rest = languages[1:]
+            second = dialog.select('And second?', rest)
+            if second > 0:
+                rest.insert(0, rest.pop(second))
+            languages = languages[:1] + rest
     genres = ask('2 of 4 · What do you like to watch?', list(ai.GENRES), 'genres')
     sports = ask('3 of 4 · Which sports do you follow?', list(SPORTS), 'sports')
     db.set_meta('profile', {'languages': languages,
@@ -1025,6 +1042,7 @@ class Home(xbmcgui.WindowXML):
                 kept = [l for l in langs if db.lang_match(l['name'], chosen) or l['name'].lower() == 'kids']
                 if any(db.lang_match(l['name'], chosen) for l in kept):
                     langs = kept
+            langs = cat.by_affinity(langs)  # the viewer's first language leads here too
             saved = cat.state.get('live_lang')
             current = next((l for l in langs if l['name'] == saved), langs[0] if langs else None)
             tiles = [tile(cat.title_case(lang['name']), 'lang', lang=lang['name']) for lang in langs]
