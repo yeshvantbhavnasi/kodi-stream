@@ -193,6 +193,22 @@ asks the AI to pick matching titles from the local index. Those appear first, ma
 
 Keys are stored as plain text in Kodi's addon settings on that device and are never written to Kodi's log.
 
+## Activity log
+
+Stream keeps a log on the device, `stream.log` in its addon data folder, and shows the latest entries under
+**Settings → Activity log**. Each line has a time, an event and details:
+
+| Event | Meaning |
+|---|---|
+| `start` | Stream opened: version, Kodi version, platform, device name, free memory |
+| `previous_session_ended_unexpectedly` | The last session never closed properly, so Kodi quit or crashed under it. The entry quotes the last thing logged before that |
+| `profile`, `tab`, `open` | Which profile was chosen, which section was shown (with free memory), which screen was opened |
+| `play_request`, `play_started`, `play_cancelled`, `play_timeout`, `play_ended` | What happened to each stream that was asked for |
+| `load_failed`, `error` | A listing that could not be loaded, or an internal error with its traceback |
+| `exit` | Stream closed normally |
+
+The log is capped at about 400 KB (one older file is kept) and never leaves the device.
+
 ## AI settings
 
 Open **Stream → Settings → AI keys and options**.
