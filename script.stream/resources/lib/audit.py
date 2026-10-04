@@ -16,6 +16,7 @@ PATH = os.path.join(FOLDER, 'stream.log')
 FLAG = os.path.join(FOLDER, 'session.open')
 INSTALL = os.path.join(FOLDER, 'install.json')
 MAX_BYTES = 400 * 1024
+NEW = {'install': False}
 
 
 def _install_id():
@@ -24,6 +25,7 @@ def _install_id():
             return json.load(f)['id']
     except Exception:
         ident = uuid.uuid4().hex[:12]
+        NEW['install'] = True  # first run on this device
         try:
             with open(INSTALL, 'w') as f:
                 json.dump({'id': ident, 'created': time.time()}, f)
@@ -49,8 +51,13 @@ def event(kind, **fields):
 
 
 def error(where):
-    """Record the exception being handled, with its traceback."""
+    """Record the exception being handled, with its traceback, and report it if reports are allowed."""
     event('error', where=where, trace=traceback.format_exc()[-1500:])
+    try:
+        import report
+        report.send('internal error in ' + where)
+    except Exception:
+        pass
 
 
 def memory():

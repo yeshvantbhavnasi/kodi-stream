@@ -18,6 +18,7 @@ import audit  # noqa: E402
 import catalogue as cat  # noqa: E402
 import db  # noqa: E402
 import meta  # noqa: E402
+import report  # noqa: E402
 
 ROWS = 14
 ROW_LIMIT = 24  # tiles per row; kept modest so low-memory TV sticks are not asked to hold hundreds of posters
@@ -437,7 +438,9 @@ def onboarding(first_run):
     profile = db.meta('profile') or {}
     if first_run:
         dialog.ok('Welcome to Stream', 'Four quick questions set up your home screen and recommendations.\n'
-                                       'You can change the answers later under Settings.')
+                                       'You can change the answers later under Settings.\n\n'
+                                       'Stream tells its developer when it is first installed, and emails a problem report with its '
+                                       'activity log if it crashes. This can be switched off under Settings.')
 
     def ask(title, options, saved_key):
         preset = [n for n, o in enumerate(options) if o in profile.get(saved_key, [])]
@@ -789,6 +792,9 @@ class Home(xbmcgui.WindowXML):
                  plot='Forget everything played, including resume points and watched episodes.'),
             tile('Activity log', 'setting', action='log',
                  plot='What Stream did recently, including errors and whether the last session ended unexpectedly. Useful when reporting a problem.'),
+            tile('Send log to the developer', 'setting', action='send_log',
+                 plot='Email the latest activity log so a problem can be investigated. It includes what was opened and played. '
+                      'A report is also sent automatically after a crash unless that is switched off under Keys and options.'),
             tile('Switch or add profile', 'setting', action='switch', meta='Now: ' + (CURRENT['profile'] or {}).get('name', ''),
                  plot='Each profile has its own history, My List, likes and recommendations. A kids profile shows only children\'s titles.'),
         ]
@@ -1011,7 +1017,12 @@ class Home(xbmcgui.WindowXML):
         return made
 
     def run_setting(self, action):
-        if action == 'log':
+        if action == 'send_log':
+            if xbmcgui.Dialog().yesno('Stream', 'Send the latest activity log to the developer?\nIt includes what was opened and played on this profile.'):
+                note = xbmcgui.Dialog().input('What went wrong? (optional)')
+                sent, message = report.send('sent by viewer', note, manual=True)
+                xbmcgui.Dialog().ok('Stream', message)
+        elif action == 'log':
             xbmcgui.Dialog().textviewer('Stream activity log', audit.tail(250) or 'The log is empty.')
         elif action == 'switch':
             self.switch = True
@@ -1106,7 +1117,12 @@ if __name__ == '__main__':
         xbmcgui.Dialog().ok('Stream', 'Install the Sasta TV addon and sign in to it first.')
     else:
         if audit.session_start():
+            # Kodi quit or crashed under the last session: say so, and email the log if reports are allowed.
             notify('Stream did not close properly last time. Settings > Activity log has the details.', 6000)
+            threading.Thread(target=report.send, args=('crash detected',), daemon=True).start()
+        if audit.NEW['install']:
+            # First run on this device: let the maintainer know there is a new installation (no activity log attached).
+            threading.Thread(target=report.send, args=('new install',), kwargs={'with_log': False, 'limited': False}, daemon=True).start()
         current = None
         while True:
             # Leaving a kids profile can be protected by a PIN.

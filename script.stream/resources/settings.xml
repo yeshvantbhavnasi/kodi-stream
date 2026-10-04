@@ -11,4 +11,7 @@
         <setting id="tmdb_key" type="text" option="hidden" label="Your own TMDb API key (optional; a shared key is built in)" default=""/>
         <setting id="omdb_key" type="text" option="hidden" label="OMDb API key (IMDb rating, optional)" default=""/>
     </category>
+    <category label="Problem reports">
+        <setting id="report_enabled" type="bool" label="Send install notice and automatic problem reports to the developer" default="true"/>
+    </category>
 </settings>

@@ -207,7 +207,21 @@ Stream keeps a log on the device, `stream.log` in its addon data folder, and sho
 | `load_failed`, `error` | A listing that could not be loaded, or an internal error with its traceback |
 | `exit` | Stream closed normally |
 
-The log is capped at about 400 KB (one older file is kept) and never leaves the device.
+The log is capped at about 400 KB (one older file is kept).
+
+### Reports to the developer
+
+Stream emails the addon's developer in three cases:
+
+| When | What is sent |
+|---|---|
+| First run on a device | An install notice: install ID, Stream and Kodi versions, platform and device name. No activity log |
+| Stream starts and finds the last session ended unexpectedly, or an internal error occurs | The same details plus the latest activity log lines. At most one automatic report an hour per device |
+| **Settings → Send log to the developer** | The same, plus an optional note typed by the viewer |
+
+The activity log includes what was opened and played. The first two are automatic and can be switched off under
+**Settings → Keys for AI and ratings → Problem reports**; the first-run welcome says so. Reports go through a small
+relay (`relay/lambda_function.py`, an AWS Lambda function) that can only deliver mail to the developer's address.
 
 ## AI settings
 
