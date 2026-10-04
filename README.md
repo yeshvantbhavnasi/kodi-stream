@@ -18,6 +18,12 @@ playback to that addon, so Sasta TV must be installed and signed in on the same 
 
 Updates then arrive through the repository.
 
+## Opening Stream
+
+Once installed, Stream opens by itself whenever Kodi starts. Closing Stream returns to Kodi's own home screen, and it can be
+reopened from **Add-ons → Video add-ons → Stream**. To stop it opening at start-up, switch off
+**Settings → Options and keys → General → Open Stream when Kodi starts**.
+
 ## Using it
 
 Everything works with the remote's direction pad, OK and Back; no mouse or pointer is needed.
@@ -222,7 +228,7 @@ Stream emails the addon's developer in three cases:
 | **Settings → Send log to the developer** | The same, plus an optional note typed by the viewer |
 
 The activity log includes what was opened and played. The first two are automatic and can be switched off under
-**Settings → Keys for AI and ratings → Problem reports**; the first-run welcome says so. Reports go through a small
+**Settings → Options and keys → Problem reports**; the first-run welcome says so. Reports go through a small
 relay (`relay/lambda_function.py`, an AWS Lambda function) that can only deliver mail to the developer's address.
 
 ## AI settings

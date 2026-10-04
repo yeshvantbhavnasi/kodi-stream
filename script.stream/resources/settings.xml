@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
+    <category label="General">
+        <setting id="autostart" type="bool" label="Open Stream when Kodi starts" default="true"/>
+    </category>
     <category label="AI">
         <setting id="ai_enabled" type="bool" label="Use AI for recommendations and search" default="true"/>
         <setting id="bedrock_token" type="text" option="hidden" label="Amazon Bedrock API key" default=""/>
