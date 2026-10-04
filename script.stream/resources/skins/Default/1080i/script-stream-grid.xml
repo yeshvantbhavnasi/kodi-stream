@@ -26,7 +26,7 @@
                         <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>
                         <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
-                        <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFCFCFCF</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
             </itemlayout>
             <focusedlayout width="224" height="360">

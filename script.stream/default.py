@@ -154,7 +154,8 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
 
 
 def entry_item(entry, **kwargs):
-    kwargs.setdefault('label', entry.get('label'))
+    # A saved label is only needed for episodes ("Show · Episode 5"); other titles use their cleaned name.
+    kwargs.setdefault('label', entry.get('label') if entry.get('series') else None)
     kwargs.setdefault('series', entry.get('series'))
     return list_item(entry['item'], entry['parent'], entry.get('group'), saved=True, **kwargs)
 
