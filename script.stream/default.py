@@ -356,17 +356,28 @@ def apply_details(li, data):
         li.setProperty('plot', data['overview'])
 
 
-def enrich(control, still_wanted, limit):
-    """Look up ratings for the first tiles of a row or grid, one at a time, while that screen is still showing."""
+def enrich(control, still_wanted, limit, lock):
+    """Look up ratings for the first tiles of a row or grid, one at a time, while that screen is still showing.
+    The lookup itself runs unlocked; reading and changing a tile happens under the screen's lock."""
     if not meta.enabled():
         return
     try:
         for n in range(limit):
-            if not still_wanted() or n >= control.size():
-                return
-            li = control.getListItem(n)
-            if is_title(li):
-                apply_details(li, meta.lookup(li.getProperty('name'), li.getProperty('t') == 'folder'))
+            with lock:
+                if not still_wanted() or n >= control.size():
+                    return
+                li = control.getListItem(n)
+                wanted = is_title(li) and not li.getProperty('tagged')
+                name, show = li.getProperty('name'), li.getProperty('t') == 'folder'
+            if not wanted:
+                continue
+            data = meta.lookup(name, show)
+            with lock:
+                if not still_wanted() or n >= control.size():
+                    return
+                li = control.getListItem(n)
+                if li.getProperty('name') == name:
+                    apply_details(li, data)
     except Exception as e:
         cat.log('enrich stopped: {0}'.format(e))
 
@@ -607,6 +618,7 @@ class Grid(xbmcgui.WindowXML):
         self.ready = False
         self.closed = False
         self.workers = []
+        self.ui_lock = threading.Lock()
 
     def spawn(self, target, *args):
         thread = threading.Thread(target=target, args=args, daemon=True)
@@ -706,10 +718,13 @@ class Grid(xbmcgui.WindowXML):
             self.view = EPISODE_LIST
         first_title = len(shown)
         shown += titles
-        position = self.panel.getSelectedPosition()
-        self.panel.addItems(shown)
-        if not first_page and position >= 0:
-            self.panel.selectItem(position)
+        with self.ui_lock:
+            if self.closed:
+                return
+            position = self.panel.getSelectedPosition()
+            self.panel.addItems(shown)
+            if not first_page and position >= 0:
+                self.panel.selectItem(position)
         self.setProperty('status', '' if titles or not first_page else 'Nothing here')
         if first_page:
             self.setFocusId(self.view)
@@ -720,7 +735,7 @@ class Grid(xbmcgui.WindowXML):
                     self.setProperty('status', 'Up next: ' + titles[upnext].getProperty('name'))
         self.loading = False
         if first_page:
-            enrich(self.panel, lambda: not self.closed, 24)
+            enrich(self.panel, lambda: not self.closed and not self.loading, 24, self.ui_lock)
 
     def refresh_marks(self):
         """After playback, redraw an episode list so watched ticks and the next episode are current."""
@@ -733,9 +748,12 @@ class Grid(xbmcgui.WindowXML):
         titles, upnext = self.title_items(self.url, cat.showable(items))
         if self.closed or not titles or not all(t.getProperty('t') == 'play' for t in titles):
             return
-        self.panel.reset()
-        self.panel.addItems([self.home_tile()] + titles)
-        self.panel.selectItem(1 + (upnext or 0))
+        with self.ui_lock:
+            if self.closed:
+                return
+            self.panel.reset()
+            self.panel.addItems([self.home_tile()] + titles)
+            self.panel.selectItem(1 + (upnext or 0))
         if upnext:
             self.setProperty('status', 'Up next: ' + titles[upnext].getProperty('name'))
 
@@ -824,6 +842,9 @@ class Home(xbmcgui.WindowXML):
         self.closed = False
         self.workers = []
         self.tab = 'home'
+        self.ui_lock = threading.Lock()   # held for every change to the row controls
+        self.pending = ('home', 0)
+        self.settling = False
         HOME['window'] = self
         self.setProperty('kids', '1' if db.KIDS else '')
         tabs = []
@@ -1015,14 +1036,12 @@ class Home(xbmcgui.WindowXML):
         return []
 
     def load_tab(self, key, focus=True):
+        """Show a section. The rows themselves are only ever touched by one loader at a time (see fill)."""
         if self.closed:
             return
         audit.event('tab', name=key, free_memory=audit.memory())
         self.tab = key
         self.token += 1
-        for n in range(ROWS):
-            self.setProperty('row{0}.title'.format(n), '')
-            self.getControl(FIRST_ROW + n).reset()
         self.setProperty('status', 'Loading…')
         self.spawn(self.fill, key, self.token, focus)
 
@@ -1040,10 +1059,23 @@ class Home(xbmcgui.WindowXML):
                 time.sleep(0.1)  # nothing focusable yet
 
     def fill(self, key, token, focus):
+        """Load a section's rows. Listings are fetched without the lock; every change to the row controls is made
+        while holding self.ui_lock and only if this is still the newest request. On a slow device a newer request
+        often arrives while an older one is still loading, and two loaders changing the same list crashed Kodi."""
+        def current():
+            return token == self.token and not self.closed
+
         slot = 0
         try:
-            for row in self.specs(key)[:ROWS]:
-                if token != self.token or self.closed:
+            specs = self.specs(key)[:ROWS]
+            with self.ui_lock:
+                if not current():
+                    return
+                for n in range(ROWS):
+                    self.setProperty('row{0}.title'.format(n), '')
+                    self.getControl(FIRST_ROW + n).reset()
+            for row in specs:
+                if not current():
                     return
                 if row[0] == 'items':
                     title, items = row[1], row[2]
@@ -1060,29 +1092,47 @@ class Home(xbmcgui.WindowXML):
                     items = [list_item(i, url, group) for i in found[:ROW_LIMIT]]
                     if len(found) > ROW_LIMIT or any(i['t'] == 'folder' for i in found):
                         items.append(list_item({'t': 'folder', 'name': title, 'url': url}, url, group, label='See all ›'))
-                if token != self.token or self.closed:
-                    return
-                self.getControl(FIRST_ROW + slot).addItems(items)
-                self.setProperty('row{0}.title'.format(slot), title)
-                if slot == 0:
-                    self.setProperty('status', '')
+                with self.ui_lock:
+                    if not current():
+                        return
+                    self.getControl(FIRST_ROW + slot).addItems(items)
+                    self.setProperty('row{0}.title'.format(slot), title)
+                    if slot == 0:
+                        self.setProperty('status', '')
+                if slot == 0 and focus:
                     # Only take focus when the viewer opened the tab, never while they are moving along the tabs.
-                    if focus:
-                        self.focus_rows(token)
+                    self.focus_rows(token)
                 slot += 1
         except Exception as e:
             cat.log('tab failed: {0}'.format(e))
             audit.error('home.fill ' + key)
+        if slot == 0:
+            with self.ui_lock:
+                if current():
+                    empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.'}
+                    self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
+            return
         # Ratings arrive after the rows are on screen, so browsing never waits for them.
         for n in range(slot):
-            if token != self.token or self.closed:
+            if not current():
                 return
-            enrich(self.getControl(FIRST_ROW + n), lambda: token == self.token and not self.closed, 12)
-        if self.closed:
-            return
-        if slot == 0 and token == self.token:
-            empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.'}
-            self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
+            enrich(self.getControl(FIRST_ROW + n), current, 12, self.ui_lock)
+
+    def settle_on_tab(self):
+        """Wait until the highlight has rested on a tab for a moment, then show it. Sweeping across the tab bar
+        therefore loads one section, not every section passed on the way."""
+        monitor = xbmc.Monitor()
+        try:
+            while not self.closed:
+                key, since = self.pending
+                if time.time() - since >= 0.4:
+                    if key != self.tab:
+                        self.load_tab(key, focus=False)
+                    return
+                if monitor.waitForAbort(0.1):
+                    return
+        finally:
+            self.settling = False
 
     def search(self):
         query = xbmcgui.Dialog().input('Search movies and shows')
@@ -1191,6 +1241,7 @@ class Home(xbmcgui.WindowXML):
             self.close()
         elif control_id == TABS_ID:
             key = self.selected_tab()
+            self.pending = (key, 0)
             if key == self.tab and self.getProperty('row0.title'):
                 self.focus_rows(self.token)  # already showing: OK just moves into the rows
             else:
@@ -1219,6 +1270,14 @@ class Home(xbmcgui.WindowXML):
             focus = 0  # nothing has focus yet
         code = action.getId()
         self.touched = True
+        if focus == 0 and code not in ACTION_BACK:
+            # Nothing is highlighted (this can happen when Stream opens by itself as Kodi starts): any key press
+            # puts the highlight on the first row, or on the top bar if the rows are still loading.
+            try:
+                self.setFocusId(FIRST_ROW if self.getProperty('row0.title') else TABS_ID)
+            except Exception:
+                pass
+            return
         if code in ACTION_BACK:
             # Back climbs one level at a time: rows -> tabs -> Home tab -> exit.
             if stop_if_playing_behind():
@@ -1248,10 +1307,13 @@ class Home(xbmcgui.WindowXML):
                 elif result == 'changed' and self.tab in ('home', 'mylist'):
                     self.load_tab(self.tab)
         elif focus == TABS_ID and code in (ACTION_LEFT, ACTION_RIGHT):
-            # Moving along the tabs shows that tab straight away; focus stays on the tabs.
+            # Moving along the tabs shows the tab the highlight comes to rest on; focus stays on the tabs.
             key = self.selected_tab()
-            if key and key != self.tab:
-                self.load_tab(key, focus=False)
+            if key:
+                self.pending = (key, time.time())
+                if not self.settling:
+                    self.settling = True
+                    self.spawn(self.settle_on_tab)
 
 
 def run():
