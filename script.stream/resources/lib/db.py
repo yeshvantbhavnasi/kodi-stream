@@ -122,6 +122,8 @@ def _entry(row):
         entry['label'] = row['label']
     if 'series' in keys and row['series']:
         entry['series'] = row['series']
+    if 'position' in keys:
+        entry['note'] = _note(row)
     return entry
 
 
@@ -213,6 +215,28 @@ def progress_for(keys):
         rows = conn.execute('SELECT key, position, duration, done FROM watched WHERE key IN ({0})'.format(','.join('?' * len(keys))),
                             list(keys)).fetchall()
     return {r['key']: (r['position'], r['duration'], bool(r['done'])) for r in rows}
+
+
+def last_played(keys):
+    """(key, finished) for the most recently played of the given keys, or None if none has been played."""
+    if not keys:
+        return None
+    with _connect() as conn:
+        row = conn.execute('SELECT key, done FROM watched WHERE key IN ({0}) ORDER BY played_at DESC LIMIT 1'.format(
+            ','.join('?' * len(keys))), list(keys)).fetchone()
+    return (row['key'], bool(row['done'])) if row else None
+
+
+def _note(row):
+    """A short status for history rows: watched, or how far in."""
+    if row['done']:
+        return 'Watched'
+    if row['duration'] and row['position'] > 30:
+        seconds = int(row['position'])
+        hours, minutes = seconds // 3600, (seconds % 3600) // 60
+        stopped = '{0}:{1:02d}:{2:02d}'.format(hours, minutes, seconds % 60) if hours else '{0}:{1:02d}'.format(minutes, seconds % 60)
+        return 'Stopped at {0} of {1} min'.format(stopped, int(row['duration'] // 60))
+    return ''
 
 
 def recent(limit=30):

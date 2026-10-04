@@ -31,7 +31,7 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Action | How |
 |---|---|
 | Move around | Direction pad. Up and Down move between rows, Left and Right along a row. Lists stop at their edges instead of wrapping |
-| Switch section | Move along the top bar: Home, Movies, Shows, Live TV, Sports, Kids, My List. The section appears as soon as it is highlighted; Down moves into it |
+| Switch section | Move along the top bar: Home, Movies, Shows, Live TV, Sports, Kids, My List, History. The section appears as soon as it is highlighted; Down moves into it |
 | Search | The search bar at the top right. OK opens the keyboard |
 | Settings | The gear icon at the top right |
 | Close Stream | The ✕ icon at the top right, or Back from the Home section (it asks first) |
@@ -42,7 +42,8 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Add or remove a title from My List | Hold OK (or press the menu key) on the title |
 | Like or dislike a title | Hold OK on the title and pick **Like** or **Dislike** |
 | Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |
-| Resume a title | Play it again; Stream offers **Resume from…** or **Start from the beginning** |
+| Resume a title | Play it again; it carries on from where it stopped. Hold OK and pick **Play from the beginning** to start over |
+| See everything watched | The **History** section: unfinished titles, then everything played, newest first |
 
 ### First-run setup
 
@@ -79,7 +80,7 @@ A shared read-only TMDb key is built into the addon; you can enter your own unde
 
 ### Episodes
 
-Inside a show, episodes are shown as a list of names in order, not as poster tiles. Watched episodes are ticked, a part-watched episode shows where it
+Inside a show, episodes are shown as a compact list of names in order, not as poster tiles. A show opens on the season watched last, and the list opens on the episode to carry on with: the last one played if it is unfinished, otherwise the one after it. Watched episodes are ticked, a part-watched episode shows where it
 stopped, and the list opens on the next episode to watch. Recently Played and Continue Watching show the show's name
 with the episode.
 

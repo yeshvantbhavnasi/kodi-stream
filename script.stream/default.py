@@ -37,8 +37,8 @@ ACTION_CONTEXT = 117
 START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
 
 TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'), ('sports', 'Sports'),
-        ('kids', 'Kids'), ('mylist', 'My List')]
-KIDS_TABS = [('home', 'Home'), ('kids', 'Movies and Shows'), ('live', 'Kids TV'), ('mylist', 'My List')]
+        ('kids', 'Kids'), ('mylist', 'My List'), ('history', 'History')]
+KIDS_TABS = [('home', 'Home'), ('kids', 'Movies and Shows'), ('live', 'Kids TV'), ('mylist', 'My List'), ('history', 'History')]
 CURRENT = {'profile': None}  # the viewer profile in use
 
 # Sports the viewer can follow, and the words that identify each in the catalogue's section names.
@@ -266,7 +266,7 @@ def stop_late_arrival():
         PLAY['cancel'] = False
 
 
-def start(li):
+def start(li, restart=False):
     item = item_of(li)
     parent, group = li.getProperty('parent'), li.getProperty('group') or None
     series = li.getProperty('series') or None
@@ -279,17 +279,15 @@ def start(li):
         except Exception:
             pass
     key = db.play_key(item)
-    resume = 0
     position, duration, done = db.progress(key)
-    if not live and not done and position > 30 and duration > 0:
-        choice = xbmcgui.Dialog().contextmenu(['Resume from ' + clock(position), 'Start from the beginning'])
-        if choice < 0:
-            return
-        resume = position if choice == 0 else 0
+    # A part-watched title carries on from where it stopped. Hold OK offers "Play from the beginning".
+    resume = position if (not live and not restart and not done and position > 30 and duration > 0) else 0
     player, monitor = xbmc.Player(), xbmc.Monitor()
     if player.isPlaying():
         player.stop()
         monitor.waitForAbort(1)
+    if series and li.getProperty('season'):
+        db.set_meta('last:' + series, {'season': li.getProperty('season'), 'episode': item['name']})
     if not cat.play(parent, item, group, series, label):
         xbmcgui.Dialog().ok('Stream', 'This title can only be opened from the Sasta TV addon itself.')
         return
@@ -300,7 +298,8 @@ def start(li):
 
     # Wait for the stream with a dialog the Back button can cancel.
     progress = xbmcgui.DialogProgress()
-    progress.create('Stream', 'Starting {0}…\nPress Back to cancel.'.format(label))
+    progress.create('Stream', '{0} {1}…\nPress Back to cancel.'.format(
+        'Resuming' if resume else 'Starting', label + (' from ' + clock(resume) if resume else '')))
     started = cancelled = False
     for step in range(START_TIMEOUT * 2):
         if progress.iscanceled():
@@ -468,6 +467,9 @@ def context_menu(li, in_grid):
                ('dislike', 'Remove dislike' if rating < 0 else 'Dislike')]
     if is_title(li):
         options.insert(1, ('info', 'Rating, reviews and trailer'))
+    if kind == 'play' and not cat.is_live(item) and db.progress(db.play_key(item))[0] > 30:
+        options[0] = ('open', 'Resume')
+        options.insert(1, ('restart', 'Play from the beginning'))
     if li.getProperty('suggestion'):
         options.append(('dismiss', 'Not interested'))
     if in_grid:
@@ -478,6 +480,9 @@ def context_menu(li, in_grid):
     action = options[choice][0]
     if action == 'open':
         return 'home' if activate(li) else None
+    if action == 'restart':
+        start(li, restart=True)
+        return None
     if action == 'info':
         details(li)
         return None
@@ -684,6 +689,11 @@ class Grid(xbmcgui.WindowXML):
             titles = sorted(titles, key=lambda i: cat.natural_key(i['name']))
         marks = db.progress_for([db.play_key(i) for i in titles]) if episodes else {}
         out, upnext = [], None
+        # Catch up from where the viewer left off: the last episode played if it is unfinished, otherwise the one after it.
+        last_played = db.last_played([db.play_key(i) for i in titles]) if episodes else None
+        for n, i in enumerate(titles):
+            if last_played and db.play_key(i) == last_played[0]:
+                upnext = n if not last_played[1] else min(n + 1, len(titles) - 1)
         for n, i in enumerate(titles):
             position, duration, done = marks.get(db.play_key(i), (0, 0, False))
             meta = None
@@ -695,6 +705,14 @@ class Grid(xbmcgui.WindowXML):
                 upnext = n
             label = ('✓ ' + i['name']) if done else None
             out.append(list_item(i, url, self.group or self.title, meta=meta, label=label, series=series if episodes else None))
+            if episodes and len(self.trail) > 1:
+                out[-1].setProperty('season', self.trail[1])
+        if not episodes and series and len(self.trail) == 1:
+            # A show's page: land on the season that was watched last.
+            season = (db.meta('last:' + series) or {}).get('season')
+            for n, i in enumerate(titles):
+                if season and i['name'] == season:
+                    upnext = n
         return out, upnext
 
     def load(self, url):
@@ -748,12 +766,26 @@ class Grid(xbmcgui.WindowXML):
             self.setFocusId(self.view)
             if titles:
                 # Land on the next episode to watch, or on the first title.
-                self.panel.selectItem(first_title + (upnext or 0))
+                self.select_when_ready(first_title + (upnext or 0))
                 if upnext:
                     self.setProperty('status', 'Up next: ' + titles[upnext].getProperty('name'))
         self.loading = False
         if first_page:
             enrich(self.panel, lambda: not self.closed and not self.loading, 24, self.ui_lock)
+
+    def select_when_ready(self, index):
+        """Highlight an entry. A list that has only just been shown ignores the request for a frame or two, so retry."""
+        for _ in range(12):
+            if self.closed:
+                return
+            try:
+                self.panel.selectItem(index)
+                if self.panel.getSelectedPosition() == index and self.getFocusId() == self.view:
+                    return
+                self.setFocusId(self.view)
+            except Exception:
+                pass
+            time.sleep(0.1)
 
     def refresh_marks(self):
         """After playback, redraw an episode list so watched ticks and the next episode are current."""
@@ -771,7 +803,7 @@ class Grid(xbmcgui.WindowXML):
                 return
             self.panel.reset()
             self.panel.addItems([self.home_tile()] + titles)
-            self.panel.selectItem(1 + (upnext or 0))
+        self.select_when_ready(1 + (upnext or 0))
         if upnext:
             self.setProperty('status', 'Up next: ' + titles[upnext].getProperty('name'))
 
@@ -990,8 +1022,23 @@ class Home(xbmcgui.WindowXML):
                                                  plot='Choose who is watching.')])]
         return []
 
+    def history_rows(self):
+        """Everything played on this profile: unfinished titles first, then the full history, newest first."""
+        rows = []
+        unfinished = db.continue_watching(40)
+        if unfinished:
+            rows.append(('items', 'Continue Watching', [entry_item(e, meta=e.get('note')) for e in unfinished]))
+        played = db.recent(120)
+        for title, entries in (('Watched', [e for e in played if not cat.is_live(e['item'])]),
+                               ('Channels Watched', [e for e in played if cat.is_live(e['item'])])):
+            if entries:
+                rows.append(('items', title, [entry_item(e, meta=e.get('note')) for e in entries[:60]]))
+        return rows
+
     def specs(self, key):
         """Rows for a tab: ('items', title, [ListItem]) or ('dir', title, url, group, only)."""
+        if key == 'history':
+            return self.history_rows()
         if db.KIDS:
             return self.kids_specs(key)
         u = cat.URLS
@@ -1128,7 +1175,8 @@ class Home(xbmcgui.WindowXML):
         if slot == 0:
             with self.ui_lock:
                 if current():
-                    empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.'}
+                    empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.',
+                     'history': 'Nothing has been played on this profile yet.'}
                     self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
             return
         # Ratings arrive after the rows are on screen, so browsing never waits for them.

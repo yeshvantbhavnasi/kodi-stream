@@ -46,22 +46,20 @@
         </control>
         <control type="list" id="51">
             <visible>!String.IsEmpty(Window.Property(mode))</visible>
-            <left>60</left><top>130</top><width>1800</width><height>930</height>
+            <left>60</left><top>120</top><width>1800</width><height>936</height>
             <orientation>vertical</orientation>
-            <scrolltime tween="quadratic">200</scrolltime>
+            <scrolltime tween="quadratic">160</scrolltime>
             <onleft>noop</onleft><onright>noop</onright><onup>noop</onup><ondown>noop</ondown>
-            <itemlayout width="1800" height="116">
-                <control type="image"><left>0</left><top>4</top><width>1800</width><height>108</height><texture colordiffuse="33000000">white.png</texture></control>
-                <control type="label"><left>30</left><top>12</top><width>1200</width><height>44</height><font>font13</font><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
-                <control type="label"><left>1240</left><top>12</top><width>530</width><height>44</height><font>font12</font><align>right</align><textcolor>FF46D369</textcolor><label>$INFO[ListItem.Property(meta)]</label></control>
-                <control type="label"><left>30</left><top>58</top><width>1740</width><height>40</height><font>font12</font><textcolor>FF9A9A9A</textcolor><label>$INFO[ListItem.Property(plot)]</label></control>
+            <itemlayout width="1800" height="72">
+                <control type="image"><left>0</left><top>3</top><width>1800</width><height>66</height><texture colordiffuse="33000000">white.png</texture></control>
+                <control type="label"><left>30</left><top>3</top><width>1150</width><height>66</height><font>font13</font><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
+                <control type="label"><left>1190</left><top>3</top><width>580</width><height>66</height><font>font12</font><align>right</align><aligny>center</aligny><textcolor>FF46D369</textcolor><label>$INFO[ListItem.Property(meta)]</label></control>
             </itemlayout>
-            <focusedlayout width="1800" height="116">
-                <control type="image"><left>0</left><top>4</top><width>1800</width><height>108</height><texture colordiffuse="40FFFFFF">white.png</texture></control>
-                <control type="image"><left>0</left><top>4</top><width>8</width><height>108</height><texture colordiffuse="FFE50914">white.png</texture></control>
-                <control type="label"><left>30</left><top>12</top><width>1200</width><height>44</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
-                <control type="label"><left>1240</left><top>12</top><width>530</width><height>44</height><font>font12</font><align>right</align><textcolor>FF46D369</textcolor><label>$INFO[ListItem.Property(meta)]</label></control>
-                <control type="label"><left>30</left><top>58</top><width>1740</width><height>40</height><font>font12</font><textcolor>FFD0D0D0</textcolor><label>$INFO[ListItem.Property(plot)]</label></control>
+            <focusedlayout width="1800" height="72">
+                <control type="image"><left>0</left><top>3</top><width>1800</width><height>66</height><texture colordiffuse="40FFFFFF">white.png</texture></control>
+                <control type="image"><left>0</left><top>3</top><width>8</width><height>66</height><texture colordiffuse="FFE50914">white.png</texture></control>
+                <control type="label"><left>30</left><top>3</top><width>1150</width><height>66</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                <control type="label"><left>1190</left><top>3</top><width>580</width><height>66</height><font>font12</font><align>right</align><aligny>center</aligny><textcolor>FF46D369</textcolor><label>$INFO[ListItem.Property(meta)]</label></control>
             </focusedlayout>
         </control>
     </controls>
