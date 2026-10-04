@@ -6,8 +6,9 @@
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="label"><left>60</left><top>30</top><width>1100</width><height>60</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
         <control type="label"><left>1180</left><top>30</top><width>680</width><height>60</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
-        <control type="textbox"><left>60</left><top>92</top><width>1800</width><height>70</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR]  $INFO[Container(50).ListItem.Property(plot)]</label></control>
+        <control type="textbox"><left>60</left><top>92</top><width>1800</width><height>70</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR]  $INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
         <control type="panel" id="50">
+            <visible>String.IsEmpty(Window.Property(mode))</visible>
             <onleft>noop</onleft>
             <onright>noop</onright>
             <onup>noop</onup>
@@ -41,6 +42,26 @@
                         <control type="label"><left>0</left><top>270</top><width>120</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
+            </focusedlayout>
+        </control>
+        <control type="list" id="51">
+            <visible>!String.IsEmpty(Window.Property(mode))</visible>
+            <left>60</left><top>130</top><width>1800</width><height>930</height>
+            <orientation>vertical</orientation>
+            <scrolltime tween="quadratic">200</scrolltime>
+            <onleft>noop</onleft><onright>noop</onright><onup>noop</onup><ondown>noop</ondown>
+            <itemlayout width="1800" height="116">
+                <control type="image"><left>0</left><top>4</top><width>1800</width><height>108</height><texture colordiffuse="33000000">white.png</texture></control>
+                <control type="label"><left>30</left><top>12</top><width>1200</width><height>44</height><font>font13</font><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
+                <control type="label"><left>1240</left><top>12</top><width>530</width><height>44</height><font>font12</font><align>right</align><textcolor>FF46D369</textcolor><label>$INFO[ListItem.Property(meta)]</label></control>
+                <control type="label"><left>30</left><top>58</top><width>1740</width><height>40</height><font>font12</font><textcolor>FF9A9A9A</textcolor><label>$INFO[ListItem.Property(plot)]</label></control>
+            </itemlayout>
+            <focusedlayout width="1800" height="116">
+                <control type="image"><left>0</left><top>4</top><width>1800</width><height>108</height><texture colordiffuse="40FFFFFF">white.png</texture></control>
+                <control type="image"><left>0</left><top>4</top><width>8</width><height>108</height><texture colordiffuse="FFE50914">white.png</texture></control>
+                <control type="label"><left>30</left><top>12</top><width>1200</width><height>44</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                <control type="label"><left>1240</left><top>12</top><width>530</width><height>44</height><font>font12</font><align>right</align><textcolor>FF46D369</textcolor><label>$INFO[ListItem.Property(meta)]</label></control>
+                <control type="label"><left>30</left><top>58</top><width>1740</width><height>40</height><font>font12</font><textcolor>FFD0D0D0</textcolor><label>$INFO[ListItem.Property(plot)]</label></control>
             </focusedlayout>
         </control>
     </controls>

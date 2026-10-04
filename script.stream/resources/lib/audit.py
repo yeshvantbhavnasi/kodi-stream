@@ -34,14 +34,14 @@ def _install_id():
         return ident
 
 
-def event(kind, **fields):
-    """Append one line: time, kind, and any details as JSON."""
+def event(_name, **fields):
+    """Append one line: time, event name, and any details as JSON. Details may use any key, including "kind"."""
     try:
         if not os.path.isdir(FOLDER):
             os.makedirs(FOLDER)
         if os.path.exists(PATH) and os.path.getsize(PATH) > MAX_BYTES:
             os.replace(PATH, PATH + '.1')
-        line = '{0} {1}'.format(time.strftime('%Y-%m-%d %H:%M:%S'), kind)
+        line = '{0} {1}'.format(time.strftime('%Y-%m-%d %H:%M:%S'), _name)
         if fields:
             line += ' ' + json.dumps(fields, ensure_ascii=False, default=str)
         with open(PATH, 'a', encoding='utf-8') as f:

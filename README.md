@@ -79,7 +79,7 @@ A shared read-only TMDb key is built into the addon; you can enter your own unde
 
 ### Episodes
 
-Inside a show, episodes are listed in order. Watched episodes are ticked, a part-watched episode shows where it
+Inside a show, episodes are shown as a list of names in order, not as poster tiles. Watched episodes are ticked, a part-watched episode shows where it
 stopped, and the list opens on the next episode to watch. Recently Played and Continue Watching show the show's name
 with the episode.
 
@@ -126,7 +126,7 @@ Everything Stream remembers lives in SQLite files in Kodi's addon data folder fo
    row. Live channels are not tracked this way, since they have no position.
 3. When playback stops, Stream writes a `stopped` event with the percent watched, or `finished` at 90% or more.
 4. The next time the Home tab loads, it queries the database:
-   - **Continue Watching** shows `watched` rows stopped after the first minute and not yet finished (90% played).
+   - **Continue Watching** shows `watched` rows stopped after the first 30 seconds and not yet finished (90% played). The Home rows reload as soon as playback stops.
    - **Recently Played** shows the 30 most recent `watched` rows, newest first; the row never grows beyond 30.
 5. Languages you play most are counted (`state.json`) and their rows move to the top of each tab.
 

@@ -49,6 +49,8 @@ def lambda_handler(event, context):
         'Device: ' + device,
         'Free memory: ' + _line(data.get('free_memory'), 20),
         '', 'Latest activity:', str(data.get('log') or '-')[:12000]])
+    # Keep a copy in the function's own log, so reports can be read even if the email is filtered or lost.
+    print('STREAM REPORT\n' + text)
     SES.send_email(Source=TO, Destination={'ToAddresses': [TO]},
                    Message={'Subject': {'Data': 'Stream: {0} on {1}'.format(reason, device), 'Charset': 'UTF-8'},
                             'Body': {'Text': {'Data': text, 'Charset': 'UTF-8'}}})

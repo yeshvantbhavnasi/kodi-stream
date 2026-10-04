@@ -30,6 +30,7 @@ PROFILE_ID = 140
 TOP_BAR = (TABS_ID, CLOSE_ID, SEARCH_ID, GEAR_ID, PROFILE_ID)
 FIRST_ROW = 200
 PANEL = 50
+EPISODE_LIST = 51   # the same screen shows episodes as a text list instead of poster tiles
 ACTION_LEFT, ACTION_RIGHT = 1, 2
 ACTION_BACK = (9, 10, 92)  # parent dir, previous menu, nav back
 ACTION_CONTEXT = 117
@@ -107,6 +108,9 @@ def exclusive(handler):
         finally:
             BUSY['on'] = False
     return wrapped
+
+# The open home screen, so it can refresh its Continue Watching row when something finishes playing.
+HOME = {'window': None}
 
 # Set when the viewer chooses "Home" inside a nested screen; every open grid closes on seeing it.
 NAV = {'home': False}
@@ -207,6 +211,9 @@ def follow(key, name, group, kind, live):
         if monitor.waitForAbort(1):
             return
     audit.event('play_ended', title=name, position=int(position), duration=int(duration))
+    home = HOME['window']
+    if home is not None and not home.closed and home.tab == 'home' and not live:
+        home.load_tab('home')  # so Continue Watching and Recently Played show what was just played
     if not live and duration > 0:
         percent = int(100 * position / duration)
         db.log_event('finished' if percent >= 90 else 'stopped', name, group, kind, 'watched {0}%'.format(percent))
@@ -269,7 +276,7 @@ def start(li):
     key = db.play_key(item)
     resume = 0
     position, duration, done = db.progress(key)
-    if not live and not done and position > 60 and duration > 0:
+    if not live and not done and position > 30 and duration > 0:
         choice = xbmcgui.Dialog().contextmenu(['Resume from ' + clock(position), 'Start from the beginning'])
         if choice < 0:
             return
@@ -315,7 +322,7 @@ def start(li):
         audit.event('play_timeout', title=label, seconds=START_TIMEOUT)
         notify('This stream did not start. Try another title or channel.', 5000)
         return
-    if resume > 60:
+    if resume > 30:
         try:
             player.seekTime(resume)
         except Exception:
@@ -622,13 +629,15 @@ class Grid(xbmcgui.WindowXML):
         self.setProperty('kids', '1' if db.KIDS else '')
         self.setProperty('title', ' · '.join(self.trail) if self.trail else self.title)
         self.panel = self.getControl(PANEL)
+        self.view = PANEL
+        self.episodes = False
         if self.entries is not None:
             items = [self.home_tile()]
             items += [entry_item(e, meta=e.get('meta'), suggestion=bool(e.get('suggestion'))) for e in self.entries]
             self.panel.addItems(items)
             self.setProperty('status', '{0} titles'.format(len(self.entries)) if self.entries else 'Nothing here')
             self.spawn(watch_visibility, self)
-            self.setFocusId(PANEL)
+            self.setFocusId(self.view)
             if self.entries:
                 self.panel.selectItem(1)
             return
@@ -640,6 +649,7 @@ class Grid(xbmcgui.WindowXML):
         """Build tiles for a listing. Inside a show, episodes are put in order and marked with their progress."""
         series = self.trail[0] if self.trail else None
         episodes = bool(series) and bool(titles) and all(i['t'] == 'play' for i in titles)
+        self.episodes = episodes
         if episodes and not self.next_url:
             titles = sorted(titles, key=lambda i: cat.natural_key(i['name']))
         marks = db.progress_for([db.play_key(i) for i in titles]) if episodes else {}
@@ -649,7 +659,7 @@ class Grid(xbmcgui.WindowXML):
             meta = None
             if done:
                 meta = '✓ Watched'
-            elif position > 60:
+            elif position > 30:
                 meta = 'Resume from ' + clock(position)
             if episodes and not done and upnext is None:
                 upnext = n
@@ -674,7 +684,7 @@ class Grid(xbmcgui.WindowXML):
             self.setProperty('status', 'Could not load: {0}'.format(e))
             if self.panel.size() == 0:
                 self.panel.addItems([self.home_tile()])
-                self.setFocusId(PANEL)
+                self.setFocusId(self.view)
             self.loading = False
             return
         if self.closed:
@@ -689,6 +699,11 @@ class Grid(xbmcgui.WindowXML):
                 label = 'Search in ' + self.title if extra['t'] == 'search' else cat.title_case(extra['name'])
                 shown.append(list_item(dict(extra, name=label, plot=''), url, self.group))
         titles, upnext = self.title_items(url, cat.showable(items))
+        if first_page and self.episodes:
+            # Episodes read better as a list of names than as a wall of identical posters.
+            self.setProperty('mode', 'list')
+            self.panel = self.getControl(EPISODE_LIST)
+            self.view = EPISODE_LIST
         first_title = len(shown)
         shown += titles
         position = self.panel.getSelectedPosition()
@@ -697,7 +712,7 @@ class Grid(xbmcgui.WindowXML):
             self.panel.selectItem(position)
         self.setProperty('status', '' if titles or not first_page else 'Nothing here')
         if first_page:
-            self.setFocusId(PANEL)
+            self.setFocusId(self.view)
             if titles:
                 # Land on the next episode to watch, or on the first title.
                 self.panel.selectItem(first_title + (upnext or 0))
@@ -735,7 +750,7 @@ class Grid(xbmcgui.WindowXML):
 
     @exclusive
     def onClick(self, control_id):
-        if control_id != PANEL or self.loading:
+        if control_id not in (PANEL, EPISODE_LIST) or self.loading:
             return
         li = self.panel.getSelectedItem()
         if li is None:
@@ -808,6 +823,8 @@ class Home(xbmcgui.WindowXML):
         self.switch = False
         self.closed = False
         self.workers = []
+        self.tab = 'home'
+        HOME['window'] = self
         self.setProperty('kids', '1' if db.KIDS else '')
         tabs = []
         for key, label in (KIDS_TABS if db.KIDS else TABS):

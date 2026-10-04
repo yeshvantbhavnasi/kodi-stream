@@ -222,10 +222,10 @@ def recent(limit=30):
 
 
 def continue_watching(limit=20):
-    """Titles stopped part-way: past the first minute and not yet watched to the end."""
+    """Titles stopped part-way: past the first 30 seconds and not yet watched to the end."""
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM watched WHERE position > 60 AND duration > 0 AND done = 0 AND key NOT LIKE 'live:%' "
+            "SELECT * FROM watched WHERE position > 30 AND duration > 0 AND done = 0 AND key NOT LIKE 'live:%' "
             'ORDER BY played_at DESC LIMIT ?', (limit,)).fetchall()
     return [_entry(r) for r in rows]
 
