@@ -12,11 +12,15 @@ playback to that addon, so Sasta TV must be installed and signed in on the same 
 
 1. In Kodi, open **Settings → System → Add-ons** and turn on **Unknown sources**.
 2. Open **Settings → File manager → Add source**, choose **<None>**, and enter
-   `https://raw.githack.com/yeshvantbhavnasi/kodi-stream/main/` (keep the final slash). Name it `stream`.
+   `https://tinyurl.com/27flx4q2/` (keep the final slash). Name it `stream`.
 3. Open **Add-ons → Install from zip file → stream** and choose `repository.stream-1.0.1.zip`.
 4. Open **Add-ons → Install from repository → Stream Repository → Video add-ons → Stream** and install it.
 
 Updates then arrive through the repository.
+
+The short address forwards to `https://raw.githack.com/yeshvantbhavnasi/kodi-stream/main/`; if it ever stops
+working, enter that full address in step 2 instead. Opened in a web browser the short address shows a TinyURL
+preview page first, which Kodi does not see.
 
 ## Opening Stream
 
