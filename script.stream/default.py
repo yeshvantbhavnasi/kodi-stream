@@ -69,7 +69,43 @@ def quality_of(name):
 
 
 # Tracks a stream that was requested but is not yet full screen, so Back can still cancel it.
-PLAY = {'since': 0, 'cancel': False}
+PLAY = {'since': 0, 'cancel': False, 'stopper': False}
+# True while a click is being handled. Kodi can deliver a second queued key press in the middle of a handler
+# that is waiting; without this a double OK press starts the same stream twice.
+BUSY = {'on': False}
+
+
+def watch_visibility(window):
+    """Close a screen of ours that Kodi has put another window on top of (for example after the remote's Home key).
+    Otherwise it would stay open unseen, holding memory, and block Stream from being opened again."""
+    monitor = xbmc.Monitor()
+    away = 0
+    while not window.closed and not monitor.waitForAbort(2):
+        current = xbmcgui.getCurrentWindowId()
+        # Addon windows are numbered from 13000; 12005 and 12006 are full-screen video and music.
+        if current >= 13000 or current in (12005, 12006):
+            away = 0
+            continue
+        away += 1
+        if away >= 3:
+            audit.event('left_behind', kodi_window=current)
+            window.close()
+            return
+
+
+def exclusive(handler):
+    """Run a window callback only if no other callback of ours is in progress and the window is still open."""
+    def wrapped(self, *args):
+        if BUSY['on'] or getattr(self, 'closed', False):
+            return
+        BUSY['on'] = True
+        try:
+            handler(self, *args)
+        except Exception:
+            audit.error(handler.__name__)
+        finally:
+            BUSY['on'] = False
+    return wrapped
 
 # Set when the viewer chooses "Home" inside a nested screen; every open grid closes on seeing it.
 NAV = {'home': False}
@@ -193,16 +229,28 @@ def stop_if_playing_behind():
 
 
 def stop_late_arrival():
-    """After a cancel, keep stopping the stream for a while: a stop sent while the player is still opening is
-    ignored, and the Sasta TV addon may deliver the stream a moment later."""
+    """After a cancel, stop the stream if it still arrives. Only one of these runs at a time."""
+    if PLAY['stopper']:
+        return
+    PLAY['stopper'] = True
     player, monitor = xbmc.Player(), xbmc.Monitor()
-    for _ in range(80):
-        if not PLAY['cancel']:
-            return  # something else was started on purpose
-        if player.isPlaying():
-            player.stop()
-        if monitor.waitForAbort(0.5):
-            return
+    try:
+        quiet = 0
+        for _ in range(40):
+            if not PLAY['cancel']:
+                return  # something else was started on purpose
+            if player.isPlaying():
+                player.stop()
+                quiet = 0
+            else:
+                quiet += 1
+                if quiet >= 12:
+                    return  # nothing has shown up for 12 seconds
+            if monitor.waitForAbort(1):
+                return
+    finally:
+        PLAY['stopper'] = False
+        PLAY['cancel'] = False
 
 
 def start(li):
@@ -532,8 +580,13 @@ def open_grid(title, url=None, entries=None, group=None, trail=()):
     audit.event('open', screen=title)
     win = Grid('script-stream-grid.xml', ADDON_PATH, 'Default', '1080i')
     win.setup(title, url, entries, group, trail)
-    win.doModal()
-    win.closed = True  # background loaders check this before touching the window again
+    # The click that opened this screen is still "in progress" underneath; let the new screen take key presses.
+    was_busy, BUSY['on'] = BUSY['on'], False
+    try:
+        win.doModal()
+    finally:
+        BUSY['on'] = was_busy
+    win.finish()
     del win
     return NAV['home']
 
@@ -545,6 +598,18 @@ class Grid(xbmcgui.WindowXML):
         self.loading = False
         self.ready = False
         self.closed = False
+        self.workers = []
+
+    def spawn(self, target, *args):
+        thread = threading.Thread(target=target, args=args, daemon=True)
+        self.workers.append(thread)
+        thread.start()
+
+    def finish(self):
+        """Mark the window closed and give its background work a moment to stop before the window is dropped."""
+        self.closed = True
+        for thread in self.workers:
+            thread.join(3)
 
     def home_tile(self):
         return list_item({'t': 'home', 'name': '⌂ Home'}, '', meta='Back to the home screen')
@@ -561,12 +626,14 @@ class Grid(xbmcgui.WindowXML):
             items += [entry_item(e, meta=e.get('meta'), suggestion=bool(e.get('suggestion'))) for e in self.entries]
             self.panel.addItems(items)
             self.setProperty('status', '{0} titles'.format(len(self.entries)) if self.entries else 'Nothing here')
+            self.spawn(watch_visibility, self)
             self.setFocusId(PANEL)
             if self.entries:
                 self.panel.selectItem(1)
             return
         self.setProperty('status', 'Loading…')
-        threading.Thread(target=self.load, args=(self.url,), daemon=True).start()
+        self.spawn(self.load, self.url)
+        self.spawn(watch_visibility, self)
 
     def title_items(self, url, titles):
         """Build tiles for a listing. Inside a show, episodes are put in order and marked with their progress."""
@@ -623,7 +690,10 @@ class Grid(xbmcgui.WindowXML):
         titles, upnext = self.title_items(url, cat.showable(items))
         first_title = len(shown)
         shown += titles
+        position = self.panel.getSelectedPosition()
         self.panel.addItems(shown)
+        if not first_page and position >= 0:
+            self.panel.selectItem(position)
         self.setProperty('status', '' if titles or not first_page else 'Nothing here')
         if first_page:
             self.setFocusId(PANEL)
@@ -638,7 +708,7 @@ class Grid(xbmcgui.WindowXML):
 
     def refresh_marks(self):
         """After playback, redraw an episode list so watched ticks and the next episode are current."""
-        if self.closed or not self.trail or self.entries is not None or self.next_url or self.loading:
+        if self.closed or not self.trail or self.entries is not None or self.next_url:
             return
         try:
             items = cat.get_dir(self.url)
@@ -654,17 +724,21 @@ class Grid(xbmcgui.WindowXML):
             self.setProperty('status', 'Up next: ' + titles[upnext].getProperty('name'))
 
     def close(self):
-        self.closed = True
-        xbmcgui.WindowXML.close(self)
+        if not self.closed:
+            self.closed = True
+            xbmcgui.WindowXML.close(self)
 
     def leave_if_home(self, go_home):
         if go_home:
             self.close()
 
+    @exclusive
     def onClick(self, control_id):
-        if control_id != PANEL:
+        if control_id != PANEL or self.loading:
             return
         li = self.panel.getSelectedItem()
+        if li is None:
+            return
         kind = li.getProperty('t')
         if kind == 'home':
             NAV['home'] = True
@@ -679,7 +753,8 @@ class Grid(xbmcgui.WindowXML):
             self.leave_if_home(open_grid(li.getLabel(), url=li.getProperty('url'), group=self.group))
         elif kind == 'play':
             start(li)
-            threading.Thread(target=self.after_playback, daemon=True).start()
+            if xbmc.Player().isPlaying():
+                self.spawn(self.after_playback)
         else:
             self.leave_if_home(activate(li, self.trail))
 
@@ -687,28 +762,39 @@ class Grid(xbmcgui.WindowXML):
         player, monitor = xbmc.Player(), xbmc.Monitor()
         if monitor.waitForAbort(3):
             return
-        while player.isPlayingVideo():
+        while player.isPlayingVideo() and not self.closed:
             if monitor.waitForAbort(1):
                 return
-        self.refresh_marks()
+        self.loading = True
+        try:
+            self.refresh_marks()
+        finally:
+            self.loading = False
 
     def onAction(self, action):
+        if self.closed or BUSY['on']:
+            return
         if action.getId() in ACTION_BACK:
             if not stop_if_playing_behind():
                 self.close()
             return
-        if not self.ready:
+        if not self.ready or self.loading:
             return
         if action.getId() == ACTION_CONTEXT:
             li = self.panel.getSelectedItem()
-            if li and context_menu(li, True) == 'home':
+            BUSY['on'] = True
+            try:
+                result = context_menu(li, True) if li else None
+            finally:
+                BUSY['on'] = False
+            if result == 'home':
                 NAV['home'] = True
                 self.close()
             return
         # Fetch the next page shortly before the end of the list is reached.
-        if self.next_url and not self.loading and self.panel.getSelectedPosition() >= self.panel.size() - 14:
+        if self.next_url and self.panel.getSelectedPosition() >= self.panel.size() - 14:
             url, self.next_url = self.next_url, None
-            threading.Thread(target=self.load, args=(url,), daemon=True).start()
+            self.spawn(self.load, url)
 
 
 class Home(xbmcgui.WindowXML):
@@ -720,6 +806,7 @@ class Home(xbmcgui.WindowXML):
         self.touched = False
         self.switch = False
         self.closed = False
+        self.workers = []
         self.setProperty('kids', '1' if db.KIDS else '')
         tabs = []
         for key, label in (KIDS_TABS if db.KIDS else TABS):
@@ -728,7 +815,8 @@ class Home(xbmcgui.WindowXML):
             tabs.append(li)
         self.getControl(TABS_ID).addItems(tabs)
         self.load_tab('home')
-        threading.Thread(target=self.background, daemon=True).start()
+        self.spawn(self.background)
+        self.spawn(watch_visibility, self)
 
     def background(self):
         """Keep the local index and the suggestions fresh without holding up the screen."""
@@ -741,9 +829,22 @@ class Home(xbmcgui.WindowXML):
             cat.log('background refresh failed: {0}'.format(e))
             audit.error('home.background')
 
-    def close(self):
+    def spawn(self, target, *args):
+        self.workers = [t for t in getattr(self, 'workers', []) if t.is_alive()]
+        thread = threading.Thread(target=target, args=args, daemon=True)
+        self.workers.append(thread)
+        thread.start()
+
+    def finish(self):
+        """Mark the window closed and give its background work a moment to stop before the window is dropped."""
         self.closed = True
-        xbmcgui.WindowXML.close(self)
+        for thread in getattr(self, 'workers', []):
+            thread.join(4)
+
+    def close(self):
+        if not getattr(self, 'closed', False):
+            self.closed = True
+            xbmcgui.WindowXML.close(self)
 
     def go_home(self, focus=True):
         NAV['home'] = False
@@ -905,17 +1006,20 @@ class Home(xbmcgui.WindowXML):
             self.setProperty('row{0}.title'.format(n), '')
             self.getControl(FIRST_ROW + n).reset()
         self.setProperty('status', 'Loading…')
-        threading.Thread(target=self.fill, args=(key, self.token, focus), daemon=True).start()
+        self.spawn(self.fill, key, self.token, focus)
 
     def focus_rows(self, token):
         """Move focus into the first row. The row only becomes focusable a frame after its title is set, so retry."""
         for _ in range(15):
             if token != self.token or self.closed:
                 return
-            self.setFocusId(FIRST_ROW)
-            xbmc.sleep(100)
-            if self.getFocusId() == FIRST_ROW:
-                return
+            try:
+                self.setFocusId(FIRST_ROW)
+                time.sleep(0.1)
+                if self.getFocusId() == FIRST_ROW:
+                    return
+            except Exception:
+                time.sleep(0.1)  # nothing focusable yet
 
     def fill(self, key, token, focus):
         slot = 0
@@ -1056,6 +1160,7 @@ class Home(xbmcgui.WindowXML):
         li = self.getControl(TABS_ID).getSelectedItem()
         return li.getProperty('key') if li else None
 
+    @exclusive
     def onClick(self, control_id):
         if control_id == CLOSE_ID:
             self.close()
@@ -1071,6 +1176,8 @@ class Home(xbmcgui.WindowXML):
                 self.load_tab(key)
         elif FIRST_ROW <= control_id < FIRST_ROW + ROWS:
             li = self.getControl(control_id).getSelectedItem()
+            if li is None:
+                return
             kind = li.getProperty('t')
             if kind == 'lang':
                 cat.state['live_lang'] = li.getProperty('lang')
@@ -1080,9 +1187,15 @@ class Home(xbmcgui.WindowXML):
                 self.run_setting(li.getProperty('action'))
             elif activate(li):
                 self.go_home()
+            NAV['home'] = False  # a "go Home" request has been dealt with once control is back here
 
     def onAction(self, action):
-        focus = self.getFocusId()
+        if getattr(self, 'closed', False) or BUSY['on']:
+            return
+        try:
+            focus = self.getFocusId()
+        except Exception:
+            focus = 0  # nothing has focus yet
         code = action.getId()
         self.touched = True
         if code in ACTION_BACK:
@@ -1093,12 +1206,22 @@ class Home(xbmcgui.WindowXML):
                 self.setFocusId(TABS_ID)
             elif self.tab != 'home':
                 self.go_home(focus=False)
-            elif xbmcgui.Dialog().yesno('Stream', 'Exit Stream?'):
-                self.close()
+            else:
+                BUSY['on'] = True
+                try:
+                    leave = xbmcgui.Dialog().yesno('Stream', 'Exit Stream?')
+                finally:
+                    BUSY['on'] = False
+                if leave:
+                    self.close()
         elif code == ACTION_CONTEXT and FIRST_ROW <= focus < FIRST_ROW + ROWS:
             li = self.getControl(focus).getSelectedItem()
             if li and li.getProperty('t') in ('play', 'folder'):
-                result = context_menu(li, False)
+                BUSY['on'] = True
+                try:
+                    result = context_menu(li, False)
+                finally:
+                    BUSY['on'] = False
                 if result == 'home':
                     self.go_home()
                 elif result == 'changed' and self.tab in ('home', 'mylist'):
@@ -1110,45 +1233,69 @@ class Home(xbmcgui.WindowXML):
                 self.load_tab(key, focus=False)
 
 
+def run():
+    """One session: pick a profile, show the home screen, repeat while the viewer switches profile."""
+    if audit.session_start():
+        # Kodi quit or crashed under the last session: say so, and email the log if reports are allowed.
+        notify('Stream did not close properly last time. Settings > Activity log has the details.', 6000)
+        threading.Thread(target=report.send, args=('crash detected',), daemon=True).start()
+    if audit.NEW['install']:
+        # First run on this device: let the maintainer know there is a new installation (no activity log attached).
+        threading.Thread(target=report.send, args=('new install',), kwargs={'with_log': False, 'limited': False}, daemon=True).start()
+    current = None
+    while True:
+        # Leaving a kids profile can be protected by a PIN.
+        if current and current.get('kids') and current.get('pin'):
+            if xbmcgui.Dialog().input('PIN to leave ' + current['name'], type=xbmcgui.INPUT_NUMERIC) != current['pin']:
+                notify('Wrong PIN')
+                profile = current
+            else:
+                profile = choose_profile(True) or current
+        else:
+            profile = choose_profile(force=current is not None)
+            if profile is None:
+                if current is None:
+                    break
+                profile = current
+        current = CURRENT['profile'] = profile
+        audit.event('profile', kids=bool(profile.get('kids')))
+        db.use_profile(profile)
+        cat.load_state()
+        if not profile.get('kids') and db.meta('profile') is None:
+            onboarding(True)
+        window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
+        xbmcgui.Window(10000).setProperty('script.stream.running', str(time.time()))
+        try:
+            window.doModal()
+        finally:
+            # Only an open home screen blocks a second launch; a slow shutdown must not.
+            xbmcgui.Window(10000).clearProperty('script.stream.running')
+        audit.event('window_closed')
+        again = getattr(window, 'switch', False)
+        window.finish()
+        audit.event('workers_stopped')
+        del window
+        if not again:
+            break
+    cat.flush()
+    audit.session_end()
+
+
 if __name__ == '__main__':
+    home = xbmcgui.Window(10000)
+    opened = home.getProperty('script.stream.running')
     try:
         cat.rpc('Addons.GetAddonDetails', {'addonid': 'plugin.video.sastatv'})
+        sasta = True
     except Exception:
+        sasta = False
+    if not sasta:
         xbmcgui.Dialog().ok('Stream', 'Install the Sasta TV addon and sign in to it first.')
+    elif opened and time.time() - float(opened) < 12 * 3600:
+        # A copy is already open (or still closing down): starting a second would double the memory in use.
+        notify('Stream is already open')
     else:
-        if audit.session_start():
-            # Kodi quit or crashed under the last session: say so, and email the log if reports are allowed.
-            notify('Stream did not close properly last time. Settings > Activity log has the details.', 6000)
-            threading.Thread(target=report.send, args=('crash detected',), daemon=True).start()
-        if audit.NEW['install']:
-            # First run on this device: let the maintainer know there is a new installation (no activity log attached).
-            threading.Thread(target=report.send, args=('new install',), kwargs={'with_log': False, 'limited': False}, daemon=True).start()
-        current = None
-        while True:
-            # Leaving a kids profile can be protected by a PIN.
-            if current and current.get('kids') and current.get('pin'):
-                if xbmcgui.Dialog().input('PIN to leave ' + current['name'], type=xbmcgui.INPUT_NUMERIC) != current['pin']:
-                    notify('Wrong PIN')
-                    profile = current
-                else:
-                    profile = choose_profile(True) or current
-            else:
-                profile = choose_profile(force=current is not None)
-                if profile is None:
-                    if current is None:
-                        break
-                    profile = current
-            current = CURRENT['profile'] = profile
-            audit.event('profile', kids=bool(profile.get('kids')))
-            db.use_profile(profile)
-            cat.load_state()
-            if not profile.get('kids') and db.meta('profile') is None:
-                onboarding(True)
-            window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
-            window.doModal()
-            again = getattr(window, 'switch', False)
-            window.closed = True
-            del window
-            if not again:
-                break
-        audit.session_end()
+        try:
+            run()
+        except Exception:
+            audit.error('main')

@@ -54,8 +54,9 @@ def error(where):
     """Record the exception being handled, with its traceback, and report it if reports are allowed."""
     event('error', where=where, trace=traceback.format_exc()[-1500:])
     try:
+        import threading
         import report
-        report.send('internal error in ' + where)
+        threading.Thread(target=report.send, args=('internal error in ' + where,), daemon=True).start()
     except Exception:
         pass
 

@@ -1,5 +1,7 @@
 # Stream for Kodi
 
+![Stream home screen](script.stream/resources/screenshots/screenshot-01.jpg)
+
 A poster-row home screen for Kodi that sits on top of the Sasta TV addon: tabs for Movies, Shows, Live TV and Kids,
 Continue Watching, My List, ranked search, and a "Recommended for You" row.
 

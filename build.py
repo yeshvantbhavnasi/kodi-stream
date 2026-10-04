@@ -31,6 +31,9 @@ def build():
         for art in ('icon.png', 'fanart.jpg'):
             if os.path.exists(os.path.join(ROOT, addon, art)):
                 shutil.copy(os.path.join(ROOT, addon, art), os.path.join(out, addon, art))
+        shots = os.path.join(ROOT, addon, 'resources', 'screenshots')
+        if os.path.isdir(shots):
+            shutil.copytree(shots, os.path.join(out, addon, 'resources', 'screenshots'))
         if addon.startswith('repository.'):
             # Copy at the top level too: this is the file people install first.
             for old in os.listdir(ROOT):

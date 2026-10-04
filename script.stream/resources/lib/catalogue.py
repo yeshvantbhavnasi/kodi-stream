@@ -67,7 +67,33 @@ def _save(path, data):
         log('could not save {0}: {1}'.format(path, e))
 
 
-_cache.update(_load(_cache_path, {}))
+MAX_CACHED = 60          # listings kept on disk
+_cache.update({k: v for k, v in _load(_cache_path, {}).items() if time.time() - v.get('t', 0) < 12 * 3600})
+_last_save = [0.0]
+
+
+def _save_cache(force=False):
+    """Write the listing cache, at most every 20 seconds, keeping only the most recent listings. Call with _lock held."""
+    if not force and time.time() - _last_save[0] < 20:
+        return
+    _last_save[0] = time.time()
+    if len(_cache) > MAX_CACHED:
+        for key in sorted(_cache, key=lambda k: _cache[k]['t'])[:len(_cache) - MAX_CACHED]:
+            del _cache[key]
+    try:
+        if not os.path.isdir(PROFILE):
+            os.makedirs(PROFILE)
+        tmp = _cache_path + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(_cache, f)
+        os.replace(tmp, _cache_path)
+    except Exception as e:
+        log('could not save cache: {0}'.format(e))
+
+
+def flush():
+    with _lock:
+        _save_cache(force=True)
 db.init()
 state = {}
 
@@ -90,9 +116,18 @@ def save_state():
 load_state()
 
 
+# Each listing or play request starts a fresh copy of the Sasta TV addon inside Kodi. Many at once can exhaust
+# the memory of a TV stick, so they take turns: at most two run at any moment.
+_plugin_slots = threading.Semaphore(2)
+
+
 def rpc(method, params=None):
-    reply = json.loads(xbmc.executeJSONRPC(json.dumps(
-        {'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params or {}})))
+    request = json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params or {}})
+    if method == 'Files.GetDirectory':
+        with _plugin_slots:
+            reply = json.loads(xbmc.executeJSONRPC(request))
+    else:
+        reply = json.loads(xbmc.executeJSONRPC(request))
     if 'error' in reply:
         raise RuntimeError(reply['error'].get('message', 'Kodi error'))
     return reply.get('result')
@@ -173,7 +208,7 @@ def _fetch(url):
     if not re.search(r'search=.', url):
         with _lock:
             _cache[url] = {'t': time.time(), 'items': items}
-            _save(_cache_path, _cache)
+            _save_cache()
         index(url, items)
     return items
 
@@ -234,11 +269,32 @@ def top_groups():
     return chosen + played
 
 
-def _refresh_quietly(url):
-    try:
-        _fetch(url)
-    except Exception as e:
-        log('refresh failed: {0}'.format(e))
+_refresh_queue = []
+_refresh_worker = [None]
+
+
+def _refresh_loop():
+    while True:
+        with _lock:
+            if not _refresh_queue:
+                _refresh_worker[0] = None
+                return
+            url = _refresh_queue.pop(0)
+        try:
+            _fetch(url)
+        except Exception as e:
+            log('refresh failed: {0}'.format(e))
+
+
+def _refresh_later(url):
+    """Queue a stale listing for one background worker; duplicates are dropped."""
+    with _lock:
+        if url in _refresh_queue:
+            return
+        _refresh_queue.append(url)
+        if _refresh_worker[0] is None:
+            _refresh_worker[0] = threading.Thread(target=_refresh_loop, daemon=True)
+            _refresh_worker[0].start()
 
 
 def get_dir(url, fresh=False):
@@ -249,7 +305,7 @@ def get_dir(url, fresh=False):
     if hit is None or fresh or age > MAX_STALE:
         return _fetch(url)
     if age > FRESH:
-        threading.Thread(target=_refresh_quietly, args=(url,), daemon=True).start()
+        _refresh_later(url)
     return hit['items']
 
 
@@ -306,8 +362,8 @@ def _search_sources(query, sources):
         results[n] = (title, url, items)
 
     threads = [threading.Thread(target=run, args=(n, base), daemon=True) for n, base in enumerate(sources)]
-    for group in range(0, len(threads), 6):
-        batch = threads[group:group + 6]
+    for group in range(0, len(threads), 2):
+        batch = threads[group:group + 2]
         for t in batch:
             t.start()
         for t in batch:

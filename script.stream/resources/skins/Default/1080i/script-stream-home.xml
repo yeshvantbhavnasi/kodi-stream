@@ -683,10 +683,10 @@
                 </control>
             </control>
         </control>
-        <control type="label"><left>60</left><top>26</top><width>220</width><height>50</height><font>font36_title</font><textcolor>FFE50914</textcolor><label>[B]STREAM[/B]</label><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+        <control type="image"><left>56</left><top>22</top><width>236</width><height>58</height><aspectratio>keep</aspectratio><texture>logo.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="label"><left>60</left><top>26</top><width>230</width><height>50</height><font>font36_title</font><textcolor>FFFFD640</textcolor><label>[B]KIDS[/B]</label><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="list" id="100">
-            <left>290</left><top>24</top><width>1200</width><height>56</height>
+            <left>330</left><top>24</top><width>1150</width><height>56</height>
             <orientation>horizontal</orientation>
             <ondown>200</ondown>
             <onright>120</onright>
