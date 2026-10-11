@@ -21,7 +21,7 @@ SASTA = 'plugin://plugin.video.sastatv/'
 # Only catalogue folders are ever opened. Addon actions (settings, cache clearing, log upload)
 # live on other plugin modes and are never called from here.
 CATALOGUE = re.compile(r'^https?://sastatv\.com/secured/php/[\w/]+\.php(\?|$)', re.I)
-GENERIC_IMG = re.compile(r'sastatv\.com/images/(logo/|Sasta)', re.I)
+GENERIC_IMG = re.compile(r'sastatv\.com/images/(logo/|Sasta|no-poster)', re.I)  # placeholders, not posters
 FRESH = 30 * 60
 MAX_STALE = 12 * 3600
 
@@ -252,10 +252,20 @@ def warm_index():
             log('warm failed: {0}'.format(e))
         db.set_meta('indexed_at', time.time())
         return
+    first = (db.chosen_languages() or [''])[0]
     for root in (URLS['movies'], URLS['web_series']):
         try:
             for folder in [f for f in get_dir(root) if f['t'] == 'folder']:
-                index(folder['url'], get_dir(folder['url']))
+                items = get_dir(folder['url'])
+                index(folder['url'], items)
+                if first and db.lang_match(folder['name'], [first]):
+                    # The main language goes deeper, so genre browsing and "more like this" have plenty to draw on.
+                    for _ in range(2):
+                        nxt = [i for i in items if i['t'] == 'next']
+                        if not nxt:
+                            break
+                        items = get_dir(nxt[0]['url'])
+                        index(nxt[0]['url'], items)
         except Exception as e:
             log('warm failed: {0}'.format(e))
     for url in (URLS['english_movies'], URLS['english_tv'], URLS['kids']):

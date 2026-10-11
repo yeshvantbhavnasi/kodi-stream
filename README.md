@@ -42,8 +42,23 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Add or remove a title from My List | Hold OK (or press the menu key) on the title |
 | Like or dislike a title | Hold OK on the title and pick **Like** or **Dislike** |
 | Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |
-| Resume a title | Play it again; it carries on from where it stopped. Hold OK and pick **Play from the beginning** to start over |
+| Resume a title | Play it again; it carries on from where it stopped. A red bar under the poster shows how far in it is. Hold OK and pick **Play from the beginning** to start over |
+| Browse by genre | The **Browse by Genre** cards at the top of Movies and Shows: Action, Comedy, Thriller & Crime, Romance and so on, in your languages, newest first |
 | See everything watched | The **History** section: unfinished titles, then everything played, newest first |
+
+### What the home screen shows
+
+Rows appear only when there is something to put in them, and your first language leads every list:
+
+- **Continue Watching**, **Recommended for You** and **Recently Played**.
+- **New This Week**: titles that appeared in the catalogue in the last seven days (after Stream has been installed for a couple of days).
+- **Top 10 in Your Home**: what every profile on this device played most in the last month.
+- **More like …**: two rows of titles like the ones watched last, from TMDb's picks that exist in the catalogue, filled out with titles of the same genres in the same language.
+- **Liked by You**, live events, then movies and web series by language, English and Kids, and YouTube.
+
+The description panel shows the rating, length (or number of seasons), genres, cast and director once a title has been
+looked up. After a minute without a key press the home screen walks the highlight along the recommended titles so the
+panel shows them off; any key stops it.
 
 ### First-run setup
 
@@ -62,7 +77,8 @@ The person icon on the top bar, or **Settings → Switch or add profile**, switc
 likes, setup answers and recommendations, stored in its own database file. Stream opens with the profile used last time; it only asks "Who's watching?" when you choose to switch.
 
 A **kids profile** shows only children's titles and kids TV channels, searches only the kids section, and has a
-brighter look. It can be given a PIN that is needed to leave it.
+brighter look. **Settings → Kids profile PIN** sets or changes a PIN that is asked for before leaving the profile,
+switching profile or closing Stream from it, so a child holding the remote stays inside Kids.
 
 ### Ratings, reviews and trailers
 
@@ -72,10 +88,14 @@ Stream looks titles up on The Movie Database (TMDb) in the background and caches
   OMDb key is entered in the settings);
 - genres in the description line;
 - a poster and description for titles the catalogue lists without them;
+- cast and director under the description;
 - **Rating, reviews and trailer** in the hold-OK menu: overview, user reviews, and the trailer. Trailers play through
-  Kodi's YouTube add-on, which must be installed.
+  Kodi's YouTube add-on; if it is not installed Stream offers to install it from Kodi's repository.
 
-Titles are matched by name and year, so an obscure or unusually named title may get no match or, rarely, the wrong one.
+Titles are matched by name and year, preferring a match in the section's language (a Telugu film called "Eyes" is not
+mistaken for an American one), so an obscure or unusually named title may still get no match or, rarely, the wrong one.
+The YouTube add-on is optional throughout: without it the YouTube section, trailers and saved YouTube videos offer to
+install it, and everything else works as before.
 A shared read-only TMDb key is built into the addon; you can enter your own under Settings.
 
 ### YouTube
@@ -116,6 +136,10 @@ tiles, play with OK like any other title, and show up in Continue Watching and H
 Inside a show, episodes are shown as a compact list of names in order, not as poster tiles. A show opens on the season watched last, and the list opens on the episode to carry on with: the last one played if it is unfinished, otherwise the one after it. Watched episodes are ticked, a part-watched episode shows where it
 stopped, and the list opens on the next episode to watch. Recently Played and Continue Watching show the show's name
 with the episode.
+
+When an episode plays to the end, Stream shows **Up next** with the following episode and starts it after ten seconds.
+Press Back (or Cancel) to stay where you are. Stopping an episode yourself never starts the next one. The season's own
+description is shown on the show's page in place of the provider's filler text.
 
 ### Quality tags
 

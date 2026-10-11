@@ -129,6 +129,8 @@ def _entry(row):
         entry['series'] = row['series']
     if 'position' in keys:
         entry['note'] = _note(row)
+        if row['duration'] and row['position'] > 30 and not row['done']:
+            entry['progress'] = max(1, int(100 * row['position'] / row['duration']))
     return entry
 
 
@@ -147,6 +149,8 @@ def set_meta(key, value):
 
 def index_titles(parent, group, kind, items):
     now = time.time()
+    if meta('index_born') is None:
+        set_meta('index_born', now)  # when this index started, so "new" titles are the ones seen after that
     rows = [(i['url'], i['name'], kind, group, i.get('plot', ''), json.dumps(i), parent, now, now) for i in items]
     with _connect() as conn:
         conn.executemany(
@@ -329,11 +333,26 @@ def recent_videos(limit=3):
 
 
 def recent_titles(limit=2):
-    """The movies and shows played most recently on this profile (no channels or videos): [name]."""
+    """The movies and shows played most recently on this profile (no channels or videos): [name].
+    An episode counts as its show."""
+    return [name for name, _, _ in recent_watched(limit)]
+
+
+def recent_watched(limit=4):
+    """[(title, is_show, language)] for the movies and shows played most recently, episodes folded into their show."""
     with _connect() as conn:
-        rows = conn.execute("SELECT name FROM watched WHERE key NOT LIKE 'yt:%' AND key NOT LIKE 'live:%' "
-                            "ORDER BY played_at DESC LIMIT ?", (limit,)).fetchall()
-    return [r['name'] for r in rows]
+        rows = conn.execute("SELECT name, series, grp FROM watched WHERE key NOT LIKE 'yt:%' AND key NOT LIKE 'live:%' "
+                            "ORDER BY played_at DESC LIMIT 40").fetchall()
+    out, seen = [], set()
+    for r in rows:
+        title = r['series'] or r['name']
+        if title in seen:
+            continue
+        seen.add(title)
+        out.append((title, bool(r['series']), r['grp'] or ''))
+        if len(out) >= limit:
+            break
+    return out
 
 
 # ---------- suggestions ----------
@@ -472,3 +491,97 @@ def get_metadata(name):
 def put_metadata(name, data):
     with _connect() as conn:
         conn.execute('INSERT OR REPLACE INTO metadata VALUES (?,?,?)', (name, json.dumps(data), time.time()))
+
+
+# ---------- discovery: genres, what is new, what the household plays most ----------
+
+def _like(text):
+    return '%' + text.replace('%', '').replace('_', '') + '%'
+
+
+def by_genre(kinds, tmdb_genres, words, limit=400):
+    """Indexed titles of the given kinds whose looked-up TMDb genres include one of tmdb_genres, or whose description
+    contains one of the words. Newest first; the caller orders by language."""
+    conds, params = [], []
+    for g in tmdb_genres:
+        conds.append('name IN (SELECT name FROM metadata WHERE data LIKE ?)')
+        params.append('%"' + g + '"%')
+    for w in words:
+        conds.append('lower(plot) LIKE ?')
+        params.append(_like(w.lower()))
+    if not conds or not kinds:
+        return []
+    sql = 'SELECT * FROM titles WHERE kind IN ({0}) AND ({1}) ORDER BY first_seen DESC, rowid ASC LIMIT ?'.format(
+        ','.join('?' * len(kinds)), ' OR '.join(conds))
+    with _connect() as conn:
+        rows = conn.execute(sql, list(kinds) + params + [limit]).fetchall()
+    return [dict(_entry(r), kind=r['kind']) for r in rows]
+
+
+def find_by_title(title, kinds=None, limit=3):
+    """Indexed titles whose name starts with the given title (ignoring the year and quality words after it)."""
+    sql = 'SELECT * FROM titles WHERE lower(name) LIKE ?'
+    params = [title.lower().replace('%', '').replace('_', '') + '%']
+    if kinds:
+        sql += ' AND kind IN ({0})'.format(','.join('?' * len(kinds)))
+        params += list(kinds)
+    with _connect() as conn:
+        rows = conn.execute(sql + ' ORDER BY first_seen DESC LIMIT ?', params + [limit]).fetchall()
+    return [dict(_entry(r), kind=r['kind']) for r in rows]
+
+
+def find_show(name):
+    """The indexed folder of a show, by its exact name, or None."""
+    with _connect() as conn:
+        row = conn.execute("SELECT * FROM titles WHERE name=? AND kind IN ('Web Series', 'TV Shows', 'English TV') "
+                           'ORDER BY last_seen DESC LIMIT 1', (name,)).fetchone()
+    return dict(_entry(row), kind=row['kind']) if row else None
+
+
+def new_titles(days=7, limit=200):
+    """Titles that appeared in the catalogue in the last few days (not counting what the index held at the start)."""
+    born = meta('index_born') or 0
+    if not born or time.time() - born < 2 * 24 * 3600:
+        return []
+    since = max(time.time() - days * 24 * 3600, born + 24 * 3600)
+    with _connect() as conn:
+        rows = conn.execute("SELECT * FROM titles WHERE first_seen > ? AND kind IN ('Movies', 'Web Series', 'TV Shows') "
+                            'ORDER BY first_seen DESC LIMIT ?', (since, limit)).fetchall()
+    return [dict(_entry(r), kind=r['kind']) for r in rows]
+
+
+def profile_db_paths():
+    """Every profile's database file on this device."""
+    try:
+        names = sorted(os.listdir(PROFILE))
+    except Exception:
+        return []
+    return [os.path.join(PROFILE, n) for n in names if n == 'stream.db' or (n.startswith('stream-') and n.endswith('.db'))]
+
+
+def top_titles(days=30, limit=10):
+    """What the whole household played most in the last month, across every profile:
+    [{'title', 'plays', 'series', 'entry'}] best first. Episodes count towards their show."""
+    since = time.time() - days * 24 * 3600
+    counts = {}
+    for path in profile_db_paths():
+        try:
+            conn = sqlite3.connect(path, timeout=15)
+            conn.row_factory = sqlite3.Row
+            with conn:
+                rows = conn.execute("SELECT * FROM watched WHERE played_at > ? AND key NOT LIKE 'live:%' AND key NOT LIKE 'yt:%'",
+                                    (since,)).fetchall()
+            conn.close()
+        except Exception:
+            continue
+        for r in rows:
+            title = r['series'] or r['name']
+            c = counts.setdefault(title, {'title': title, 'plays': 0, 'series': bool(r['series']), 'row': r, 'at': 0})
+            c['plays'] += max(1, r['plays'] or 1)
+            if r['played_at'] > c['at']:
+                c['at'], c['row'] = r['played_at'], r
+    ranked = sorted(counts.values(), key=lambda c: (-c['plays'], -c['at']))[:limit]
+    for c in ranked:
+        c['entry'] = _entry(c['row'])
+        del c['row']
+    return ranked

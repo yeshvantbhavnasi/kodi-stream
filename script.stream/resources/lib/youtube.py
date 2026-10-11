@@ -61,6 +61,17 @@ def installed():
     return xbmc.getCondVisibility('System.HasAddon({0})'.format(ADDON_ID))
 
 
+def ensure_installed(purpose='play YouTube videos'):
+    """True when Kodi's YouTube add-on is there. Otherwise offer to install it from Kodi's own repository and return False,
+    so nothing else in Stream has to deal with a missing add-on."""
+    if installed():
+        return True
+    if xbmcgui.Dialog().yesno('Stream', 'Kodi\'s YouTube add-on is needed to {0}.\nInstall it now? Everything else in Stream works without it.'.format(purpose),
+                              yeslabel='Install', nolabel='Not now'):
+        xbmc.executebuiltin('InstallAddon({0})'.format(ADDON_ID))
+    return False
+
+
 def has_key():
     """True once the viewer's own API key, client ID and client secret are in the YouTube add-on's settings."""
     if not installed():
@@ -164,13 +175,23 @@ def classify(entry):
     plot = clean(entry.get('plot'))
     if plot:
         item['plot'] = plot
+    if entry.get('studio'):
+        item['by'] = clean(entry['studio'])  # the YouTube add-on files the channel name here
+    try:
+        if int(entry.get('duration') or 0) > 0:
+            item['duration'] = int(entry['duration'])
+    except (TypeError, ValueError):
+        pass
     return item
 
 
 def listing(rpc, link):
     if link.startswith(VIRTUAL):
         return virtual(link[len(VIRTUAL):])
-    result = rpc('Files.GetDirectory', {'directory': link, 'media': 'video', 'properties': ['title', 'thumbnail', 'art', 'plot']})
+    if not installed():
+        return []  # a saved row from before the add-on was removed: shown as empty rather than failing
+    result = rpc('Files.GetDirectory', {'directory': link, 'media': 'video',
+                                        'properties': ['title', 'thumbnail', 'art', 'plot', 'studio', 'duration']})
     return [i for i in (classify(e) for e in result.get('files') or []) if i]
 
 
@@ -320,8 +341,7 @@ def when_text(stamp):
 
 def open_settings():
     """The YouTube add-on's own settings, where the API key is entered and the sign-in lives."""
-    if not installed():
-        xbmcgui.Dialog().ok('Stream', 'Install "YouTube" from Add-ons > Install from repository > Video add-ons first.')
+    if not ensure_installed('sign in and show your YouTube lists'):
         return
     state = 'API key entered' if has_key() else 'no API key yet'
     choice = xbmcgui.Dialog().select('YouTube  -  ' + state,

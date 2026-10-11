@@ -1,0 +1,122 @@
+# Rows built from the local index and TMDb: titles like one just watched, browsing by genre, what is new,
+# and what the household plays most. Everything prefers the viewer's languages, first language first.
+import catalogue as cat
+import db
+import meta
+
+MOVIE_KINDS = ('Movies',)
+SHOW_KINDS = ('Web Series', 'TV Shows', 'English TV')
+TITLE_KINDS = MOVIE_KINDS + SHOW_KINDS
+
+# Genres offered for browsing. Each maps to TMDb's genre names (for titles that have been looked up) and to
+# words found in the catalogue's own descriptions (for the rest).
+GENRES = [
+    ('Action', ['Action', 'Adventure', 'War'], ['action', 'fight', 'mission', 'gangster', 'revenge', 'battle', 'warrior']),
+    ('Comedy', ['Comedy'], ['comedy', 'funny', 'hilarious', 'laugh', 'comic']),
+    ('Thriller & Crime', ['Thriller', 'Crime', 'Mystery'], ['thriller', 'murder', 'crime', 'police', 'investigat', 'detective', 'mystery', 'killer', 'heist']),
+    ('Romance', ['Romance'], ['love', 'romance', 'romantic', 'wedding', 'couple']),
+    ('Drama', ['Drama', 'History'], ['drama', 'emotional', 'struggle', 'journey']),
+    ('Horror', ['Horror'], ['horror', 'ghost', 'haunted', 'spirit', 'paranormal', 'supernatural']),
+    ('Family', ['Family', 'Animation'], ['family', 'father', 'mother', 'children', 'brother', 'sister']),
+    ('Sci-fi & Fantasy', ['Science Fiction', 'Fantasy'], ['sci-fi', 'future', 'alien', 'fantasy', 'magic', 'myth', 'superhero']),
+    ('Devotional & Mythology', [], ['god', 'goddess', 'divine', 'devotion', 'temple', 'mytholog', 'lord ']),
+]
+TMDB_TO_GENRE = {name: label for label, names, _ in GENRES for name in names}
+
+
+def _lang_rank(entry, order=None):
+    order = cat.top_groups() if order is None else order
+    group = (entry.get('group') or '').lower()
+    for n, lang in enumerate(order):
+        if db.lang_match(group, [lang]):
+            return n
+    return len(order)
+
+
+def by_language(entries, limit=None):
+    """The viewer's languages first (their main language leading), then the rest; stable otherwise."""
+    order = cat.top_groups()
+    ranked = sorted(enumerate(entries), key=lambda p: (_lang_rank(p[1], order), p[0]))
+    out = [e for _, e in ranked]
+    return out[:limit] if limit else out
+
+
+def chosen_only(entries):
+    """Only the viewer's languages, unless that would leave nothing."""
+    return db.only_chosen(entries, lambda e: e.get('group'))
+
+
+def _dedupe(entries):
+    seen, out = set(), []
+    for e in entries:
+        name = e['item']['name']
+        if name not in seen:
+            seen.add(name)
+            out.append(e)
+    return out
+
+
+def genre_entries(genre, kinds, limit=80):
+    """Titles of a genre: looked-up TMDb genres and description words, in the viewer's languages, newest first."""
+    spec = next((g for g in GENRES if g[0] == genre), None)
+    if not spec:
+        return []
+    entries = chosen_only(_dedupe(db.by_genre(kinds, spec[1], spec[2])))
+    return by_language(entries, limit)
+
+
+def genre_tiles(kinds):
+    """[(genre, count)] for the genres that have enough titles to be worth a tile."""
+    out = []
+    for genre, names, words in GENRES:
+        entries = chosen_only(_dedupe(db.by_genre(kinds, names, words)))
+        if len(entries) >= 4:
+            out.append((genre, len(entries)))
+    return out
+
+
+def similar_entries(name, show=False, lang='', limit=20):
+    """Titles like the one named: TMDb's picks that exist in the catalogue, then titles of the same genres in the
+    same language. Empty when too little is known."""
+    kinds = SHOW_KINDS if show else MOVIE_KINDS
+    found = []
+    try:
+        for pick in meta.similar(name, show, lang):
+            for hit in db.find_by_title(pick['title'], kinds, 2):
+                base = meta.split_title(hit['item']['name'])[0].lower()
+                if base == pick['title'].lower() or (pick['year'] and pick['year'] in hit['item']['name']):
+                    found.append(hit)
+    except Exception as e:
+        cat.log('similar lookup failed: {0}'.format(e))
+    found = chosen_only(_dedupe(found)) if found else []
+    if len(found) < limit:
+        data = meta.lookup(name, show, fetch=False, lang=lang)
+        labels = {TMDB_TO_GENRE[g] for g in data.get('genres', []) if g in TMDB_TO_GENRE}
+        names = [n for label, ns, _ in GENRES if label in labels for n in ns]
+        words = [w for label, _, ws in GENRES if label in labels for w in ws][:12]
+        if names or words:
+            same = db.by_genre(kinds, names, words, 300)
+            if lang:
+                same = [e for e in same if db.lang_match(e.get('group') or '', [lang.lower()])] or same
+            found = _dedupe(found + by_language(chosen_only(same)))
+    base = meta.split_title(name)[0].lower()
+    found = [e for e in found if meta.split_title(e['item']['name'])[0].lower() != base]
+    return by_language(found, limit)
+
+
+def new_entries(limit=24):
+    """Titles added to the catalogue this week, in the viewer's languages."""
+    return by_language(chosen_only(_dedupe(db.new_titles())), limit)
+
+
+def top_entries(limit=10):
+    """The household's most played movies and shows this month, as tiles with their rank."""
+    out = []
+    for n, pick in enumerate(db.top_titles(30, limit)):
+        entry = db.find_show(pick['title']) if pick['series'] else pick['entry']
+        if not entry:
+            continue
+        times = 'played {0} time{1}'.format(pick['plays'], '' if pick['plays'] == 1 else 's')
+        out.append(dict(entry, meta='#{0} in your home · {1}'.format(n + 1, times), rank=n + 1))
+    return out
+
