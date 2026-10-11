@@ -785,6 +785,29 @@ def onboarding(first_run):
     return True
 
 
+def reset_everything():
+    """Erase every profile and everything Stream has saved on this device, as if it had just been installed.
+    The add-on settings (keys) are kept; the activity log is kept so the reset itself can be traced."""
+    import shutil
+    keep = ('settings.xml', 'stream.log', 'session.open')
+    for name in sorted(os.listdir(db.PROFILE)):
+        if name in keep:
+            continue
+        path = os.path.join(db.PROFILE, name)
+        try:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
+        except Exception as e:
+            cat.log('reset could not remove {0}: {1}'.format(name, e))
+    cat._cache.clear()
+    cat.state.clear()
+    cat.state['affinity'] = {}
+    db.use_profile({'id': 'default', 'name': 'Me', 'kids': False, 'pin': ''})
+    audit.event('reset')
+
+
 def add_profile():
     dialog = xbmcgui.Dialog()
     name = dialog.input('Name for the new profile')
@@ -1268,6 +1291,9 @@ class Home(xbmcgui.WindowXML):
                       'A report is also sent automatically after a crash unless that is switched off under Keys and options.'),
             tile('Switch or add profile', 'setting', action='switch', meta='Now: ' + (CURRENT['profile'] or {}).get('name', ''),
                  plot='Stream opens with the profile used last. Each profile has its own history, My List, likes and recommendations. A kids profile shows only children\'s titles.'),
+            tile('Start fresh', 'setting', action='reset', meta='Erases every profile',
+                 plot='Delete all profiles with their watch history, resume points, My List, likes, recommendations and setup answers, '
+                      'and the cached catalogue, then run the first-time setup again as on a new installation. API keys entered under Options and keys are kept.'),
             tile('Kids profile PIN', 'setting', action='pin',
                  meta='Locked' if any(p.get('kids') and p.get('pin') for p in db.list_profiles()) else 'No PIN set',
                  plot='Set or change the PIN that is asked for when someone tries to leave a kids profile, switch profile or close Stream from it. '
@@ -1615,6 +1641,16 @@ class Home(xbmcgui.WindowXML):
             xbmcaddon.Addon('script.stream').openSettings()
         elif action == 'pin':
             self.set_kids_pin()
+        elif action == 'reset':
+            dialog = xbmcgui.Dialog()
+            if dialog.yesno('Start fresh', 'Erase every profile on this device, with all watch history, My List, likes, '
+                                           'recommendations and setup answers?\nThis cannot be undone.', nolabel='Keep everything', yeslabel='Erase'):
+                if dialog.yesno('Start fresh', 'Last check: erase everything and run the first-time setup again?',
+                                nolabel='Keep everything', yeslabel='Erase everything'):
+                    reset_everything()
+                    notify('Everything erased. Setting up from the start…', 4000)
+                    self.reset = True
+                    self.close()
         elif action == 'youtube':
             yt.open_settings()
         elif action == 'subscribe_help':
@@ -1859,8 +1895,12 @@ def run():
                 xbmcgui.Window(10000).clearProperty('script.stream.running')
             audit.event('window_closed')
             again = getattr(window, 'switch', False)
+            fresh = getattr(window, 'reset', False)
             window.finish()
             del window
+            if fresh:
+                current, remembered = None, None  # everything was erased: pick up as a new installation
+                continue
             if not again:
                 break
             continue
@@ -1894,9 +1934,13 @@ def run():
             xbmcgui.Window(10000).clearProperty('script.stream.running')
         audit.event('window_closed')
         again = getattr(window, 'switch', False)
+        fresh = getattr(window, 'reset', False)
         window.finish()
         audit.event('workers_stopped')
         del window
+        if fresh:
+            current, remembered = None, None
+            continue
         if not again:
             break
     cat.flush()

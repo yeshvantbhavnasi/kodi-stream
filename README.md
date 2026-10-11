@@ -80,6 +80,10 @@ A **kids profile** shows only children's titles and kids TV channels, searches o
 brighter look. **Settings → Kids profile PIN** sets or changes a PIN that is asked for before leaving the profile,
 switching profile or closing Stream from it, so a child holding the remote stays inside Kids.
 
+**Settings → Start fresh** erases every profile on the device with its history, resume points, My List, likes,
+recommendations and setup answers, along with the cached catalogue, and then runs the first-time setup again as on a new
+installation. It asks twice. API keys entered under Options and keys are kept.
+
 ### Ratings, reviews and trailers
 
 Stream looks titles up on The Movie Database (TMDb) in the background and caches the result on the device:
