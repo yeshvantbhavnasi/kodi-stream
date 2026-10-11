@@ -306,7 +306,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row0.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(200)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -358,7 +358,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(200) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(200) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -425,7 +425,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row1.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(201)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -477,7 +477,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(201) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(201) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -544,7 +544,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row2.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(202)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -596,7 +596,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(202) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(202) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -663,7 +663,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row3.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(203)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -715,7 +715,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(203) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(203) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -782,7 +782,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row4.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(204)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -834,7 +834,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(204) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(204) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -901,7 +901,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row5.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(205)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -953,7 +953,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(205) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(205) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1020,7 +1020,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row6.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(206)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -1072,7 +1072,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(206) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(206) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1139,7 +1139,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row7.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(207)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -1191,7 +1191,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(207) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(207) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1258,7 +1258,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row8.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(208)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -1310,7 +1310,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(208) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(208) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1377,7 +1377,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row9.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(209)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -1429,7 +1429,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(209) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(209) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1496,7 +1496,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row10.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(210)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -1548,7 +1548,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(210) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(210) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1615,7 +1615,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row11.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(211)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -1667,7 +1667,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(211) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(211) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1734,7 +1734,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row12.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(212)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -1786,7 +1786,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(212) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(212) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1853,7 +1853,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row13.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(213)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -1905,7 +1905,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(213) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(213) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -1972,7 +1972,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row14.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(214)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -2024,7 +2024,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(214) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(214) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
@@ -2090,7 +2090,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row15.wide))">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(215)</visible></control>
                             <!-- wide tiles: YouTube videos -->
                             <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
@@ -2142,7 +2142,7 @@
                         </control>
                     </itemlayout>
                     <focusedlayout width="216" height="364">
-                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="107" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                        <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(215) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(215) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
