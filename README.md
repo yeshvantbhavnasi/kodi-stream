@@ -43,7 +43,7 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Like or dislike a title | Hold OK on the title and pick **Like** or **Dislike** |
 | Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |
 | Resume a title | Play it again; it carries on from where it stopped. A red bar under the poster shows how far in it is. Hold OK and pick **Play from the beginning** to start over |
-| Browse by genre | The **Browse by Genre** cards at the top of Movies and Shows: Action, Comedy, Thriller & Crime, Romance and so on, in your languages, newest first |
+| Browse by genre | The genre strip under the description panel on Movies and Shows (Down from the top bar): OK on Action, Comedy, Thriller & Crime, Romance and so on filters the rows to that genre, one row per language, your first language first. **All** clears it |
 | See everything watched | The **History** section: unfinished titles, then everything played, newest first |
 
 ### What the home screen shows

@@ -39,6 +39,7 @@ ACTION_CONTEXT = 117
 ACTION_INFO = 11  # the Info key on a remote plays the trailer of the highlighted title
 ACTION_DOWN = 4
 TRAILER_ID = 150  # the Watch trailer button in the description panel
+FILTER_ID = 160  # the genre strip under the description panel on Movies and Shows
 IDLE_AFTER = 60  # seconds without a key press before the home screen starts showing off recommended titles
 NEXT_IN = 10  # seconds the next episode waits before it starts by itself
 START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
@@ -1166,6 +1167,8 @@ class Home(xbmcgui.WindowXML):
         self.pending = ('home', 0)
         self.settling = False
         self.hero_row = FIRST_ROW
+        self.filter = None  # genre chosen on the Movies or Shows strip
+        self.strip_for = None  # which tab the strip's chips were built for
         HOME['window'] = self
         self.setProperty('kids', '1' if db.KIDS else '')
         tabs = []
@@ -1212,12 +1215,35 @@ class Home(xbmcgui.WindowXML):
         self.getControl(TABS_ID).selectItem(0)
         self.load_tab('home', focus)
 
-    def genre_row(self, kinds, what):
-        """Cards for browsing by genre, built from the local index; nothing when the index is still empty."""
-        tiles = [tile(genre, 'genre', genre=genre, kinds=what, meta='{0} titles'.format(count),
-                      plot='{0} {1} in your languages, newest first.'.format(genre, what))
-                 for genre, count in discover.genre_tiles(kinds)]
-        return [('items', 'Browse by Genre', tiles)] if tiles else []
+    def filtered_rows(self, kinds):
+        """The chosen genre as one row per language, the viewer's first language first."""
+        entries = discover.genre_entries(self.filter, kinds, 400)
+        rows, by_lang = [], {}
+        for e in entries:
+            by_lang.setdefault(cat.title_case(e.get('group') or 'Other'), []).append(e)
+        for lang, found in by_lang.items():
+            rows.append(('items', '{0} · {1}'.format(self.filter, lang), [entry_item(e, meta=lang) for e in found[:ROW_LIMIT]]))
+        return rows
+
+    def show_filters(self, key):
+        """Fill the genre strip for Movies and Shows; hide it elsewhere. Called with the UI lock held."""
+        strip = self.getControl(FILTER_ID)
+        self.setProperty('filter', self.filter or '')
+        if key not in ('movies', 'shows') or db.KIDS:
+            strip.reset()
+            self.strip_for = None
+            self.setProperty('filters', '')
+            return
+        if self.strip_for == key:
+            return  # same tab reloading after a pick: keep the chips, and the highlight on them
+        strip.reset()
+        kinds = discover.MOVIE_KINDS if key == 'movies' else discover.SHOW_KINDS
+        chips = [tile('All', 'filter', genre='')]
+        for genre, count in discover.genre_tiles(kinds):
+            chips.append(tile(genre.replace(' & Mythology', ''), 'filter', genre=genre))
+        strip.addItems(chips)
+        self.strip_for = key
+        self.setProperty('filters', '1' if len(chips) > 1 else '')
 
     def discovery_rows(self):
         """What is new, what the household plays most, and titles like the ones watched last."""
@@ -1421,10 +1447,14 @@ class Home(xbmcgui.WindowXML):
                     rows.append(('dir', 'YouTube', yt.url('special/related_videos'), 'YouTube', None))
             return rows
         if key == 'movies':
-            return self.genre_row(discover.MOVIE_KINDS, 'movies') + self.language_rows(u['movies'], '{0} Movies', ROWS - 2) + english_movies
+            if self.filter:
+                return self.filtered_rows(discover.MOVIE_KINDS)
+            return self.language_rows(u['movies'], '{0} Movies', ROWS - 1) + english_movies
         if key == 'shows':
-            return (self.genre_row(discover.SHOW_KINDS, 'shows') + self.language_rows(u['web_series'], '{0} Web Series', 9)
-                    + english_tv + self.language_rows(u['tv_shows'], '{0} TV Shows', 4))
+            if self.filter:
+                return self.filtered_rows(discover.SHOW_KINDS)
+            return (self.language_rows(u['web_series'], '{0} Web Series', 9) + english_tv
+                    + self.language_rows(u['tv_shows'], '{0} TV Shows', 4))
         if key == 'sports':
             return self.sports_rows(ROWS - 1)
         if key == 'kids':
@@ -1465,6 +1495,8 @@ class Home(xbmcgui.WindowXML):
         if self.closed:
             return
         audit.event('tab', name=key, free_memory=audit.memory())
+        if key != self.tab:
+            self.filter = None  # a genre filter belongs to the tab it was chosen on
         self.tab = key
         self.token += 1
         self.setProperty('status', 'Loading…')
@@ -1500,6 +1532,7 @@ class Home(xbmcgui.WindowXML):
                     self.setProperty('row{0}.title'.format(n), '')
                     self.setProperty('row{0}.wide'.format(n), '')
                     self.getControl(FIRST_ROW + n).reset()
+                self.show_filters(key)
             for row in specs:
                 if not current():
                     return
@@ -1538,6 +1571,7 @@ class Home(xbmcgui.WindowXML):
             with self.ui_lock:
                 if current():
                     empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.',
+                             'movies': 'Nothing found for this genre yet.', 'shows': 'Nothing found for this genre yet.',
                              'history': 'Nothing has been played on this profile yet.',
                              'youtube': yt.KEY_HELP}
                     self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
@@ -1770,6 +1804,13 @@ class Home(xbmcgui.WindowXML):
             self.search()
         elif control_id == GEAR_ID:
             self.load_tab('settings')
+        elif control_id == FILTER_ID:
+            li = self.getControl(FILTER_ID).getSelectedItem()
+            if li is not None:
+                self.filter = li.getProperty('genre') or None
+                if self.filter:
+                    db.log_event('browsed', self.filter, None, self.tab)
+                self.load_tab(self.tab, focus=False)  # the highlight stays on the strip; Down goes to the rows
         elif control_id == PROFILE_ID:
             if self.may_leave():
                 self.switch = True
@@ -1792,13 +1833,6 @@ class Home(xbmcgui.WindowXML):
                 self.load_tab('live')
             elif kind == 'setting':
                 self.run_setting(li.getProperty('action'))
-            elif kind == 'genre':
-                what = li.getProperty('kinds')
-                entries = discover.genre_entries(li.getProperty('genre'), discover.SHOW_KINDS if what == 'shows' else discover.MOVIE_KINDS)
-                db.log_event('browsed', li.getProperty('genre'), None, what)
-                if open_grid('{0} {1}'.format(li.getProperty('genre'), what.capitalize()),
-                             entries=[dict(e, meta=cat.title_case(e.get('group') or '')) for e in entries]):
-                    self.go_home()
             elif activate(li):
                 self.go_home()
             elif kind == 'play' and li.getProperty('series') and xbmc.Player().isPlaying():

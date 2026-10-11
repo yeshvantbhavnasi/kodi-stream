@@ -4,9 +4,9 @@
     <controls>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
-        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label><visible>Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140)</visible></control>
+        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label><visible>Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)</visible></control>
         <control type="group">
-            <visible>Control.HasFocus(200) | [Control.HasFocus(150) + String.IsEqual(Window.Property(hero),200)] | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140)] + String.IsEmpty(Window.Property(status))]</visible>
+            <visible>Control.HasFocus(200) | [Control.HasFocus(150) + String.IsEqual(Window.Property(hero),200)] | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)] + String.IsEmpty(Window.Property(status))]</visible>
             <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="70FFFFFF">$INFO[Container(200).ListItem.Art(thumb)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><texture>fade.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true">$INFO[Container(200).ListItem.Art(thumb)]</texture></control>
@@ -198,7 +198,7 @@
             <control type="label"><left>340</left><top>404</top><width>1100</width><height>30</height><font>font10</font><textcolor>FF8C8C8C</textcolor><label>$INFO[Container(215).ListItem.Property(hint)]</label><visible>!String.IsEmpty(Container(215).ListItem.Property(trailer))</visible></control>
         </control>
         <!-- Watch trailer: shown for movies and shows (dimmed while the top bar has focus). Up from any tile reaches it (Kodi skips the hidden button and follows its own Up to the row above or the tabs); Left from a row's first tile reaches it too -->
-        <control type="image"><left>60</left><top>392</top><width>260</width><height>50</height><texture colordiffuse="40FFFFFF">white.png</texture><visible>[Control.HasFocus(200) + !String.IsEmpty(Container(200).ListItem.Property(trailer))] | [Control.HasFocus(201) + !String.IsEmpty(Container(201).ListItem.Property(trailer))] | [Control.HasFocus(202) + !String.IsEmpty(Container(202).ListItem.Property(trailer))] | [Control.HasFocus(203) + !String.IsEmpty(Container(203).ListItem.Property(trailer))] | [Control.HasFocus(204) + !String.IsEmpty(Container(204).ListItem.Property(trailer))] | [Control.HasFocus(205) + !String.IsEmpty(Container(205).ListItem.Property(trailer))] | [Control.HasFocus(206) + !String.IsEmpty(Container(206).ListItem.Property(trailer))] | [Control.HasFocus(207) + !String.IsEmpty(Container(207).ListItem.Property(trailer))] | [Control.HasFocus(208) + !String.IsEmpty(Container(208).ListItem.Property(trailer))] | [Control.HasFocus(209) + !String.IsEmpty(Container(209).ListItem.Property(trailer))] | [Control.HasFocus(210) + !String.IsEmpty(Container(210).ListItem.Property(trailer))] | [Control.HasFocus(211) + !String.IsEmpty(Container(211).ListItem.Property(trailer))] | [Control.HasFocus(212) + !String.IsEmpty(Container(212).ListItem.Property(trailer))] | [Control.HasFocus(213) + !String.IsEmpty(Container(213).ListItem.Property(trailer))] | [Control.HasFocus(214) + !String.IsEmpty(Container(214).ListItem.Property(trailer))] | [Control.HasFocus(215) + !String.IsEmpty(Container(215).ListItem.Property(trailer))] | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140)] + String.IsEmpty(Window.Property(status)) + !String.IsEmpty(Container(200).ListItem.Property(trailer))]</visible></control>
+        <control type="image"><left>60</left><top>392</top><width>260</width><height>50</height><texture colordiffuse="40FFFFFF">white.png</texture><visible>[Control.HasFocus(200) + !String.IsEmpty(Container(200).ListItem.Property(trailer))] | [Control.HasFocus(201) + !String.IsEmpty(Container(201).ListItem.Property(trailer))] | [Control.HasFocus(202) + !String.IsEmpty(Container(202).ListItem.Property(trailer))] | [Control.HasFocus(203) + !String.IsEmpty(Container(203).ListItem.Property(trailer))] | [Control.HasFocus(204) + !String.IsEmpty(Container(204).ListItem.Property(trailer))] | [Control.HasFocus(205) + !String.IsEmpty(Container(205).ListItem.Property(trailer))] | [Control.HasFocus(206) + !String.IsEmpty(Container(206).ListItem.Property(trailer))] | [Control.HasFocus(207) + !String.IsEmpty(Container(207).ListItem.Property(trailer))] | [Control.HasFocus(208) + !String.IsEmpty(Container(208).ListItem.Property(trailer))] | [Control.HasFocus(209) + !String.IsEmpty(Container(209).ListItem.Property(trailer))] | [Control.HasFocus(210) + !String.IsEmpty(Container(210).ListItem.Property(trailer))] | [Control.HasFocus(211) + !String.IsEmpty(Container(211).ListItem.Property(trailer))] | [Control.HasFocus(212) + !String.IsEmpty(Container(212).ListItem.Property(trailer))] | [Control.HasFocus(213) + !String.IsEmpty(Container(213).ListItem.Property(trailer))] | [Control.HasFocus(214) + !String.IsEmpty(Container(214).ListItem.Property(trailer))] | [Control.HasFocus(215) + !String.IsEmpty(Container(215).ListItem.Property(trailer))] | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)] + String.IsEmpty(Window.Property(status)) + !String.IsEmpty(Container(200).ListItem.Property(trailer))]</visible></control>
         <control type="image"><left>60</left><top>392</top><width>260</width><height>50</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(150)</visible></control>
         <control type="button" id="150">
             <left>60</left><top>392</top><width>260</width><height>50</height>
@@ -212,6 +212,7 @@
             <focusedcolor>FF141414</focusedcolor>
             <onleft>150</onleft>
             <onright>150</onright>
+            <onup condition="[Control.HasFocus(200) | String.IsEqual(Window.Property(hero),200)] + Control.IsVisible(160)">160</onup>
             <onup condition="Control.HasFocus(200)">100</onup>
             <onup condition="Control.HasFocus(201)">200</onup>
             <onup condition="Control.HasFocus(202)">201</onup>
@@ -262,7 +263,30 @@
             <ondown condition="String.IsEqual(Window.Property(hero),214)">214</ondown>
             <ondown condition="String.IsEqual(Window.Property(hero),215)">215</ondown>
             <ondown>150</ondown>
-            <visible>Control.HasFocus(150) | [Control.HasFocus(200) + !String.IsEmpty(Container(200).ListItem.Property(trailer))] | [Control.HasFocus(201) + !String.IsEmpty(Container(201).ListItem.Property(trailer))] | [Control.HasFocus(202) + !String.IsEmpty(Container(202).ListItem.Property(trailer))] | [Control.HasFocus(203) + !String.IsEmpty(Container(203).ListItem.Property(trailer))] | [Control.HasFocus(204) + !String.IsEmpty(Container(204).ListItem.Property(trailer))] | [Control.HasFocus(205) + !String.IsEmpty(Container(205).ListItem.Property(trailer))] | [Control.HasFocus(206) + !String.IsEmpty(Container(206).ListItem.Property(trailer))] | [Control.HasFocus(207) + !String.IsEmpty(Container(207).ListItem.Property(trailer))] | [Control.HasFocus(208) + !String.IsEmpty(Container(208).ListItem.Property(trailer))] | [Control.HasFocus(209) + !String.IsEmpty(Container(209).ListItem.Property(trailer))] | [Control.HasFocus(210) + !String.IsEmpty(Container(210).ListItem.Property(trailer))] | [Control.HasFocus(211) + !String.IsEmpty(Container(211).ListItem.Property(trailer))] | [Control.HasFocus(212) + !String.IsEmpty(Container(212).ListItem.Property(trailer))] | [Control.HasFocus(213) + !String.IsEmpty(Container(213).ListItem.Property(trailer))] | [Control.HasFocus(214) + !String.IsEmpty(Container(214).ListItem.Property(trailer))] | [Control.HasFocus(215) + !String.IsEmpty(Container(215).ListItem.Property(trailer))] | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140)] + String.IsEmpty(Window.Property(status)) + !String.IsEmpty(Container(200).ListItem.Property(trailer))]</visible>
+            <visible>Control.HasFocus(150) | [Control.HasFocus(200) + !String.IsEmpty(Container(200).ListItem.Property(trailer))] | [Control.HasFocus(201) + !String.IsEmpty(Container(201).ListItem.Property(trailer))] | [Control.HasFocus(202) + !String.IsEmpty(Container(202).ListItem.Property(trailer))] | [Control.HasFocus(203) + !String.IsEmpty(Container(203).ListItem.Property(trailer))] | [Control.HasFocus(204) + !String.IsEmpty(Container(204).ListItem.Property(trailer))] | [Control.HasFocus(205) + !String.IsEmpty(Container(205).ListItem.Property(trailer))] | [Control.HasFocus(206) + !String.IsEmpty(Container(206).ListItem.Property(trailer))] | [Control.HasFocus(207) + !String.IsEmpty(Container(207).ListItem.Property(trailer))] | [Control.HasFocus(208) + !String.IsEmpty(Container(208).ListItem.Property(trailer))] | [Control.HasFocus(209) + !String.IsEmpty(Container(209).ListItem.Property(trailer))] | [Control.HasFocus(210) + !String.IsEmpty(Container(210).ListItem.Property(trailer))] | [Control.HasFocus(211) + !String.IsEmpty(Container(211).ListItem.Property(trailer))] | [Control.HasFocus(212) + !String.IsEmpty(Container(212).ListItem.Property(trailer))] | [Control.HasFocus(213) + !String.IsEmpty(Container(213).ListItem.Property(trailer))] | [Control.HasFocus(214) + !String.IsEmpty(Container(214).ListItem.Property(trailer))] | [Control.HasFocus(215) + !String.IsEmpty(Container(215).ListItem.Property(trailer))] | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)] + String.IsEmpty(Window.Property(status)) + !String.IsEmpty(Container(200).ListItem.Property(trailer))]</visible>
+        </control>
+        <!-- Genre filter strip under the top bar on Movies and Shows: OK on a chip filters the rows, All clears it -->
+        <control type="list" id="160">
+            <left>50</left><top>82</top><width>1460</width><height>38</height>
+            <orientation>horizontal</orientation>
+            <scrolltime tween="quadratic">150</scrolltime>
+            <onup>100</onup>
+            <ondown>200</ondown>
+            <onleft>noop</onleft>
+            <onright>noop</onright>
+            <visible>!String.IsEmpty(Window.Property(filters))</visible>
+            <itemlayout width="146" height="38">
+                <control type="image"><left>10</left><top>3</top><width>134</width><height>32</height><texture colordiffuse="2EFFFFFF">white.png</texture><visible>!String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>134</width><height>32</height><texture colordiffuse="A0E50914">white.png</texture><visible>String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>134</width><height>32</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>
+            </itemlayout>
+            <focusedlayout width="146" height="38">
+                <control type="image"><left>10</left><top>3</top><width>134</width><height>32</height><texture colordiffuse="2EFFFFFF">white.png</texture><visible>!Control.HasFocus(160) + !String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>134</width><height>32</height><texture colordiffuse="A0E50914">white.png</texture><visible>!Control.HasFocus(160) + String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>134</width><height>32</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(160)</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>134</width><height>32</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label><visible>!Control.HasFocus(160)</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>134</width><height>32</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus(160)</visible></control>
+            </focusedlayout>
         </control>
         <control type="grouplist" id="9000">
             <left>0</left><top>480</top><width>1920</width><height>600</height>
@@ -2180,7 +2204,7 @@
         <control type="list" id="100">
             <left>330</left><top>24</top><width>1150</width><height>56</height>
             <orientation>horizontal</orientation>
-            <ondown>200</ondown>
+            <ondown>160</ondown>
             <onright>120</onright>
             <onleft>noop</onleft>
             <onup>noop</onup>
@@ -2218,7 +2242,7 @@
             <focusedcolor>FFFFFFFF</focusedcolor>
             <onleft>100</onleft>
             <onright>140</onright>
-            <ondown>200</ondown>
+            <ondown>160</ondown>
             <onup>noop</onup>
         </control>
         <control type="button" id="140">
@@ -2229,7 +2253,7 @@
             <onleft>120</onleft>
             <onright>130</onright>
             <onup>noop</onup>
-            <ondown>200</ondown>
+            <ondown>160</ondown>
         </control>
         <control type="button" id="130">
             <left>1800</left><top>30</top><width>44</width><height>44</height>
@@ -2239,7 +2263,7 @@
             <onleft>140</onleft>
             <onright>110</onright>
             <onup>noop</onup>
-            <ondown>200</ondown>
+            <ondown>160</ondown>
         </control>
         <control type="button" id="110">
             <left>1856</left><top>30</top><width>44</width><height>44</height>
@@ -2249,7 +2273,7 @@
             <onleft>130</onleft>
             <onright>noop</onright>
             <onup>noop</onup>
-            <ondown>200</ondown>
+            <ondown>160</ondown>
         </control>
     </controls>
 </window>
