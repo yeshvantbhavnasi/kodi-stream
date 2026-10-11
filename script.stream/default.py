@@ -36,6 +36,8 @@ ACTION_LEFT, ACTION_RIGHT = 1, 2
 ACTION_BACK = (9, 10, 92)  # parent dir, previous menu, nav back
 ACTION_CONTEXT = 117
 ACTION_INFO = 11  # the Info key on a remote plays the trailer of the highlighted title
+ACTION_DOWN = 4
+TRAILER_ID = 150  # the Watch trailer button in the description panel
 START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
 CANCEL_GRACE = 1.5  # seconds after a play request during which a cancel is taken as a repeated OK press
 
@@ -161,7 +163,8 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     if video and item['t'] == 'play':
         hint += '     Hold OK  Subscribe to channel, My List'
     elif (titled or item['t'] == 'folder') and not series and cat.section_of(parent or '')[0]:
-        hint += '     Hold OK  Trailer, My List, Like'   # a movie or show from the catalogue
+        hint += '     Hold OK  My List, Like'   # a movie or show from the catalogue
+        li.setProperty('trailer', 'find')  # shows the Watch trailer button; TMDb's own pick replaces this once looked up
     else:
         hint += '     Hold OK  More options'
     li.setProperty('hint', hint)
@@ -388,6 +391,8 @@ def apply_details(li, data):
         li.setArt({'thumb': data['poster']})
     if not li.getProperty('plot') and data.get('overview'):
         li.setProperty('plot', data['overview'])
+    if data.get('trailer'):
+        li.setProperty('trailer', data['trailer'])
 
 
 def enrich(control, still_wanted, limit, lock):
@@ -433,8 +438,11 @@ def watch_trailer(li):
     busy = xbmcgui.DialogProgressBG()
     busy.create('Stream', 'Finding the trailer for ' + name + '…')
     key, title = '', name
+    known = li.getProperty('trailer')
+    if known and known != 'find':
+        key, title = known, meta.split_title(name)[0] or name  # TMDb's pick, already looked up for this tile
     try:
-        if meta.enabled():
+        if not key and meta.enabled():
             data = meta.lookup(name, show)
             if data:
                 key, title = data.get('trailer') or '', data.get('title') or name
@@ -927,6 +935,15 @@ class Grid(xbmcgui.WindowXML):
 
     @exclusive
     def onClick(self, control_id):
+        if control_id == TRAILER_ID and not self.loading:
+            li = self.panel.getSelectedItem()
+            if li and is_title(li):
+                BUSY['on'] = True
+                try:
+                    watch_trailer(li)
+                finally:
+                    BUSY['on'] = False
+            return
         if control_id not in (PANEL, EPISODE_LIST) or self.loading:
             return
         li = self.panel.getSelectedItem()
@@ -966,6 +983,13 @@ class Grid(xbmcgui.WindowXML):
 
     def onAction(self, action):
         if self.closed or BUSY['on']:
+            return
+        try:
+            on_button = self.getFocusId() == TRAILER_ID
+        except Exception:
+            on_button = False
+        if on_button and (action.getId() in ACTION_BACK or action.getId() in (ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT)):
+            self.setFocusId(self.view)  # the button hands back to the tiles
             return
         if action.getId() in ACTION_BACK:
             if not stop_if_playing_behind():
@@ -1014,6 +1038,7 @@ class Home(xbmcgui.WindowXML):
         self.ui_lock = threading.Lock()   # held for every change to the row controls
         self.pending = ('home', 0)
         self.settling = False
+        self.hero_row = FIRST_ROW
         HOME['window'] = self
         self.setProperty('kids', '1' if db.KIDS else '')
         tabs = []
@@ -1476,9 +1501,25 @@ class Home(xbmcgui.WindowXML):
         return li.getProperty('key') if li else None
 
     @exclusive
+    def onFocus(self, control_id):
+        if FIRST_ROW <= control_id < FIRST_ROW + ROWS:
+            self.hero_row = control_id
+            self.setProperty('hero', str(control_id))
+
+    def play_trailer_of(self, control_id):
+        li = self.getControl(control_id).getSelectedItem()
+        if li and is_title(li):
+            BUSY['on'] = True
+            try:
+                watch_trailer(li)
+            finally:
+                BUSY['on'] = False
+
     def onClick(self, control_id):
         if control_id == CLOSE_ID:
             self.close()
+        elif control_id == TRAILER_ID:
+            self.play_trailer_of(self.hero_row)
         elif control_id == SEARCH_ID:
             self.search()
         elif control_id == GEAR_ID:
@@ -1525,11 +1566,16 @@ class Home(xbmcgui.WindowXML):
             except Exception:
                 pass
             return
+        if focus == TRAILER_ID and code in (ACTION_RIGHT, ACTION_DOWN):
+            self.setFocusId(self.hero_row)  # back to the tile the button belongs to
+            return
         if code in ACTION_BACK:
-            # Back climbs one level at a time: rows -> tabs -> Home tab -> exit.
+            # Back climbs one level at a time: trailer button -> its row -> tabs -> Home tab -> exit.
             if stop_if_playing_behind():
                 return
-            if focus not in TOP_BAR:
+            if focus == TRAILER_ID:
+                self.setFocusId(self.hero_row)
+            elif focus not in TOP_BAR:
                 self.setFocusId(TABS_ID)
             elif self.tab != 'home':
                 self.go_home(focus=False)
@@ -1554,13 +1600,7 @@ class Home(xbmcgui.WindowXML):
                 elif result == 'changed' and self.tab in ('home', 'mylist', 'youtube'):
                     self.load_tab(self.tab)
         elif code == ACTION_INFO and FIRST_ROW <= focus < FIRST_ROW + ROWS:
-            li = self.getControl(focus).getSelectedItem()
-            if li and is_title(li):
-                BUSY['on'] = True
-                try:
-                    watch_trailer(li)
-                finally:
-                    BUSY['on'] = False
+            self.play_trailer_of(focus)
         elif focus == TABS_ID and code in (ACTION_LEFT, ACTION_RIGHT):
             # Moving along the tabs shows the tab the highlight comes to rest on; focus stays on the tabs.
             key = self.selected_tab()

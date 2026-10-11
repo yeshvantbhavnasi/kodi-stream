@@ -105,9 +105,11 @@ tiles, play with OK like any other title, and show up in Continue Watching and H
      and press Save. Then choose **Saved, sign in** and enter the code at google.com/device (Google warns that the app
      is unverified: it is your own project, continue).
   The rows appear on the YouTube tab as soon as the key is in and you are signed in.
-- **Trailers.** Hold OK on any movie or show and choose **Watch trailer**, or press the remote's Info key. The trailer
-  TMDb lists is used when there is one; otherwise Stream searches YouTube for the title and plays the best match.
-  Trailers play through the YouTube add-on, with no advertisements, and need no key or account.
+- **Trailers.** Every movie and show has a **Watch trailer** button in its description panel: press Left from the
+  first tile of a row to reach it (Up from the top row inside a listing), or hold OK and choose it from the menu, or
+  press the remote's Info key. The trailer TMDb lists is used when there is one; otherwise Stream searches YouTube for
+  the title and plays the best match. Trailers play through the YouTube add-on, with no advertisements, and need no
+  key or account.
 
 ### Episodes
 
