@@ -184,6 +184,7 @@
             <itemgap>10</itemgap>
             <scrolltime tween="quadratic">250</scrolltime>
             <onup>100</onup>
+            <onleft>150</onleft>
             <control type="group" id="300">
                 <height>520</height>
                 <visible>!String.IsEmpty(Window.Property(row0.title))</visible>
