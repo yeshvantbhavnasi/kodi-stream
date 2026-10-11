@@ -35,6 +35,7 @@ EPISODE_LIST = 51   # the same screen shows episodes as a text list instead of p
 ACTION_LEFT, ACTION_RIGHT = 1, 2
 ACTION_BACK = (9, 10, 92)  # parent dir, previous menu, nav back
 ACTION_CONTEXT = 117
+ACTION_INFO = 11  # the Info key on a remote plays the trailer of the highlighted title
 START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
 CANCEL_GRACE = 1.5  # seconds after a play request during which a cancel is taken as a repeated OK press
 
@@ -124,6 +125,10 @@ def clock(seconds):
     return '{0}:{1:02d}:{2:02d}'.format(h, m, s) if h else '{0}:{1:02d}'.format(m, s)
 
 
+def shorten(text, limit=32):
+    return text if len(text) <= limit else text[:limit - 1].rstrip() + '…'
+
+
 def notify(text, ms=3000):
     xbmcgui.Dialog().notification('Stream', text, xbmcgui.NOTIFICATION_INFO, ms)
 
@@ -140,7 +145,9 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     li.setProperty('name', item['name'])
     li.setProperty('plot', item.get('plot', ''))
     if meta is None:
-        meta = 'YouTube' if video and item['t'] == 'play' else cat.title_case(group) if group and item['t'] == 'play' else ''
+        meta = (item.get('by') or 'YouTube') if video and item['t'] == 'play' else cat.title_case(group) if group and item['t'] == 'play' else ''
+        if video and item.get('when'):
+            meta += ' · ' + yt.when_text(item['when'])
     if note:
         meta = (meta + ' · ' if meta else '') + note
     li.setProperty('meta', meta)
@@ -150,7 +157,14 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     elif video and item['t'] == 'play':
         li.setProperty('wide', '1')  # YouTube thumbnails are 16:9, so videos get a wide tile instead of a poster
     li.setProperty('t', item['t'])
-    li.setProperty('hint', ('OK  Play' if item['t'] == 'play' else 'OK  Open') + '     Hold OK  More options')
+    hint = 'OK  Play' if item['t'] == 'play' else 'OK  Open'
+    if video and item['t'] == 'play':
+        hint += '     Hold OK  Subscribe to channel, My List'
+    elif (titled or item['t'] == 'folder') and not series and cat.section_of(parent or '')[0]:
+        hint += '     Hold OK  Trailer, My List, Like'   # a movie or show from the catalogue
+    else:
+        hint += '     Hold OK  More options'
+    li.setProperty('hint', hint)
     li.setProperty('url', item.get('url', ''))
     li.setProperty('i', str(item.get('i', 1)))
     li.setProperty('parent', parent or '')
@@ -412,6 +426,38 @@ def play_trailer(video_id, title):
     threading.Thread(target=follow, args=(None, title + ' (trailer)', None, 'Trailer', True), daemon=True).start()
 
 
+def watch_trailer(li):
+    """Play the trailer of a movie or show: TMDb's pick when available, otherwise the best match from a YouTube search."""
+    name = li.getProperty('name') or li.getLabel()
+    show = li.getProperty('t') == 'folder'
+    busy = xbmcgui.DialogProgressBG()
+    busy.create('Stream', 'Finding the trailer for ' + name + '…')
+    key, title = '', name
+    try:
+        if meta.enabled():
+            data = meta.lookup(name, show)
+            if data:
+                key, title = data.get('trailer') or '', data.get('title') or name
+                apply_details(li, data)
+        if not key:
+            key = db.meta('trailer:' + name) or ''
+        if not key:
+            short, year = meta.split_title(name)
+            title = short or name
+            key = yt.trailer(short, year, show) or ''
+            if key:
+                db.set_meta('trailer:' + name, key)
+    except Exception as e:
+        cat.log('trailer lookup failed: {0}'.format(e))
+    finally:
+        busy.close()
+    if not key:
+        notify('No trailer found for ' + name)
+        return
+    db.log_event('trailer', name, li.getProperty('group') or None, 'Trailer')
+    play_trailer(key, title)
+
+
 def details(li):
     """Rating, overview, reviews and trailer for a title."""
     name = li.getProperty('name') or li.getLabel()
@@ -475,6 +521,21 @@ def context_menu(li, in_grid):
         return 'home' if in_grid and xbmcgui.Dialog().contextmenu(['Go to Home']) == 0 else None
     item, parent, group = item_of(li), li.getProperty('parent'), li.getProperty('group') or None
     section = cat.section_of(parent)[0]
+    channel = li.getProperty('channel')
+    if channel:
+        # A followed channel's tile on the YouTube tab.
+        options = [('open', 'Open'), ('unsubscribe', 'Unsubscribe from ' + item['name'])]
+        if in_grid:
+            options.append(('home', 'Go to Home'))
+        choice = xbmcgui.Dialog().contextmenu([label for _, label in options])
+        if choice < 0:
+            return None
+        if options[choice][0] == 'unsubscribe':
+            db.toggle_channel(channel, item['name'])
+            notify('Unsubscribed from ' + item['name'], 2500)
+            return 'changed'
+        return 'home' if options[choice][0] == 'home' or activate(li) else None
+    video = kind == 'play' and yt.is_youtube(item.get('url'))
     listed = db.in_mylist(item['name'])
     rating = db.rating(item['name'])
     options = [('open', 'Play' if kind == 'play' else 'Open'),
@@ -482,7 +543,10 @@ def context_menu(li, in_grid):
                ('like', 'Remove like' if rating > 0 else 'Like'),
                ('dislike', 'Remove dislike' if rating < 0 else 'Dislike')]
     if is_title(li):
-        options.insert(1, ('info', 'Rating, reviews and trailer'))
+        options.insert(1, ('trailer', 'Watch trailer'))
+        options.insert(2, ('info', 'Rating, reviews and trailer'))
+    if video:
+        options.insert(1, ('subscribe', 'Subscribe to channel'))
     if kind == 'play' and not cat.is_live(item) and db.progress(db.play_key(item))[0] > 30:
         options[0] = ('open', 'Resume')
         options.insert(1, ('restart', 'Play from the beginning'))
@@ -502,6 +566,33 @@ def context_menu(li, in_grid):
     if action == 'info':
         details(li)
         return None
+    if action == 'trailer':
+        watch_trailer(li)
+        return None
+    if action == 'subscribe':
+        busy = xbmcgui.DialogProgressBG()
+        busy.create('Stream', 'Finding the channel…')
+        try:
+            found = yt.channel_of(yt.video_id(item['url']))
+        except Exception as e:
+            cat.log('channel lookup failed: {0}'.format(e))
+            found = None
+        finally:
+            busy.close()
+        if not found:
+            notify('Could not find the channel of this video')
+            return None
+        channel_id, channel_name = found
+        if db.is_subscribed(channel_id):
+            if xbmcgui.Dialog().yesno('Stream', 'You already follow {0}. Unsubscribe?'.format(channel_name)):
+                db.toggle_channel(channel_id, channel_name)
+                notify('Unsubscribed from ' + channel_name, 2500)
+                return 'changed'
+            return None
+        db.toggle_channel(channel_id, channel_name, item.get('img', ''))
+        db.log_event('subscribed', channel_name, 'YouTube', 'channel')
+        notify('Subscribed to {0}. New videos appear on the YouTube tab.'.format(channel_name), 4000)
+        return 'changed'
     if action == 'list':
         added = db.toggle_mylist(item, parent, group)
         db.log_event('listed' if added else 'unlisted', item['name'], group, section)
@@ -893,6 +984,15 @@ class Grid(xbmcgui.WindowXML):
                 NAV['home'] = True
                 self.close()
             return
+        if action.getId() == ACTION_INFO:
+            li = self.panel.getSelectedItem()
+            if li and is_title(li):
+                BUSY['on'] = True
+                try:
+                    watch_trailer(li)
+                finally:
+                    BUSY['on'] = False
+            return
         # Fetch the next page shortly before the end of the list is reached.
         if self.next_url and self.panel.getSelectedPosition() >= self.panel.size() - 14:
             url, self.next_url = self.next_url, None
@@ -1058,6 +1158,40 @@ class Home(xbmcgui.WindowXML):
                 rows.append(('items', title, [entry_item(e, meta=e.get('note')) for e in entries[:60]]))
         return rows
 
+    def youtube_rows(self):
+        """Subscriptions kept in Stream, rows that follow what was watched here, then the add-on's own lists."""
+        rows = []
+        followed = db.channels()
+        if followed:
+            rows.append(('dir', 'New from Your Subscriptions', yt.subs_url(), 'YouTube', None))
+        for video, name in db.recent_videos(2):
+            rows.append(('dir', 'Because you watched ' + shorten(name), yt.url('special/related_videos/?video_id=' + video), 'YouTube', None))
+        for name in db.recent_titles(1):
+            title, year = meta.split_title(name)
+            rows.append(('dir', 'Videos about ' + title, yt.search_url(' '.join(p for p in (title, year) if p)), 'YouTube', None))
+        rows += [('dir', title, yt.url(path), 'YouTube', None) for title, path in yt.lists()]
+        if followed:
+            tiles = []
+            for channel in followed:
+                url = yt.uploads_url(channel['id'])
+                li = list_item({'t': 'folder', 'name': channel['name'], 'url': url, 'img': channel['img'], 'yt': 1}, url, 'YouTube',
+                               meta='Channel')
+                li.setProperty('wide', '1')
+                li.setProperty('channel', channel['id'])
+                li.setProperty('hint', 'OK  Open     Hold OK  Unsubscribe')
+                tiles.append(li)
+            rows.append(('items', 'Your Subscriptions', tiles))
+        else:
+            rows.append(('items', 'Subscriptions', [tile('Follow channels in Stream', 'setting', action='subscribe_help',
+                                                         meta='No Google account needed',
+                                                         plot='Hold OK on any YouTube video and choose Subscribe to channel. '
+                                                              'New videos from the channels you follow then appear here.')]))
+        if not yt.has_key():
+            rows.append(('items', 'More from YouTube', [tile('Use your YouTube account\'s own lists', 'setting', action='youtube',
+                                                              meta='Needs a Google API key',
+                                                              plot=yt.KEY_HELP)]))
+        return rows
+
     def specs(self, key):
         """Rows for a tab: ('items', title, [ListItem]) or ('dir', title, url, group, only)."""
         if key == 'history':
@@ -1090,7 +1224,12 @@ class Home(xbmcgui.WindowXML):
             if english:
                 rows.append(('dir', 'Kids', u['kids'], 'Kids', None))
             if yt.installed():
-                rows.append(('dir', 'YouTube', yt.url('special/recommendations' if yt.has_key() else 'special/related_videos'), 'YouTube', None))
+                if yt.has_key():
+                    rows.append(('dir', 'YouTube', yt.url('special/recommendations'), 'YouTube', None))
+                elif db.channels():
+                    rows.append(('dir', 'New from Your YouTube Subscriptions', yt.subs_url(), 'YouTube', None))
+                else:
+                    rows.append(('dir', 'YouTube', yt.url('special/related_videos'), 'YouTube', None))
             return rows
         if key == 'movies':
             return self.language_rows(u['movies'], '{0} Movies', ROWS - 1) + english_movies
@@ -1106,12 +1245,7 @@ class Home(xbmcgui.WindowXML):
                 return [('items', 'YouTube', [tile('Install the YouTube add-on', 'setting', action='youtube',
                                                     plot='Stream shows YouTube through Kodi\'s YouTube add-on. Install it from '
                                                          'Add-ons > Install from repository > Video add-ons, then come back here.')])]
-            rows = [('dir', title, yt.url(path), 'YouTube', None) for title, path in yt.lists()]
-            if not yt.has_key():
-                rows.append(('items', 'More from YouTube', [tile('Add your API key for Subscriptions and History', 'setting', action='youtube',
-                                                                  meta='Also unlocks Recommendations, Trending and Watch Later',
-                                                                  plot=yt.KEY_HELP)]))
-            return rows
+            return self.youtube_rows()
         if key == 'mylist':
             saved = db.mylist()
             return [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
@@ -1318,6 +1452,10 @@ class Home(xbmcgui.WindowXML):
             xbmcaddon.Addon('script.stream').openSettings()
         elif action == 'youtube':
             yt.open_settings()
+        elif action == 'subscribe_help':
+            xbmcgui.Dialog().ok('Stream', 'Hold OK on any YouTube video and choose Subscribe to channel.\n'
+                                          'New videos from the channels you follow then appear on the YouTube tab and on Home. '
+                                          'No Google account or key is needed.')
         elif action == 'refresh':
             made = self.refresh_recommendations()
             source = db.meta('recs', {}).get('source', 'local')
@@ -1413,8 +1551,16 @@ class Home(xbmcgui.WindowXML):
                     BUSY['on'] = False
                 if result == 'home':
                     self.go_home()
-                elif result == 'changed' and self.tab in ('home', 'mylist'):
+                elif result == 'changed' and self.tab in ('home', 'mylist', 'youtube'):
                     self.load_tab(self.tab)
+        elif code == ACTION_INFO and FIRST_ROW <= focus < FIRST_ROW + ROWS:
+            li = self.getControl(focus).getSelectedItem()
+            if li and is_title(li):
+                BUSY['on'] = True
+                try:
+                    watch_trailer(li)
+                finally:
+                    BUSY['on'] = False
         elif focus == TABS_ID and code in (ACTION_LEFT, ACTION_RIGHT):
             # Moving along the tabs shows the tab the highlight comes to rest on; focus stays on the tabs.
             key = self.selected_tab()

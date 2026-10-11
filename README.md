@@ -85,6 +85,11 @@ add-ons → YouTube**), which fetches videos directly from YouTube, so no advert
 tiles, play with OK like any other title, and show up in Continue Watching and History.
 
 - **Related Videos** works as soon as the add-on is installed, with no account.
+- **Subscriptions without an account.** Hold OK on any video and choose **Subscribe to channel**. Stream keeps the list
+  itself and reads each channel's public feed, so a **New from Your Subscriptions** row shows the latest uploads
+  (also on Home), and a **Your Subscriptions** row opens each channel. Hold OK on a channel tile to unsubscribe.
+- **Rows that follow what you watch in Stream:** *Because you watched …* for the videos played most recently, and
+  *Videos about …* for the last movie or show played.
 - **Your subscriptions, history, recommendations, Trending, Live, Watch Later and Subscribed Channels** come through
   the YouTube Data API, which Google only allows with your own free API key (it no longer gives the Kodi add-on a
   shared one). Signing in without a key only completes halfway: the add-on logs "User is partially logged in" and the
@@ -100,7 +105,9 @@ tiles, play with OK like any other title, and show up in Continue Watching and H
      and press Save. Then choose **Saved, sign in** and enter the code at google.com/device (Google warns that the app
      is unverified: it is your own project, continue).
   The rows appear on the YouTube tab as soon as the key is in and you are signed in.
-- Trailers from the **Rating, reviews and trailer** menu also play through the YouTube add-on.
+- **Trailers.** Hold OK on any movie or show and choose **Watch trailer**, or press the remote's Info key. The trailer
+  TMDb lists is used when there is one; otherwise Stream searches YouTube for the title and plays the best match.
+  Trailers play through the YouTube add-on, with no advertisements, and need no key or account.
 
 ### Episodes
 

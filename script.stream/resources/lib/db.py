@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS ratings (
     name TEXT PRIMARY KEY, value INTEGER, item TEXT, parent TEXT, grp TEXT, rated_at REAL);
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL, action TEXT, name TEXT, grp TEXT, kind TEXT, detail TEXT);
+CREATE TABLE IF NOT EXISTS channels (id TEXT PRIMARY KEY, name TEXT, img TEXT, added_at REAL);
 '''
 
 
@@ -288,6 +289,51 @@ def mylist():
     with _connect() as conn:
         rows = conn.execute('SELECT * FROM mylist ORDER BY added_at DESC').fetchall()
     return [_entry(r) for r in rows]
+
+
+# ---------- YouTube channels followed in Stream (kept here, so no Google account or API key is needed) ----------
+
+def channels():
+    with _connect() as conn:
+        rows = conn.execute('SELECT * FROM channels ORDER BY added_at DESC').fetchall()
+    return [{'id': r['id'], 'name': r['name'], 'img': r['img'] or ''} for r in rows]
+
+
+def is_subscribed(channel_id):
+    with _connect() as conn:
+        return conn.execute('SELECT 1 FROM channels WHERE id=?', (channel_id,)).fetchone() is not None
+
+
+def toggle_channel(channel_id, name, img=''):
+    """Follow a channel, or stop following it. Returns True when it is now followed."""
+    with _connect() as conn:
+        if conn.execute('SELECT 1 FROM channels WHERE id=?', (channel_id,)).fetchone():
+            conn.execute('DELETE FROM channels WHERE id=?', (channel_id,))
+            return False
+        conn.execute('INSERT INTO channels VALUES (?,?,?,?)', (channel_id, name, img, time.time()))
+        return True
+
+
+def channels_version():
+    """Changes whenever the followed channels change, so cached subscription listings are rebuilt."""
+    with _connect() as conn:
+        row = conn.execute('SELECT COUNT(*), COALESCE(MAX(added_at), 0) FROM channels').fetchone()
+    return '{0}-{1}'.format(row[0], int(row[1]))
+
+
+def recent_videos(limit=3):
+    """The YouTube videos played most recently on this profile: [(video_id, name)]."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT key, name FROM watched WHERE key LIKE 'yt:%' ORDER BY played_at DESC LIMIT ?", (limit,)).fetchall()
+    return [(r['key'][3:], r['name']) for r in rows]
+
+
+def recent_titles(limit=2):
+    """The movies and shows played most recently on this profile (no channels or videos): [name]."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT name FROM watched WHERE key NOT LIKE 'yt:%' AND key NOT LIKE 'live:%' "
+                            "ORDER BY played_at DESC LIMIT ?", (limit,)).fetchall()
+    return [r['name'] for r in rows]
 
 
 # ---------- suggestions ----------
