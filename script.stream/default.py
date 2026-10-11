@@ -35,6 +35,7 @@ ACTION_LEFT, ACTION_RIGHT = 1, 2
 ACTION_BACK = (9, 10, 92)  # parent dir, previous menu, nav back
 ACTION_CONTEXT = 117
 START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
+CANCEL_GRACE = 1.5  # seconds after a play request during which a cancel is taken as a repeated OK press
 
 TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'), ('sports', 'Sports'),
         ('kids', 'Kids'), ('mylist', 'My List'), ('history', 'History')]
@@ -297,14 +298,24 @@ def start(li, restart=False):
     audit.event('play_request', title=label, kind=kind, free_memory=audit.memory())
 
     # Wait for the stream with a dialog the Back button can cancel.
+    text = '{0} {1}…\nPress Back to cancel.'.format(
+        'Resuming' if resume else 'Starting', label + (' from ' + clock(resume) if resume else ''))
     progress = xbmcgui.DialogProgress()
-    progress.create('Stream', '{0} {1}…\nPress Back to cancel.'.format(
-        'Resuming' if resume else 'Starting', label + (' from ' + clock(resume) if resume else '')))
+    progress.create('Stream', text)
     started = cancelled = False
+    grace = time.time() + CANCEL_GRACE
     for step in range(START_TIMEOUT * 2):
         if progress.iscanceled():
-            cancelled = True
-            break
+            if time.time() < grace:
+                # The OK press that chose the title can repeat (a held key on a TV remote) and land on the
+                # dialog's Cancel button. A cancel this early is not meant, so the dialog is simply put back.
+                progress.close()
+                progress = xbmcgui.DialogProgress()
+                progress.create('Stream', text)
+                audit.event('play_cancel_ignored', title=label)
+            else:
+                cancelled = True
+                break
         if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
             started = True
             break
@@ -886,6 +897,7 @@ class Home(xbmcgui.WindowXML):
         if getattr(self, 'ready', False):
             return
         self.ready = True
+        audit.event('window_init')
         self.token = 0
         self.touched = False
         self.switch = False
@@ -1386,9 +1398,9 @@ class Home(xbmcgui.WindowXML):
 def run():
     """One session: pick a profile, show the home screen, repeat while the viewer switches profile."""
     if audit.session_start():
-        # Kodi quit or crashed under the last session: say so, and email the log if reports are allowed.
-        notify('Stream did not close properly last time. Settings > Activity log has the details.', 6000)
-        threading.Thread(target=report.send, args=('crash detected',), daemon=True).start()
+        # The last session never closed: Kodi was killed under it (common on Android when the TV is switched off)
+        # or crashed. Email the log if reports are allowed; the viewer can do nothing about it, so no notice is shown.
+        threading.Thread(target=report.send, args=('session ended unexpectedly',), daemon=True).start()
     if audit.NEW['install']:
         # First run on this device: let the maintainer know there is a new installation (no activity log attached).
         threading.Thread(target=report.send, args=('new install',), kwargs={'with_log': False, 'limited': False}, daemon=True).start()
@@ -1404,6 +1416,7 @@ def run():
             cat.load_state()
             window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
             xbmcgui.Window(10000).setProperty('script.stream.running', str(time.time()))
+            audit.event('window_open')
             try:
                 window.doModal()
             finally:
@@ -1437,6 +1450,7 @@ def run():
             onboarding(True)
         window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
         xbmcgui.Window(10000).setProperty('script.stream.running', str(time.time()))
+        audit.event('window_open')
         try:
             window.doModal()
         finally:
