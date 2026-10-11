@@ -85,12 +85,21 @@ add-ons → YouTube**), which fetches videos directly from YouTube, so no advert
 tiles, play with OK like any other title, and show up in Continue Watching and History.
 
 - **Related Videos** works as soon as the add-on is installed, with no account.
-- **Recommendations, My Subscriptions, Trending, Live broadcast, Watch Later, Subscribed Channels and History** need
-  the add-on to be signed in to your Google account with your own API key. Create a project at
-  console.cloud.google.com, enable the *YouTube Data API v3*, create an **API key** and an **OAuth client ID** of type
-  *TVs and Limited Input devices*, enter the three values under the YouTube add-on's **Settings → API**, then choose
-  **Settings → YouTube: sign in and keys → Sign in** in Stream and enter the codes shown at google.com/device. Until a
-  key is entered those rows stay hidden and a tile on the tab explains what is needed.
+- **Your subscriptions, history, recommendations, Trending, Live, Watch Later and Subscribed Channels** come through
+  the YouTube Data API, which Google only allows with your own free API key (it no longer gives the Kodi add-on a
+  shared one). Signing in without a key only completes halfway: the add-on logs "User is partially logged in" and the
+  rows stay hidden, with a tile on the tab explaining what is needed. One-time setup, about five minutes:
+  1. On a computer open console.cloud.google.com and create a project.
+  2. **APIs & Services → Library**: enable *YouTube Data API v3*.
+  3. **OAuth consent screen**: user type *External*, fill in a name and your email, then **Publish app** so the status
+     is *In production* (in *Testing* status Google signs you out again after 7 days).
+  4. **Credentials → Create credentials**: an **API key**, then an **OAuth client ID** of type *TVs and Limited Input
+     devices*. Note the key, client ID and client secret.
+  5. In Stream choose **Settings → YouTube: sign in and keys → Add your API key**. It shows an address such as
+     `http://192.168.1.20:50152/youtube/api`; open it in a browser on your phone or computer, paste the three values
+     and press Save. Then choose **Saved, sign in** and enter the code at google.com/device (Google warns that the app
+     is unverified: it is your own project, continue).
+  The rows appear on the YouTube tab as soon as the key is in and you are signed in.
 - Trailers from the **Rating, reviews and trailer** menu also play through the YouTube add-on.
 
 ### Episodes

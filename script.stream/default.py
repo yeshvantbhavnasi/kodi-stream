@@ -996,8 +996,8 @@ class Home(xbmcgui.WindowXML):
                  plot='Choose whether Stream opens when Kodi starts and whether problem reports are sent, and enter keys for AI recommendations and ratings. Stream works without any keys.'),
             tile('YouTube: sign in and keys', 'setting', action='youtube',
                  meta='Add-on ' + ('installed' if yt.installed() else 'not installed'),
-                 plot='Sign in to YouTube, or open the YouTube add-on\'s settings to enter your own API key. '
-                      'Related Videos work without an account; Recommendations, Subscriptions and Trending need the key and sign-in.'),
+                 plot='Sign in to YouTube and add your own Google API key (pasted from a phone or computer). '
+                      'Related Videos work without a key; your Subscriptions, History, Recommendations and Trending need it.'),
             tile('Refresh recommendations', 'setting', action='refresh', meta='Last built with: ' + engine,
                  plot='Build a new Recommended for You row now.'),
             tile('Clear recommendations', 'setting', action='clear_recs', plot='Remove the saved recommendations.'),
@@ -1108,8 +1108,8 @@ class Home(xbmcgui.WindowXML):
                                                          'Add-ons > Install from repository > Video add-ons, then come back here.')])]
             rows = [('dir', title, yt.url(path), 'YouTube', None) for title, path in yt.lists()]
             if not yt.has_key():
-                rows.append(('items', 'More from YouTube', [tile('Sign in and add a YouTube API key', 'setting', action='youtube',
-                                                                  meta='Unlocks Recommendations, Subscriptions, Trending and Watch Later',
+                rows.append(('items', 'More from YouTube', [tile('Add your API key for Subscriptions and History', 'setting', action='youtube',
+                                                                  meta='Also unlocks Recommendations, Trending and Watch Later',
                                                                   plot=yt.KEY_HELP)]))
             return rows
         if key == 'mylist':
@@ -1505,7 +1505,9 @@ if __name__ == '__main__':
         sasta = True
     except Exception:
         sasta = False
-    if not sasta:
+    if sys.argv[1:2] == ['youtube']:
+        yt.open_settings()  # RunScript(script.stream,youtube): the YouTube sign-in and API key helper on its own
+    elif not sasta:
         xbmcgui.Dialog().ok('Stream', 'Install the Sasta TV addon and sign in to it first.')
     elif opened and time.time() - float(opened) < 12 * 3600:
         # A copy is already open (or still closing down): starting a second would double the memory in use.
