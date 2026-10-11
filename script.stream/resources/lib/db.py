@@ -1,6 +1,7 @@
 # Local SQLite store: catalogue index, watch history, My List and saved suggestions.
 import json
 import os
+import re
 import sqlite3
 import time
 
@@ -97,6 +98,9 @@ def play_key(item):
     url = item.get('url', '')
     if 'vendor1play.php' in url or '.m3u8' in url:
         return 'live:' + item['name']
+    if url.startswith('plugin://plugin.video.youtube/'):
+        video = re.search(r'[?&]video_id=([\w-]+)', url)
+        return 'yt:' + (video.group(1) if video else item['name'])
     return url.split('?')[0]
 
 

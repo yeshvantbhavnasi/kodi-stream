@@ -2,7 +2,7 @@
 
 ![Stream home screen](script.stream/resources/screenshots/screenshot-01.jpg)
 
-A poster-row home screen for Kodi that sits on top of the Sasta TV addon: tabs for Movies, Shows, Live TV and Kids,
+A poster-row home screen for Kodi that sits on top of the Sasta TV addon: tabs for Movies, Shows, Live TV, Kids and YouTube,
 Continue Watching, My List, ranked search, and a "Recommended for You" row.
 
 Stream does not provide any content or accounts. It only re-presents what the Sasta TV addon already lists, and hands
@@ -31,7 +31,7 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Action | How |
 |---|---|
 | Move around | Direction pad. Up and Down move between rows, Left and Right along a row. Lists stop at their edges instead of wrapping |
-| Switch section | Move along the top bar: Home, Movies, Shows, Live TV, Sports, Kids, My List, History. The section appears as soon as it is highlighted; Down moves into it |
+| Switch section | Move along the top bar: Home, Movies, Shows, Live TV, Sports, Kids, YouTube, My List, History. The section appears as soon as it is highlighted; Down moves into it |
 | Search | The search bar at the top right. OK opens the keyboard |
 | Settings | The gear icon at the top right |
 | Close Stream | The ✕ icon at the top right, or Back from the Home section (it asks first) |
@@ -77,6 +77,21 @@ Stream looks titles up on The Movie Database (TMDb) in the background and caches
 
 Titles are matched by name and year, so an obscure or unusually named title may get no match or, rarely, the wrong one.
 A shared read-only TMDb key is built into the addon; you can enter your own under Settings.
+
+### YouTube
+
+The **YouTube** tab shows YouTube through Kodi's official YouTube add-on (**Add-ons → Install from repository → Video
+add-ons → YouTube**), which fetches videos directly from YouTube, so no advertisements are played. Videos appear as wide
+tiles, play with OK like any other title, and show up in Continue Watching and History.
+
+- **Related Videos** works as soon as the add-on is installed, with no account.
+- **Recommendations, My Subscriptions, Trending, Live broadcast, Watch Later, Subscribed Channels and History** need
+  the add-on to be signed in to your Google account with your own API key. Create a project at
+  console.cloud.google.com, enable the *YouTube Data API v3*, create an **API key** and an **OAuth client ID** of type
+  *TVs and Limited Input devices*, enter the three values under the YouTube add-on's **Settings → API**, then choose
+  **Settings → YouTube: sign in and keys → Sign in** in Stream and enter the codes shown at google.com/device. Until a
+  key is entered those rows stay hidden and a tile on the tab explains what is needed.
+- Trailers from the **Rating, reviews and trailer** menu also play through the YouTube add-on.
 
 ### Episodes
 

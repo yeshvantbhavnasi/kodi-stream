@@ -12,6 +12,7 @@ import xbmcaddon
 import xbmcvfs
 
 import db
+import youtube as yt
 
 ADDON = xbmcaddon.Addon('script.stream')
 PROFILE = xbmcvfs.translatePath(ADDON.getAddonInfo('profile'))
@@ -201,10 +202,13 @@ def plugin_folder(url):
 
 
 def _fetch(url):
-    result = rpc('Files.GetDirectory', {'directory': plugin_folder(url), 'media': 'video',
-                                        'properties': ['title', 'thumbnail', 'art', 'plot']})
-    items = [classify(e, n) for n, e in enumerate(result.get('files') or [])]
-    items = [i for i in items if i]
+    if yt.is_youtube(url):
+        items = yt.listing(rpc, url)
+    else:
+        result = rpc('Files.GetDirectory', {'directory': plugin_folder(url), 'media': 'video',
+                                            'properties': ['title', 'thumbnail', 'art', 'plot']})
+        items = [classify(e, n) for n, e in enumerate(result.get('files') or [])]
+        items = [i for i in items if i]
     if not re.search(r'search=.', url):
         with _lock:
             _cache[url] = {'t': time.time(), 'items': items}
@@ -428,11 +432,11 @@ def play_url(parent, item):
 
 
 def play(parent, item, group=None, series=None, label=None):
-    target = play_url(parent, item)
+    target = item['url'] if yt.is_youtube(item.get('url')) else play_url(parent, item)
     if not target:
         return False
     db.add_history(item, parent, group, series, label)
-    if group:
+    if group and not yt.is_youtube(target):   # YouTube is not a language, so it does not shape the language order
         key = group.lower()
         state['affinity'][key] = state['affinity'].get(key, 0) + 1
     save_state()
@@ -440,7 +444,10 @@ def play(parent, item, group=None, series=None, label=None):
     # Opening the link as a folder is what a click inside the Sasta TV addon does; it then starts the player.
     def run():
         try:
-            rpc('Files.GetDirectory', {'directory': target})
+            if yt.is_youtube(target):
+                rpc('Player.Open', {'item': {'file': target}})
+            else:
+                rpc('Files.GetDirectory', {'directory': target})
         except Exception:
             pass
     threading.Thread(target=run, daemon=True).start()

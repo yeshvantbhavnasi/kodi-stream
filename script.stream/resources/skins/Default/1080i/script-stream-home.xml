@@ -161,6 +161,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row0.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row0.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(200)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -211,6 +231,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row1.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row1.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(201)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -261,6 +301,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row2.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row2.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(202)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -311,6 +371,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row3.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row3.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(203)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -361,6 +441,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row4.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row4.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(204)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -411,6 +511,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row5.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row5.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(205)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -461,6 +581,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row6.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row6.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(206)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -511,6 +651,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row7.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row7.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(207)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -561,6 +721,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row8.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row8.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(208)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -611,6 +791,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row9.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row9.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(209)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -661,6 +861,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row10.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row10.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(210)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -711,6 +931,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row11.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row11.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(211)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -761,6 +1001,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row12.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row12.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(212)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -810,6 +1070,26 @@
                     <left>50</left><top>56</top><width>1870</width><height>364</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>
+                    <itemlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row13.wide))">
+                        <control type="group"><left>10</left><top>14</top>
+                            
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
+                        </control>
+                    </itemlayout>
+                    <focusedlayout width="372" height="364" condition="!String.IsEmpty(Window.Property(row13.wide))">
+                        <control type="group"><left>10</left><top>14</top><animation effect="zoom" start="100" end="105" center="auto" time="140" tween="quadratic" reversible="false">Focus</animation>
+                            <control type="image"><left>-5</left><top>45</top><width>366</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(213)</visible></control>
+                            <!-- wide tiles: YouTube videos -->
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture></control>
+                            <control type="image"><left>0</left><top>50</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture></control>
+                            <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
+                            <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                        </control>
+                    </focusedlayout>
                     <itemlayout width="216" height="364">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
@@ -860,13 +1140,14 @@
             <onright>120</onright>
             <onleft>noop</onleft>
             <onup>noop</onup>
-            <itemlayout width="143" height="56" condition="String.IsEmpty(Window.Property(kids))">
-                <control type="label"><left>0</left><top>0</top><width>150</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>
+            <!-- nine tabs share 1150px, so each is 127 wide -->
+            <itemlayout width="127" height="56" condition="String.IsEmpty(Window.Property(kids))">
+                <control type="label"><left>0</left><top>0</top><width>127</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>
             </itemlayout>
-            <focusedlayout width="143" height="56" condition="String.IsEmpty(Window.Property(kids))">
-                <control type="image"><left>-14</left><top>6</top><width>138</width><height>44</height><texture colordiffuse="FFE50914">white.png</texture><visible>Control.HasFocus(100)</visible></control>
-                <control type="image"><left>0</left><top>50</top><width>110</width><height>4</height><texture colordiffuse="FFE50914">white.png</texture><visible>!Control.HasFocus(100)</visible></control>
-                <control type="label"><left>0</left><top>0</top><width>150</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+            <focusedlayout width="127" height="56" condition="String.IsEmpty(Window.Property(kids))">
+                <control type="image"><left>-12</left><top>6</top><width>124</width><height>44</height><texture colordiffuse="FFE50914">white.png</texture><visible>Control.HasFocus(100)</visible></control>
+                <control type="image"><left>0</left><top>50</top><width>100</width><height>4</height><texture colordiffuse="FFE50914">white.png</texture><visible>!Control.HasFocus(100)</visible></control>
+                <control type="label"><left>0</left><top>0</top><width>127</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
             </focusedlayout>
             <itemlayout width="230" height="56" condition="!String.IsEmpty(Window.Property(kids))">
                 <control type="label"><left>0</left><top>0</top><width>290</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>

@@ -19,6 +19,7 @@ import catalogue as cat  # noqa: E402
 import db  # noqa: E402
 import meta  # noqa: E402
 import report  # noqa: E402
+import youtube as yt  # noqa: E402
 
 ROWS = 14
 ROW_LIMIT = 24  # tiles per row; kept modest so low-memory TV sticks are not asked to hold hundreds of posters
@@ -38,7 +39,7 @@ START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
 CANCEL_GRACE = 1.5  # seconds after a play request during which a cancel is taken as a repeated OK press
 
 TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'), ('sports', 'Sports'),
-        ('kids', 'Kids'), ('mylist', 'My List'), ('history', 'History')]
+        ('kids', 'Kids'), ('youtube', 'YouTube'), ('mylist', 'My List'), ('history', 'History')]
 KIDS_TABS = [('home', 'Home'), ('kids', 'Movies and Shows'), ('live', 'Kids TV'), ('mylist', 'My List'), ('history', 'History')]
 CURRENT = {'profile': None}  # the viewer profile in use
 
@@ -128,7 +129,9 @@ def notify(text, ms=3000):
 
 
 def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False, label=None, series=None):
-    titled = item['t'] == 'play' and not cat.is_live(item)  # channel names such as '... 4K' are not release tags
+    video = yt.is_youtube(item.get('url'))
+    # Channel names such as '... 4K' and YouTube titles are not release tags.
+    titled = item['t'] == 'play' and not cat.is_live(item) and not video
     clean, tag, note = quality_of(item['name']) if titled else (item['name'], '', '')
     li = xbmcgui.ListItem(label=label or clean)
     li.setProperty('tag', tag)
@@ -137,13 +140,15 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     li.setProperty('name', item['name'])
     li.setProperty('plot', item.get('plot', ''))
     if meta is None:
-        meta = cat.title_case(group) if group and item['t'] == 'play' else ''
+        meta = 'YouTube' if video and item['t'] == 'play' else cat.title_case(group) if group and item['t'] == 'play' else ''
     if note:
         meta = (meta + ' · ' if meta else '') + note
     li.setProperty('meta', meta)
     if item['t'] == 'play' and cat.is_live(item):
         li.setProperty('logo', '1')
         li.setProperty('card', '1')  # channels are drawn as square cards rather than posters
+    elif video and item['t'] == 'play':
+        li.setProperty('wide', '1')  # YouTube thumbnails are 16:9, so videos get a wide tile instead of a poster
     li.setProperty('t', item['t'])
     li.setProperty('hint', ('OK  Play' if item['t'] == 'play' else 'OK  Open') + '     Hold OK  More options')
     li.setProperty('url', item.get('url', ''))
@@ -293,7 +298,7 @@ def start(li, restart=False):
         xbmcgui.Dialog().ok('Stream', 'This title can only be opened from the Sasta TV addon itself.')
         return
     PLAY['since'], PLAY['cancel'] = time.time(), False
-    kind = 'Live TV' if live else cat.section_of(parent)[0]
+    kind = 'Live TV' if live else 'YouTube' if yt.is_youtube(item.get('url')) else cat.section_of(parent)[0]
     db.log_event('played', label, group, kind)
     audit.event('play_request', title=label, kind=kind, free_memory=audit.memory())
 
@@ -768,6 +773,8 @@ class Grid(xbmcgui.WindowXML):
         with self.ui_lock:
             if self.closed:
                 return
+            if first_page and titles and titles[0].getProperty('wide'):
+                self.setProperty('wide', '1')  # a listing of videos is drawn with wide tiles
             position = self.panel.getSelectedPosition()
             self.panel.addItems(shown)
             if not first_page and position >= 0:
@@ -987,6 +994,10 @@ class Home(xbmcgui.WindowXML):
                  plot='See everything you have marked with Like or Dislike. Hold OK on any title to rate it.'),
             tile('Options and keys', 'setting', action='keys',
                  plot='Choose whether Stream opens when Kodi starts and whether problem reports are sent, and enter keys for AI recommendations and ratings. Stream works without any keys.'),
+            tile('YouTube: sign in and keys', 'setting', action='youtube',
+                 meta='Add-on ' + ('installed' if yt.installed() else 'not installed'),
+                 plot='Sign in to YouTube, or open the YouTube add-on\'s settings to enter your own API key. '
+                      'Related Videos work without an account; Recommendations, Subscriptions and Trending need the key and sign-in.'),
             tile('Refresh recommendations', 'setting', action='refresh', meta='Last built with: ' + engine,
                  plot='Build a new Recommended for You row now.'),
             tile('Clear recommendations', 'setting', action='clear_recs', plot='Remove the saved recommendations.'),
@@ -1078,6 +1089,8 @@ class Home(xbmcgui.WindowXML):
             rows += english_movies
             if english:
                 rows.append(('dir', 'Kids', u['kids'], 'Kids', None))
+            if yt.installed():
+                rows.append(('dir', 'YouTube', yt.url('special/recommendations' if yt.has_key() else 'special/related_videos'), 'YouTube', None))
             return rows
         if key == 'movies':
             return self.language_rows(u['movies'], '{0} Movies', ROWS - 1) + english_movies
@@ -1088,6 +1101,17 @@ class Home(xbmcgui.WindowXML):
             return self.sports_rows(ROWS - 1)
         if key == 'kids':
             return [('dir', 'Kids', u['kids'], 'Kids', None)]
+        if key == 'youtube':
+            if not yt.installed():
+                return [('items', 'YouTube', [tile('Install the YouTube add-on', 'setting', action='youtube',
+                                                    plot='Stream shows YouTube through Kodi\'s YouTube add-on. Install it from '
+                                                         'Add-ons > Install from repository > Video add-ons, then come back here.')])]
+            rows = [('dir', title, yt.url(path), 'YouTube', None) for title, path in yt.lists()]
+            if not yt.has_key():
+                rows.append(('items', 'More from YouTube', [tile('Sign in and add a YouTube API key', 'setting', action='youtube',
+                                                                  meta='Unlocks Recommendations, Subscriptions, Trending and Watch Later',
+                                                                  plot=yt.KEY_HELP)]))
+            return rows
         if key == 'mylist':
             saved = db.mylist()
             return [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
@@ -1151,6 +1175,7 @@ class Home(xbmcgui.WindowXML):
                     return
                 for n in range(ROWS):
                     self.setProperty('row{0}.title'.format(n), '')
+                    self.setProperty('row{0}.wide'.format(n), '')
                     self.getControl(FIRST_ROW + n).reset()
             for row in specs:
                 if not current():
@@ -1175,6 +1200,8 @@ class Home(xbmcgui.WindowXML):
                         return
                     self.getControl(FIRST_ROW + slot).addItems(items)
                     self.setProperty('row{0}.title'.format(slot), title)
+                    # A row of videos is drawn with wide tiles (the skin can only switch layouts per row, not per tile).
+                    self.setProperty('row{0}.wide'.format(slot), '1' if items and items[0].getProperty('wide') else '')
                     if slot == 0:
                         self.setProperty('status', '')
                 if slot == 0 and focus:
@@ -1188,7 +1215,8 @@ class Home(xbmcgui.WindowXML):
             with self.ui_lock:
                 if current():
                     empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.',
-                     'history': 'Nothing has been played on this profile yet.'}
+                             'history': 'Nothing has been played on this profile yet.',
+                             'youtube': yt.KEY_HELP}
                     self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
             return
         # Ratings arrive after the rows are on screen, so browsing never waits for them.
@@ -1288,6 +1316,8 @@ class Home(xbmcgui.WindowXML):
                 self.go_home()
         elif action == 'keys':
             xbmcaddon.Addon('script.stream').openSettings()
+        elif action == 'youtube':
+            yt.open_settings()
         elif action == 'refresh':
             made = self.refresh_recommendations()
             source = db.meta('recs', {}).get('source', 'local')
