@@ -14,12 +14,15 @@ import audit  # noqa: E402
 
 monitor = xbmc.Monitor()
 if ADDON.getSetting('autostart') != 'false':
+    # In the Stream Android app, service.stream.intro sets this property, plays the intro over a cover and
+    # opens Stream itself, so Kodi's own home screen is never seen; then there is nothing to do here.
+    intro = 'Window(Home).Property(stream.intro)'
     for _ in range(60):
-        if xbmc.getCondVisibility('Window.IsVisible(home)'):
+        if xbmc.getCondVisibility('Window.IsVisible(home) | !String.IsEmpty(%s)' % intro):
             break
         if monitor.waitForAbort(0.5):
             break
-    if not monitor.abortRequested():
+    if not monitor.abortRequested() and xbmc.getCondVisibility('String.IsEmpty(%s)' % intro):
         xbmc.executebuiltin('RunScript(special://home/addons/script.stream/default.py)')
 
 monitor.waitForAbort()
