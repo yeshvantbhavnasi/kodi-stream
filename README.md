@@ -226,8 +226,9 @@ first 15. Each is labelled "New in <language>". Nothing leaves the device.
 library only, for a Mac or any always-on machine in the home. Each box sends it the same material described below
 (profile, interaction history, candidates) and the service asks the local model through Ollama. It keeps the last
 batch for every box and profile and rebuilds it in the background, so a box gets its row at once and never waits for
-the model; a search is answered on the spot and remembered for a week, so repeating it is instant. One question goes
-to the model at a time, however many boxes ask. Install: copy `service/com.yeshvant.stream-recs.plist` to
+the model; a search is answered on the spot and remembered for a week, so repeating it is instant. Batches are filed
+per box (its name and install id) and per profile on that box, so each person on each TV gets their own. One question
+goes to the model at a time, however many boxes ask. Install: copy `service/com.yeshvant.stream-recs.plist` to
 `~/Library/LaunchAgents` (edit the paths, port and `BIND` addresses), `launchctl bootstrap gui/$(id -u) <plist>`, and
 put the address in each box's *Recommendation service* setting, for example `http://<machine>.<tailnet>.ts.net:8770`
 over Tailscale or `http://192.168.1.20:8770` on the LAN. `GET /health` reports the model and whether Ollama answers;

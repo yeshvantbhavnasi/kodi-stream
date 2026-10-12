@@ -44,8 +44,14 @@ def provider():
 
 
 def profile_key():
-    """This box and profile, as the service files its batches: 'Living room/default'."""
-    return '{0}/{1}'.format(xbmc.getInfoLabel('System.FriendlyName') or 'kodi', getattr(db, 'ACTIVE', 'default'))
+    """This box and profile, as the service files its batches: 'Kodi (Mac) 52c8d4aa36d7/default'. The install id keeps
+    two boxes with the same name apart, and each profile on a box has its own batch."""
+    try:
+        import audit
+        install = audit._install_id()
+    except Exception:
+        install = ''
+    return '{0} {1}/{2}'.format(xbmc.getInfoLabel('System.FriendlyName') or 'kodi', install, getattr(db, 'ACTIVE', 'default')).strip()
 
 
 def has_llm():
