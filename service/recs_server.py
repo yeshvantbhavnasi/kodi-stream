@@ -9,6 +9,8 @@ Searches are answered on the spot and remembered, so a repeated query is instant
                -> {"picks": [{"name": "Sardar 2 (2026)", "reason": "..."}], "model": "gemma3:4b",
                    "fresh": true | false, "took": 12.3, "building": true | false}
     GET  /health  -> {"ok": true, "model": "gemma3:4b", "ollama": true, "batches": 3}
+    GET  /         a page showing every box and profile's current picks, the reasons, and what the model was told
+    GET  /batches  the same as JSON
 
 Settings come from the environment: PORT (8770), BIND (addresses to listen on, comma separated; 127.0.0.1 by
 default, add the machine's Tailscale address so the other boxes on the tailnet can reach it), OLLAMA_URL
@@ -16,6 +18,7 @@ default, add the machine's Tailscale address so the other boxes on the tailnet c
 tailnet, `tailscale serve --bg 8770` publishes it as https://<machine>.<tailnet>.ts.net instead.
 """
 import hashlib
+import html
 import json
 import os
 import sys
@@ -102,11 +105,19 @@ def build(req):
     return out[:count], took
 
 
+def entry_for(req, digest, picks, took):
+    """A stored batch: the picks plus what the model was told, so the page can explain them."""
+    return {'digest': digest, 'picks': picks, 'at': time.time(), 'model': MODEL, 'took': round(took, 1),
+            'kind': req.get('kind', 'recommend'), 'profile': req.get('profile', 'default'), 'count': int(req.get('count', 15)),
+            'system': req.get('system', '')[:2000], 'intro': req.get('intro', '')[:12000],
+            'candidates': [c.get('name', '') for c in req.get('candidates', [])][:100]}
+
+
 def rebuild(key, req, digest):
     try:
         picks, took = build(req)
         with LOCK:
-            BATCHES[key] = {'digest': digest, 'picks': picks, 'at': time.time(), 'model': MODEL, 'took': round(took, 1)}
+            BATCHES[key] = entry_for(req, digest, picks, took)
             save()
         log('{0}: {1} picks in {2:.1f}s'.format(key, len(picks), took))
     except Exception as e:
@@ -125,6 +136,9 @@ def pick(req):
     with LOCK:
         have = BATCHES.get(key)
         if have and (have['digest'] == digest or (kind == 'search' and time.time() - have['at'] < KEEP)):
+            if 'intro' not in have:  # a batch saved by an earlier version: keep its picks, add the explanation
+                have.update({k: v for k, v in entry_for(req, digest, have['picks'], have.get('took', 0)).items() if k not in ('at', 'picks', 'took')})
+                save()
             return dict(have, fresh=True, building=False)
         serve_old = have if kind == 'recommend' else None
         if serve_old and key in BUILDING:
@@ -136,7 +150,7 @@ def pick(req):
         threading.Thread(target=rebuild, args=(key, req, digest), daemon=True).start()
         return dict(serve_old, fresh=False, building=True)
     picks, took = build(req)
-    entry = {'digest': digest, 'picks': picks, 'at': time.time(), 'model': MODEL, 'took': round(took, 1)}
+    entry = entry_for(req, digest, picks, took)
     with LOCK:
         BATCHES[key] = entry
         # Remembered searches are trimmed so the file stays small.
@@ -146,6 +160,51 @@ def pick(req):
         save()
     log('{0}: {1} picks in {2:.1f}s (asked to wait)'.format(key, len(picks), took))
     return dict(entry, fresh=True, building=False)
+
+
+PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>Stream recommendations</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="refresh" content="60">
+<style>
+body{{background:#141414;color:#ddd;font:15px/1.5 -apple-system,Helvetica,Arial,sans-serif;margin:0;padding:24px}}
+h1{{color:#e50914;font-size:26px;margin:0 0 4px}} .sub{{color:#888;margin-bottom:24px}}
+.batch{{background:#1e1e26;border-radius:10px;padding:18px 22px;margin-bottom:22px}}
+.batch h2{{margin:0 0 2px;font-size:19px;color:#fff}} .meta{{color:#9a9a9a;font-size:13px;margin-bottom:12px}}
+ol{{margin:0;padding-left:26px}} li{{margin:5px 0}} .title{{color:#fff;font-weight:600}} .why{{color:#b8b8b8}}
+details{{margin-top:12px}} summary{{cursor:pointer;color:#f5c518}} pre{{white-space:pre-wrap;background:#111;padding:12px;border-radius:8px;font-size:12.5px;color:#bbb;max-height:420px;overflow:auto}}
+.pill{{display:inline-block;background:#2b2b36;border-radius:12px;padding:1px 10px;margin-right:6px;font-size:12px;color:#ccc}}
+.ok{{color:#5fd36b}} .bad{{color:#ff6b6b}}
+</style></head><body>
+<h1>Stream recommendations</h1>
+<div class="sub">Model <b>{model}</b> through Ollama at {ollama}: <span class="{ollama_class}">{ollama_state}</span> &middot; {n} batches remembered &middot; refreshes every minute</div>
+{batches}
+</body></html>"""
+
+
+def page():
+    with LOCK:
+        items = sorted(BATCHES.items(), key=lambda kv: -kv[1].get('at', 0))
+    up = ollama_up()
+    blocks = []
+    for key, b in items:
+        kind = b.get('kind') or ('search' if '|search|' in key else 'recommend')
+        heading = ('Search: ' + html.escape(b.get('intro', '').replace('The viewer asked for: ', ''))[:120]) if kind == 'search' else 'Recommended for You'
+        when = time.strftime('%a %d %b %H:%M', time.localtime(b.get('at', 0)))
+        picks = ''.join('<li><span class="title">{0}</span> <span class="why">&mdash; {1}</span></li>'.format(
+            html.escape(p.get('name', '')), html.escape(p.get('reason', '') or 'no reason given')) for p in b.get('picks', []))
+        told = html.escape(b.get('intro', '')) or 'Not recorded (built before this page existed; it fills in on the next request).'
+        cands = ', '.join(html.escape(c) for c in b.get('candidates', []))
+        blocks.append(
+            '<div class="batch"><h2>{profile}</h2><div class="meta"><span class="pill">{heading}</span><span class="pill">{when}</span>'
+            '<span class="pill">{took}s</span><span class="pill">{model}</span><span class="pill">{n} picks from {m} candidates</span></div>'
+            '<ol>{picks}</ol>'
+            '<details><summary>What the model was told</summary><pre>{system}\n\n{told}</pre></details>'
+            '<details><summary>Candidates offered</summary><pre>{cands}</pre></details></div>'.format(
+                profile=html.escape(b.get('profile') or key.split('|')[0]), heading=heading, when=when, took=b.get('took', 0),
+                model=html.escape(b.get('model', MODEL)), n=len(b.get('picks', [])), m=len(b.get('candidates', [])) or '?',
+                picks=picks or '<li>nothing picked</li>', system=html.escape(b.get('system', '')), told=told, cands=cands or 'not recorded'))
+    return PAGE.format(model=html.escape(MODEL), ollama=html.escape(OLLAMA), ollama_class='ok' if up else 'bad',
+                       ollama_state='answering' if up else 'not answering', n=len(items),
+                       batches=''.join(blocks) or '<div class="batch">No batches yet. Open Stream on a TV and the first one appears here.</div>')
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -162,6 +221,16 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 n = len(BATCHES)
             return self._send(200, {'ok': True, 'model': MODEL, 'ollama': ollama_up(), 'batches': n})
+        if self.path.startswith('/batches'):
+            with LOCK:
+                return self._send(200, BATCHES)
+        if self.path == '/' or self.path.startswith('/?') or self.path.startswith('/index'):
+            body = page().encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            return self.wfile.write(body)
         self._send(404, {'error': 'not found'})
 
     def do_POST(self):
