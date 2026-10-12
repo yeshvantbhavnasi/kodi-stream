@@ -174,7 +174,7 @@ def rebuild(key, req, digest):
         with LOCK:
             BATCHES[key] = entry_for(req, digest, picks, took)
             save(key)
-        log('{0}: {1} picks in {2:.1f}s'.format(key, len(picks), took))
+        log('{0}: {1} picks in {2:.1f}s, for {3}'.format(key, len(picks), took, req.get('from', '?')))
     except Exception as e:
         log('{0}: build failed: {1}'.format(key, e))
     finally:
@@ -191,6 +191,7 @@ def pick(req):
     with LOCK:
         have = BATCHES.get(key)
         if have and (have['digest'] == digest or (kind == 'search' and time.time() - have['at'] < KEEP)):
+            log('{0}: served as is, for {1}'.format(key, req.get('from', '?')))
             if 'intro' not in have:  # a batch saved by an earlier version: keep its picks, add the explanation
                 have.update({k: v for k, v in entry_for(req, digest, have['picks'], have.get('took', 0)).items() if k not in ('at', 'picks', 'took')})
                 save(key)
@@ -213,7 +214,7 @@ def pick(req):
         for k in [k for k, v in BATCHES.items() if '|search|' in k and time.time() - v['at'] > KEEP]:
             del BATCHES[k]
             forget(k)
-    log('{0}: {1} picks in {2:.1f}s (asked to wait)'.format(key, len(picks), took))
+    log('{0}: {1} picks in {2:.1f}s (asked to wait), for {3}'.format(key, len(picks), took, req.get('from', '?')))
     return dict(entry, fresh=True, building=False)
 
 
@@ -287,6 +288,7 @@ class Handler(BaseHTTPRequestHandler):
             req = json.loads(self.rfile.read(length) or b'{}')
             if not req.get('candidates'):
                 return self._send(400, {'error': 'no candidates'})
+            req['from'] = self.client_address[0]
             result = pick(req)
             self._send(200, {'picks': result['picks'], 'model': result.get('model', MODEL), 'fresh': result['fresh'],
                              'building': result['building'], 'took': result.get('took', 0), 'at': result.get('at', 0)})

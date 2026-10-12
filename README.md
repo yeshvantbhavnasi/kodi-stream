@@ -350,8 +350,8 @@ Open **Stream → Settings → AI keys and options**.
 | Setting | Meaning | Default |
 |---|---|---|
 | Use AI for recommendations and search | Master switch | On |
-| Recommendation service | Address of Stream's recommendation service (`service/recs_server.py`) on a machine in your home; blank to ask Ollama directly | empty |
-| Ollama server | Address of an Ollama server running a local model; blank to use Bedrock instead | `http://127.0.0.1:11434` |
+| Recommendation service | Address of Stream's recommendation service (`service/recs_server.py`), reached over Tailscale; blank to ask Ollama directly | the household's Mac mini on its tailnet |
+| Ollama server | Address of an Ollama server running a local model; blank to use Bedrock instead | empty |
 | Ollama model | The model Ollama should answer with | `gemma3:4b` |
 | Amazon Bedrock API key | A Bedrock API key (bearer token), not AWS access keys | empty |
 | Bedrock region | Region the request is sent to | `us-east-1` |
