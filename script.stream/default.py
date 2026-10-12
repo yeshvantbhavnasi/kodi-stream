@@ -195,7 +195,7 @@ def entry_item(entry, **kwargs):
     kwargs.setdefault('progress', entry.get('progress', 0))
     li = list_item(entry['item'], entry['parent'], entry.get('group'), saved=True, **kwargs)
     if entry.get('progress'):
-        # A part-watched title shows a red ✕ badge when highlighted: the Delete key, or hold OK, takes it off Continue Watching.
+        # A part-watched title: the Delete key, or hold OK, takes it off Continue Watching.
         li.setProperty('removable', '1')
         li.setProperty('hint', li.getProperty('hint').replace('Hold OK  ', 'Hold OK  Remove, '))
     return li

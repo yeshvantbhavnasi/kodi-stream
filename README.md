@@ -43,7 +43,7 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Like or dislike a title | Hold OK on the title and pick **Like** or **Dislike** |
 | Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |
 | Resume a title | Play it again; it carries on from where it stopped. A red bar under the poster shows how far in it is. Hold OK and pick **Play from the beginning** to start over |
-| Tidy Continue Watching or History | A highlighted part-watched tile shows a red ✕ badge: press the remote's Delete (Clear) key, or hold OK and pick **Remove from Continue Watching**; the title stays in History and plays from the start next time. **Remove from History** is in the same menu |
+| Tidy Continue Watching or History | On a part-watched tile press the remote's Delete (Clear) key, or hold OK and pick **Remove from Continue Watching**; the title stays in History and plays from the start next time. **Remove from History** is in the same menu |
 | Search YouTube | On the YouTube section the search bar searches YouTube. Elsewhere a **Search YouTube for …** tile sits at the end of the results, first when nothing in the catalogue matched |
 | Browse by genre | The genre strip under the description panel on Movies and Shows (Down from the top bar): OK on Action, Comedy, Thriller & Crime, Romance and so on filters the rows to that genre, one row per language, your first language first. **All** clears it |
 | See everything watched | The **History** section: unfinished titles, then everything played, newest first |

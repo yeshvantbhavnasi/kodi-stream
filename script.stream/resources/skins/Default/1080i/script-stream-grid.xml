@@ -77,8 +77,6 @@
                         <control type="label"><left>280</left><top>167</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                         <control type="textbox"><left>10</left><top>60</top><width>330</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         <control type="label"><left>0</left><top>204</top><width>350</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
-                        <control type="image"><left>316</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
-                        <control type="image"><left>322</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
             </focusedlayout>
             <itemlayout width="224" height="360" condition="String.IsEmpty(Window.Property(wide))">
@@ -130,8 +128,6 @@
                         <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                         <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
-                        <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
-                        <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
             </focusedlayout>
         </control>
