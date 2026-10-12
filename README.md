@@ -244,9 +244,9 @@ per box (its name and install id) and per profile on that box, so each person on
 goes to the model at a time, however many boxes ask. Install: copy `service/com.yeshvant.stream-recs.plist` to
 `~/Library/LaunchAgents` (edit the paths, port and `BIND` addresses), `launchctl bootstrap gui/$(id -u) <plist>`, and
 put the address in each box's *Recommendation service* setting, for example `http://<machine>.<tailnet>.ts.net:8770`
-over Tailscale or `http://192.168.1.20:8770` on the LAN. Open the same address in a browser for a status page that
-lists every box and profile's current picks with the model's reason for each, when it was built and how long it took,
-and, folded away, exactly what the model was told (profile, history, candidates). `GET /health` reports the model and
+over Tailscale or `http://192.168.1.20:8770` on the LAN. Open the same address in a browser for a plain-text status
+page that lists every box and profile's current picks with the model's reason for each, when it was built and how
+long it took, exactly what the model was told (profile, history, priorities) and the candidates offered. `GET /health` reports the model and
 whether Ollama answers; `GET /batches` is the same data as JSON; the log is `~/Library/Logs/stream-recs.log`. With Tailscale Serve enabled on the tailnet, `tailscale serve --bg 8770`
 publishes it over HTTPS instead.
 
