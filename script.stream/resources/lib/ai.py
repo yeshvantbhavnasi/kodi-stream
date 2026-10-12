@@ -372,7 +372,9 @@ def recommend(top_groups, force=False):
              or (last.get('pending') and age > PENDING_AFTER))
     if not (force or stale):
         return False
-    pool = db.candidates(400, top_groups)
+    # Every unplayed title is fetched (the first language alone can hold hundreds), so the language shares below
+    # are taken from the whole index rather than from whatever a cut by preference happened to leave.
+    pool = db.candidates(2000, top_groups)
     if not db.KIDS:
         pool = db.only_chosen(pool, lambda e: e.get('group'))
     order = priority_languages()
