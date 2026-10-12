@@ -5,7 +5,7 @@
     </category>
     <category label="AI">
         <setting id="ai_enabled" type="bool" label="Use AI for recommendations and search" default="true"/>
-        <setting id="recs_url" type="text" label="Recommendation service (Stream's own, reached over Tailscale; blank to ask Ollama directly)" default="http://yeshvants-mac-mini.tail1fe071.ts.net:8770"/>
+        <setting id="recs_url" type="text" label="Recommendation service (Stream's own; the public address works from any network, blank to ask Ollama directly)" default="https://recs.senapati.si"/>
         <setting id="recs_key" type="text" option="hidden" label="Recommendation service key" default=""/>
         <setting id="ollama_url" type="text" label="Ollama server (local model; blank to use Bedrock instead)" default=""/>
         <setting id="ollama_model" type="text" label="Ollama model" default="gemma3:4b"/>

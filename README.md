@@ -22,12 +22,13 @@ Updates then arrive through the repository.
 
 The same steps on every box, for a Fire TV Stick, Google TV or any Android TV running Kodi:
 
-1. Put the box on the home tailnet: install **Tailscale** (Amazon Appstore on Fire TV, Play Store on Google TV),
+1. Optional, for the Tailscale address: install **Tailscale** (Amazon Appstore on Fire TV, Play Store on Google TV),
    sign in with the login link or QR code it shows, and accept the VPN prompt. In the Tailscale admin console,
    open the new device and choose **Disable key expiry** so it never silently signs out.
 2. Install Kodi, then Stream as described under *Install* above.
 3. Open Stream, go through the first-run setup (languages and profiles), and under **Settings → AI** enter the
-   recommendation service key. The service address is already the Mac's Tailscale name, so nothing else is typed.
+   recommendation service key. The service address already defaults to the public `https://recs.senapati.si`, which
+   works from any network; a box on the tailnet can use `http://yeshvants-mac-mini.tail1fe071.ts.net:8770` instead.
 4. Within a minute the Recommended for You row shows "· AI", and the Mac's `~/Library/Logs/stream-recs.log` lists
    the new box by name.
 
@@ -258,8 +259,9 @@ the model; a search is answered on the spot and remembered for a week, so repeat
 per box (its name and install id) and per profile on that box, so each person on each TV gets their own. One question
 goes to the model at a time, however many boxes ask. Install: copy `service/com.yeshvant.stream-recs.plist` to
 `~/Library/LaunchAgents` (edit the paths, port and `BIND` addresses), `launchctl bootstrap gui/$(id -u) <plist>`, and
-put the address in each box's *Recommendation service* setting, for example `http://<machine>.<tailnet>.ts.net:8770`
-over Tailscale or `http://192.168.1.20:8770` on the LAN. Open the same address in a browser for a web page with one
+put the address in each box's *Recommendation service* setting: the default is the public address
+`https://recs.senapati.si` (a Cloudflare Tunnel from the Mac, launch agent `service/com.yeshvant.cloudflared.plist`), or
+`http://<machine>.<tailnet>.ts.net:8770` over Tailscale or `http://192.168.1.20:8770` on the LAN. Open the same address in a browser for a web page with one
 tab per box: each profile's current picks with the model's reason for each, when it was built and how long it took,
 and the box's recent searches. When `TOKEN` is set the page asks for the key once and keeps a cookie (`/logout` signs
 out). `/text` is the full plain-text report, which adds exactly what the model was told (profile, history,
