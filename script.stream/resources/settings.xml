@@ -6,7 +6,7 @@
     <category label="AI">
         <setting id="ai_enabled" type="bool" label="Use AI for recommendations and search" default="true"/>
         <setting id="recs_url" type="text" label="Recommendation service (Stream's own; the public address works from any network, blank to ask Ollama directly)" default="https://recs.senapati.si"/>
-        <setting id="recs_key" type="text" option="hidden" label="Recommendation service key" default=""/>
+        <setting id="recs_key" type="text" option="hidden" label="Recommendation service key" default="7f48e2e1859d0e248af84902"/>
         <setting id="ollama_url" type="text" label="Ollama server (local model; blank to use Bedrock instead)" default=""/>
         <setting id="ollama_model" type="text" label="Ollama model" default="gemma3:4b"/>
         <setting id="bedrock_token" type="text" option="hidden" label="Amazon Bedrock API key" default=""/>

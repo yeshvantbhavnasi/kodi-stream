@@ -26,9 +26,9 @@ The same steps on every box, for a Fire TV Stick, Google TV or any Android TV ru
    sign in with the login link or QR code it shows, and accept the VPN prompt. In the Tailscale admin console,
    open the new device and choose **Disable key expiry** so it never silently signs out.
 2. Install Kodi, then Stream as described under *Install* above.
-3. Open Stream, go through the first-run setup (languages and profiles), and under **Settings → AI** enter the
-   recommendation service key. The service address already defaults to the public `https://recs.senapati.si`, which
-   works from any network; a box on the tailnet can use `http://yeshvants-mac-mini.tail1fe071.ts.net:8770` instead.
+3. Open Stream and go through the first-run setup (languages and profiles). The service address and key are built
+   in (`https://recs.senapati.si`, which works from any network), so nothing is typed; a box on the tailnet can use
+   `http://yeshvants-mac-mini.tail1fe071.ts.net:8770` under **Settings → AI** instead.
 4. Within a minute the Recommended for You row shows "· AI", and the Mac's `~/Library/Logs/stream-recs.log` lists
    the new box by name.
 
