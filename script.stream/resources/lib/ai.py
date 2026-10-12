@@ -39,10 +39,11 @@ def service_url():
 
 
 def provider():
-    """'service', 'ollama', 'bedrock' or '' for what answers."""
+    """'bedrock', 'service', 'ollama' or '' for what answers. A Bedrock key is an explicit choice, so it wins over the
+    service address (which has a built-in default); Ollama is used when both are blank."""
     if not enabled():
         return ''
-    return 'service' if service_url() else 'ollama' if ollama_url() else 'bedrock' if _setting('bedrock_token') else ''
+    return 'bedrock' if _setting('bedrock_token') else 'service' if service_url() else 'ollama' if ollama_url() else ''
 
 
 def profile_key():
@@ -140,7 +141,7 @@ def ask_ollama(system, prompt, max_tokens=4000):
 
 
 def ask(system, prompt, max_tokens=4000):
-    """One question to whichever model is set up: Ollama first, otherwise Claude on Bedrock."""
+    """One question to whichever model is set up: Claude on Bedrock when a key is set, otherwise Ollama."""
     if provider() == 'ollama':
         return ask_ollama(system, prompt, max_tokens)
     return ask_claude(system, prompt, max_tokens)
