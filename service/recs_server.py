@@ -10,17 +10,22 @@ Searches are answered on the spot and remembered, so a repeated query is instant
                    "fresh": true | false, "took": 12.3, "building": true | false}
     GET  /health  -> {"ok": true, "model": "gemma3:4b", "ollama": true, "batches": 3}
     GET  /         a page showing every box and profile's current picks, the reasons, and what the model was told
-    GET  /batches  the same as JSON
+    GET  /batches  the same as JSON; GET /history the past batches, newest first
 
 Settings come from the environment: PORT (8770), BIND (addresses to listen on, comma separated; 127.0.0.1 by
 default, add the machine's Tailscale address so the other boxes on the tailnet can reach it), OLLAMA_URL
-(http://127.0.0.1:11434), OLLAMA_MODEL (gemma3:4b) and STATE (where the batches are kept). With Serve enabled on the
-tailnet, `tailscale serve --bg 8770` publishes it as https://<machine>.<tailnet>.ts.net instead.
+(http://127.0.0.1:11434), OLLAMA_MODEL (gemma3:4b) and STATE (the SQLite file the batches are kept in). With Serve
+enabled on the tailnet, `tailscale serve --bg 8770` publishes it as https://<machine>.<tailnet>.ts.net instead.
+
+Storage: one SQLite file. `batches` holds the current batch per box, profile and kind (the only thing a box ever
+asks for), and `history` keeps the last 48 batches per key so the page can show how the picks moved; a batch
+identical to the previous one is not written again.
 """
 import hashlib
 import html
 import json
 import os
+import sqlite3
 import sys
 import threading
 import time
@@ -31,8 +36,9 @@ PORT = int(os.environ.get('PORT', '8770'))
 BIND = [h.strip() for h in os.environ.get('BIND', '127.0.0.1').split(',') if h.strip()]
 OLLAMA = os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434').rstrip('/')
 MODEL = os.environ.get('OLLAMA_MODEL', 'gemma3:4b')
-STATE = os.environ.get('STATE', os.path.expanduser('~/Library/Application Support/stream-recs/batches.json'))
+STATE = os.environ.get('STATE', os.path.expanduser('~/Library/Application Support/stream-recs/batches.db'))
 KEEP = 7 * 24 * 3600  # a remembered search answer is kept this long
+HISTORY = 48          # past batches kept per box, profile and kind
 
 LOCK = threading.Lock()        # guards BATCHES and BUILDING
 MODEL_LOCK = threading.Lock()  # one question to the model at a time
@@ -45,21 +51,71 @@ def log(msg):
     sys.stdout.flush()
 
 
-def load():
-    global BATCHES
-    try:
-        with open(STATE) as f:
-            BATCHES = json.load(f)
-    except Exception:
-        BATCHES = {}
+SCHEMA = '''
+CREATE TABLE IF NOT EXISTS batches (key TEXT PRIMARY KEY, profile TEXT, kind TEXT, digest TEXT, at REAL, model TEXT,
+    took REAL, count INTEGER, system TEXT, intro TEXT, candidates TEXT, picks TEXT);
+CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, at REAL, model TEXT, took REAL, picks TEXT);
+CREATE INDEX IF NOT EXISTS history_key ON history (key, at);
+'''
+JSON_COLUMNS = ('candidates', 'picks')
 
 
-def save():
+def connect():
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
-    tmp = STATE + '.tmp'
-    with open(tmp, 'w') as f:
-        json.dump(BATCHES, f)
-    os.replace(tmp, STATE)
+    conn = sqlite3.connect(STATE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def load():
+    """Read every current batch into memory; batches saved by the JSON-file version are taken over once."""
+    global BATCHES
+    with connect() as conn:
+        conn.executescript(SCHEMA)
+        rows = conn.execute('SELECT * FROM batches').fetchall()
+    BATCHES = {}
+    for r in rows:
+        entry = {k: r[k] for k in r.keys() if k != 'key'}
+        for col in JSON_COLUMNS:
+            entry[col] = json.loads(entry[col] or '[]')
+        BATCHES[r['key']] = entry
+    old = STATE.rsplit('.', 1)[0] + '.json'
+    if not BATCHES and os.path.exists(old):
+        try:
+            with open(old) as f:
+                BATCHES = json.load(f)
+            for key in BATCHES:
+                save(key)
+            os.rename(old, old + '.imported')
+            log('took over {0} batches from {1}'.format(len(BATCHES), old))
+        except Exception as e:
+            log('could not import {0}: {1}'.format(old, e))
+
+
+def save(key):
+    """Write one batch (call with LOCK held). The history row is skipped when the picks did not change."""
+    b = BATCHES[key]
+    columns = ('profile', 'kind', 'digest', 'at', 'model', 'took', 'count', 'system', 'intro', 'candidates', 'picks')
+    values = [json.dumps(b.get(c)) if c in JSON_COLUMNS else b.get(c) for c in columns]
+    with connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO batches (key, {0}) VALUES (?{1})'.format(', '.join(columns), ', ?' * len(columns)), [key] + values)
+        last = conn.execute('SELECT picks FROM history WHERE key=? ORDER BY at DESC LIMIT 1', (key,)).fetchone()
+        if not last or last['picks'] != json.dumps(b.get('picks')):
+            conn.execute('INSERT INTO history (key, at, model, took, picks) VALUES (?,?,?,?,?)',
+                         (key, b.get('at'), b.get('model'), b.get('took'), json.dumps(b.get('picks'))))
+            conn.execute('DELETE FROM history WHERE key=? AND id NOT IN (SELECT id FROM history WHERE key=? ORDER BY at DESC LIMIT ?)',
+                         (key, key, HISTORY))
+
+
+def forget(key):
+    with connect() as conn:
+        conn.execute('DELETE FROM batches WHERE key=?', (key,))
+        conn.execute('DELETE FROM history WHERE key=?', (key,))
+
+
+def runs(key):
+    with connect() as conn:
+        return conn.execute('SELECT COUNT(*) FROM history WHERE key=?', (key,)).fetchone()[0]
 
 
 def ask_model(system, prompt, max_tokens=4000):
@@ -118,7 +174,7 @@ def rebuild(key, req, digest):
         picks, took = build(req)
         with LOCK:
             BATCHES[key] = entry_for(req, digest, picks, took)
-            save()
+            save(key)
         log('{0}: {1} picks in {2:.1f}s'.format(key, len(picks), took))
     except Exception as e:
         log('{0}: build failed: {1}'.format(key, e))
@@ -138,7 +194,7 @@ def pick(req):
         if have and (have['digest'] == digest or (kind == 'search' and time.time() - have['at'] < KEEP)):
             if 'intro' not in have:  # a batch saved by an earlier version: keep its picks, add the explanation
                 have.update({k: v for k, v in entry_for(req, digest, have['picks'], have.get('took', 0)).items() if k not in ('at', 'picks', 'took')})
-                save()
+                save(key)
             return dict(have, fresh=True, building=False)
         serve_old = have if kind == 'recommend' else None
         if serve_old and key in BUILDING:
@@ -153,11 +209,11 @@ def pick(req):
     entry = entry_for(req, digest, picks, took)
     with LOCK:
         BATCHES[key] = entry
-        # Remembered searches are trimmed so the file stays small.
-        old = [k for k, v in BATCHES.items() if '|search|' in k and time.time() - v['at'] > KEEP]
-        for k in old:
+        save(key)
+        # Remembered searches are trimmed so the store stays small.
+        for k in [k for k, v in BATCHES.items() if '|search|' in k and time.time() - v['at'] > KEEP]:
             del BATCHES[k]
-        save()
+            forget(k)
     log('{0}: {1} picks in {2:.1f}s (asked to wait)'.format(key, len(picks), took))
     return dict(entry, fresh=True, building=False)
 
@@ -195,12 +251,13 @@ def page():
         cands = ', '.join(html.escape(c) for c in b.get('candidates', []))
         blocks.append(
             '<div class="batch"><h2>{profile}</h2><div class="meta"><span class="pill">{heading}</span><span class="pill">{when}</span>'
-            '<span class="pill">{took}s</span><span class="pill">{model}</span><span class="pill">{n} picks from {m} candidates</span></div>'
+            '<span class="pill">{took}s</span><span class="pill">{model}</span><span class="pill">{n} picks from {m} candidates</span>'
+            '<span class="pill">{runs} batches kept</span></div>'
             '<ol>{picks}</ol>'
             '<details><summary>What the model was told</summary><pre>{system}\n\n{told}</pre></details>'
             '<details><summary>Candidates offered</summary><pre>{cands}</pre></details></div>'.format(
                 profile=html.escape(b.get('profile') or key.split('|')[0]), heading=heading, when=when, took=b.get('took', 0),
-                model=html.escape(b.get('model', MODEL)), n=len(b.get('picks', [])), m=len(b.get('candidates', [])) or '?',
+                model=html.escape(b.get('model') or MODEL), n=len(b.get('picks', [])), m=len(b.get('candidates', [])) or '?', runs=runs(key),
                 picks=picks or '<li>nothing picked</li>', system=html.escape(b.get('system', '')), told=told, cands=cands or 'not recorded'))
     return PAGE.format(model=html.escape(MODEL), ollama=html.escape(OLLAMA), ollama_class='ok' if up else 'bad',
                        ollama_state='answering' if up else 'not answering', n=len(items),
@@ -224,6 +281,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith('/batches'):
             with LOCK:
                 return self._send(200, BATCHES)
+        if self.path.startswith('/history'):
+            with connect() as conn:
+                rows = conn.execute('SELECT key, at, model, took, picks FROM history ORDER BY at DESC LIMIT 500').fetchall()
+            return self._send(200, [{'key': r['key'], 'at': r['at'], 'model': r['model'], 'took': r['took'], 'picks': json.loads(r['picks'])} for r in rows])
         if self.path == '/' or self.path.startswith('/?') or self.path.startswith('/index'):
             body = page().encode()
             self.send_response(200)

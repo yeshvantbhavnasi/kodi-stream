@@ -208,9 +208,22 @@ newest first. Saved live channels are looked up again when played, because their
 
 ### How recommendations work
 
-A new batch is built in the background when the addon opens, if the last batch is more than 12 hours old or three or
-more titles have been played since. It can also be forced from **Settings → Refresh recommendations now**. Each batch
-is saved to `suggestions`, and the Home tab shows the latest batch minus anything dismissed or already played.
+A new batch is built in the background when the addon opens, if the last batch is more than an hour old or three or
+more titles have been played since, and then every hour while Stream stays open (the same hourly pass re-reads the
+first pages of the catalogue's sections). When the recommendation service answers with its last batch and says it is
+rebuilding, Stream asks again three minutes later for the fresh one. Home's rows are redrawn as soon as nobody has
+touched the remote for a minute; otherwise the next visit to Home shows them. It can also be forced from
+**Settings → Refresh recommendations now**. Each batch is saved to `suggestions` (the five most recent are kept, and
+a batch identical to the last one is not written again), and the Home tab shows the latest batch minus anything
+dismissed or already played.
+
+**Priorities.** The languages chosen at setup set the order, first language leading: the shortlist the model sees is
+about half from the first language and a third from the second, the model is told to favour them in that order and,
+within a language, the genres the household watches most (taken from the looked-up details of recent and liked
+titles). When the model passes over the first or second language, it gets a second, smaller question with only that
+language's titles offered, and any share still short is filled from the best-scored candidates in that language. The
+finished row is sorted by language with the model's order kept inside each. Change the order under
+**Settings → My languages, sports and likes**.
 
 Every run starts the same way: Stream takes up to 120 candidate titles from `titles` that you have not played or
 dismissed, preferring your most-played languages. Kids titles are left out of the pool. What happens next depends on

@@ -241,9 +241,10 @@ def index(url, items):
             log('index failed: {0}'.format(e))
 
 
-def warm_index():
-    """Once a day, make sure the first page of every main section is in the local database."""
-    if time.time() - db.meta('indexed_at', 0) < 24 * 3600:
+def warm_index(max_age=24 * 3600):
+    """Make sure the first page of every main section is in the local database, once the last pass is older than
+    max_age (a day when Stream opens; the hourly keeper passes an hour)."""
+    if time.time() - db.meta('indexed_at', 0) < max_age:
         return
     if db.KIDS:
         try:

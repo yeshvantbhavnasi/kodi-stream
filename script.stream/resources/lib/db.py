@@ -375,16 +375,21 @@ def recent_watched(limit=4):
 # ---------- suggestions ----------
 
 def save_suggestions(picks, source):
-    """picks: [{'entry': {item, parent, group}, 'reason': str}] in rank order. Every batch is kept."""
+    """picks: [{'entry': {item, parent, group}, 'reason': str}] in rank order. Returns True when a new batch was
+    written; a batch identical to the latest one (same titles, order and reasons) is not stored again, so hourly
+    refreshes do not fill the table with copies."""
     batch = time.time()
     rows = [(batch, n, p['entry']['item']['name'], p.get('reason', ''), source, json.dumps(p['entry']['item']),
              p['entry']['parent'], p['entry'].get('group')) for n, p in enumerate(picks)]
     with _connect() as conn:
+        latest = conn.execute('SELECT name, reason FROM suggestions WHERE batch=(SELECT MAX(batch) FROM suggestions) ORDER BY rank').fetchall()
+        if latest and [(r['name'], r['reason']) for r in latest] == [(r[2], r[3]) for r in rows]:
+            return False
         conn.executemany('INSERT INTO suggestions (batch, rank, name, reason, source, item, parent, grp) '
                          'VALUES (?,?,?,?,?,?,?,?)', rows)
         # Keep the five most recent batches; dismissed titles stay hidden through their own flag in those rows.
         conn.execute('DELETE FROM suggestions WHERE batch NOT IN (SELECT DISTINCT batch FROM suggestions ORDER BY batch DESC LIMIT 5)')
-    return batch
+    return True
 
 
 def suggestions():

@@ -1215,8 +1215,27 @@ class Home(xbmcgui.WindowXML):
         self.getControl(TABS_ID).addItems(tabs)
         self.load_tab('home')
         self.spawn(self.background)
+        self.spawn(self.keeper)
         self.spawn(self.billboard)
         self.spawn(watch_visibility, self)
+
+    def keeper(self):
+        """While Stream is open: every hour, re-read the catalogue's first pages and rebuild the recommendations
+        (or fetch the batch the service finished in the background a few minutes after it was asked). Home's rows
+        are redrawn straight away when nobody is using the remote; otherwise the next visit to Home shows them."""
+        monitor = xbmc.Monitor()
+        while not self.closed and not monitor.waitForAbort(60):
+            if BUSY['on'] or xbmc.Player().isPlaying():
+                continue
+            try:
+                cat.warm_index(ai.REFRESH_AFTER)
+                if not ai.recommend(cat.top_groups()):
+                    continue
+                idle = xbmc.getGlobalIdleTime() >= IDLE_AFTER and not OPEN['grids'] and xbmcgui.getCurrentWindowDialogId() == 9999
+                if self.tab == 'home' and idle and not self.closed:
+                    self.load_tab('home')
+            except Exception as e:
+                cat.log('hourly refresh failed: {0}'.format(e))
 
     def background(self):
         """Keep the local index and the suggestions fresh without holding up the screen."""

@@ -14,7 +14,9 @@ import db
 
 JEV_URL = 'https://api.typesafe.ai/v1/systemone'
 OLLAMA_MODEL = 'gemma3:4b'
-REFRESH_AFTER = 12 * 3600
+REFRESH_AFTER = 3600       # a batch older than this is rebuilt while Stream is open
+PENDING_AFTER = 180        # when the service is rebuilding in the background, ask again this soon
+LAST = {'building': False}  # whether the service said it was still rebuilding after the last request
 PICKS = 15
 
 
@@ -160,6 +162,8 @@ def ask_service(kind, system, prompt_intro, candidates, count):
     if r.status_code != 200:
         raise RuntimeError('service returned HTTP {0}: {1}'.format(r.status_code, r.text[:200]))
     reply = r.json()
+    if kind == 'recommend':
+        LAST['building'] = bool(reply.get('building'))
     log('service answered {0} ({1}, {2}s{3})'.format(kind, 'fresh' if reply.get('fresh') else 'last batch',
                                                     reply.get('took', 0), ', rebuilding' if reply.get('building') else ''))
     return reply.get('picks', [])
@@ -274,6 +278,68 @@ def _profile_lines():
     return lines
 
 
+def priority_languages():
+    """Languages in the order recommendations favour them: the ones chosen at setup, first language leading."""
+    return list((db.meta('profile') or {}).get('languages', []))
+
+
+def watched_genres(limit=4):
+    """The genres this household plays and likes most, from the looked-up details of recent and liked titles."""
+    taste = {}
+    for entry in db.recent(40) + db.rated(1):
+        for genre in _genres(entry.get('series') or entry['item']['name']):
+            taste[genre] = taste.get(genre, 0) + 1
+    return [g for g, _ in sorted(taste.items(), key=lambda p: -p[1])[:limit]]
+
+
+def _lang_rank(entry, order):
+    group = (entry.get('group') or '').lower()
+    for n, lang in enumerate(order):
+        if db.lang_match(group, [lang.lower()]):
+            return n
+    return len(order)
+
+
+def _by_priority(pool, order, size=60):
+    """Arrange the pool so the shortlist the model sees is weighted by language: about half from the first language,
+    a third from the second, the rest from the others, each part in the pool's own order."""
+    if not order:
+        return pool
+    shares = [size // 2, size * 3 // 10] + [size // 5] * max(0, len(order) - 2)
+    chosen, taken = [], set()
+    for n, lang in enumerate(order):
+        for e in [e for e in pool if _lang_rank(e, order) == n][:shares[n]]:
+            chosen.append(e)
+            taken.add(e['item']['name'])
+    return chosen + [e for e in pool if e['item']['name'] not in taken]
+
+
+def _balance(picks, pool, order):
+    """Hold the model to the language shares: about half the row from the first language, a third from the second.
+    A language the model under-served is topped up from the best-scored candidates in that language, each marked
+    with its genres, so the row always carries the mix the household asked for."""
+    shares = [PICKS // 2, PICKS * 3 // 10] + [PICKS // 5] * max(0, len(order) - 2)
+    chosen = {p['entry']['item']['name'] for p in picks}
+    out, taken = [], set()
+    for n, lang in enumerate(order):
+        mine = [p for p in picks if _lang_rank(p['entry'], order) == n][:shares[n]]
+        for e in pool:
+            if len(mine) >= shares[n]:
+                break
+            if _lang_rank(e, order) == n and e['item']['name'] not in chosen and e['item']['name'] not in taken:
+                genres = _genres(e['item']['name'])[:2]
+                mine.append({'entry': e, 'reason': (', '.join(genres) + ' · in ' + lang) if genres else 'New in ' + lang})
+        for p in mine:
+            if p['entry']['item']['name'] not in taken:
+                out.append(p)
+                taken.add(p['entry']['item']['name'])
+    for p in picks:  # whatever the model picked beyond the shares, in its order
+        if p['entry']['item']['name'] not in taken and len(out) < PICKS:
+            out.append(p)
+            taken.add(p['entry']['item']['name'])
+    return out[:PICKS]
+
+
 def _local_order(pool):
     """No AI key: score by chosen genres (keywords in the description), then spread across languages and types."""
     profile = db.meta('profile') or {}
@@ -301,17 +367,21 @@ def recommend(top_groups, force=False):
     """Build and store a new batch of suggestions when the last one is stale. Returns True if a batch was saved."""
     plays = db.history_count()
     last = db.meta('recs', {})
-    stale = (time.time() - last.get('at', 0) > REFRESH_AFTER or plays - last.get('plays', 0) >= 3
-             or db.meta('recs_dirty', False))
+    age = time.time() - last.get('at', 0)
+    stale = (age > REFRESH_AFTER or plays - last.get('plays', 0) >= 3 or db.meta('recs_dirty', False)
+             or (last.get('pending') and age > PENDING_AFTER))
     if not (force or stale):
         return False
     pool = db.candidates(400, top_groups)
     if not db.KIDS:
         pool = db.only_chosen(pool, lambda e: e.get('group'))
-    pool = pool[:120]
+    order = priority_languages()
+    genres = watched_genres()
+    # Language shares are applied before the pool is cut, so the second language is not crowded out by the first.
+    pool = _by_priority(pool, order, 120)[:120]
     if not pool:
         return False
-    pool = _local_order(pool)
+    pool = _by_priority(_local_order(pool), order)
     timeline = _timeline()
     watched = db.recent(30)
     stated = _profile_lines()
@@ -327,17 +397,40 @@ def recommend(top_groups, force=False):
     if stated:
         intro = 'What the household told us:\n' + '\n'.join('- ' + line for line in stated) + '\n\n' + intro
         goal += '. ' + ' '.join(stated)[:600]
+    if order or genres:
+        rules = []
+        if order:
+            shares = [PICKS // 2, PICKS * 3 // 10] + [PICKS // 5] * max(0, len(order) - 2)
+            want = ', '.join('about {0} from {1}'.format(n, lang) for n, lang in zip(shares, order[:3]))
+            rules.append('favour titles in ' + ', then '.join(order) + ', in that order: ' + want + (', the rest from the other languages' if len(order) > 3 else ''))
+        if genres:
+            rules.append('within a language prefer the genres they watch most: ' + ', '.join(genres))
+        intro = 'Priorities: ' + '; '.join(rules) + '.\n\n' + intro
     system = RECOMMENDER + (' This is a children\'s profile: every pick must be suitable for young children.' if db.KIDS else '')
     picks, source = _pick(goal, system, intro, pool, PICKS)
+    if order and source != 'local':
+        # A language the model passed over gets its own, smaller question with only that language's titles offered.
+        shares = [PICKS // 2, PICKS * 3 // 10] + [PICKS // 5] * max(0, len(order) - 2)
+        for n, lang in enumerate(order[:2]):
+            have = [p for p in picks if _lang_rank(p['entry'], order) == n]
+            mine = [e for e in pool if _lang_rank(e, order) == n]
+            if len(have) < shares[n] and mine:
+                extra, _ = _pick(goal, system, 'Only titles in {0} are offered here; pick the ones this household would play.\n\n'.format(lang) + intro,
+                                 mine, shares[n] - len(have), 40, kind='recommend-' + lang.lower())
+                names = {p['entry']['item']['name'] for p in picks}
+                picks += [p for p in extra if p['entry']['item']['name'] not in names]
+        picks = _balance(picks, pool, order)
+        picks.sort(key=lambda p: _lang_rank(p['entry'], order))  # stable: the model's order holds within a language
     if source == 'local':
         for p in picks:
             if p['entry'].get('group'):
                 p['reason'] = 'New in {0}'.format(p['entry']['group'].title())
-    db.save_suggestions(picks, source)
-    db.set_meta('recs', {'at': time.time(), 'plays': plays, 'source': source})
+    changed = db.save_suggestions(picks, source)
+    # 'pending' means the service handed back its last batch and is building a new one: ask again in a few minutes.
+    db.set_meta('recs', {'at': time.time(), 'plays': plays, 'source': source, 'pending': source.startswith('service') and LAST['building']})
     db.set_meta('recs_dirty', False)
-    log('saved {0} suggestions via {1}'.format(len(picks), source))
-    return True
+    log('{0} {1} suggestions via {2}'.format('saved' if changed else 'kept', len(picks), source))
+    return changed
 
 
 def smart_search(query):
