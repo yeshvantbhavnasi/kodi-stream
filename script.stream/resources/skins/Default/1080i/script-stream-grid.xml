@@ -79,7 +79,7 @@
                         <control type="label"><left>0</left><top>204</top><width>350</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
             </focusedlayout>
-            <itemlayout width="224" height="360">
+            <itemlayout width="224" height="360" condition="String.IsEmpty(Window.Property(wide))">
                         <control type="group"><left>6</left><top>6</top>
                         <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture></control>
                         <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
@@ -104,7 +104,7 @@
                         <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label></control>
                         </control>
             </itemlayout>
-            <focusedlayout width="224" height="360">
+            <focusedlayout width="224" height="360" condition="String.IsEmpty(Window.Property(wide))">
                         <control type="group"><left>6</left><top>6</top>
                         <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(50)</visible></control>
                         <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture></control>

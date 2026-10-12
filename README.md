@@ -43,6 +43,8 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Like or dislike a title | Hold OK on the title and pick **Like** or **Dislike** |
 | Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |
 | Resume a title | Play it again; it carries on from where it stopped. A red bar under the poster shows how far in it is. Hold OK and pick **Play from the beginning** to start over |
+| Tidy Continue Watching or History | Hold OK on the tile and pick **Remove from Continue Watching** (the title stays in History and plays from the start next time) or **Remove from History** |
+| Search YouTube | On the YouTube section the search bar searches YouTube. Elsewhere a **Search YouTube for …** tile sits at the end of the results, first when nothing in the catalogue matched |
 | Browse by genre | The genre strip under the description panel on Movies and Shows (Down from the top bar): OK on Action, Comedy, Thriller & Crime, Romance and so on filters the rows to that genre, one row per language, your first language first. **All** clears it |
 | See everything watched | The **History** section: unfinished titles, then everything played, newest first |
 
@@ -108,7 +110,13 @@ The **YouTube** tab shows YouTube through Kodi's official YouTube add-on (**Add-
 add-ons → YouTube**), which fetches videos directly from YouTube, so no advertisements are played. Videos appear as wide
 tiles, play with OK like any other title, and show up in Continue Watching and History.
 
+- **Ms Rachel** (toddler learning) is always the first row of the tab, and a row on a kids profile's home, read from
+  the channel's public feed. Other channels to pin go in `PINNED` in `youtube.py`.
 - **Related Videos** works as soon as the add-on is installed, with no account.
+- **Search.** On the YouTube tab the search bar searches YouTube (read from the public results page, so no key is
+  needed); elsewhere a *Search YouTube for …* tile closes every list of search results.
+- **Tiles.** A row made only of videos uses wide 16:9 tiles. A mixed row such as Continue Watching keeps poster tiles
+  and shows each video letterboxed inside its tile, so neither posters nor thumbnails are cropped.
 - **Subscriptions without an account.** Hold OK on any video and choose **Subscribe to channel**. Stream keeps the list
   itself and reads each channel's public feed, so a **New from Your Subscriptions** row shows the latest uploads
   (also on Home), and a **Your Subscriptions** row opens each channel. Hold OK on a channel tile to unsubscribe.
@@ -210,11 +218,22 @@ which keys are set.
 
 Candidates are limited to the languages chosen at setup, and anything played, liked, disliked or dismissed is left out.
 
-**Without any AI key.** Stream scores candidates by the genres chosen at setup (matching words in each description)
+**Without any model.** Stream scores candidates by the genres chosen at setup (matching words in each description)
 and by the languages of liked titles, then takes turns across languages and types so the row is varied, and picks the
 first 15. Each is labelled "New in <language>". Nothing leaves the device.
 
-**With a Bedrock key (Claude).** Claude is the recommendation engine. Stream sends it:
+**With a local model (Ollama, default).** The *Ollama server* setting points at an [Ollama](https://ollama.com)
+server, `http://127.0.0.1:11434` by default, and *Ollama model* names the model, `gemma3:4b` (Google's Gemma 3, 4B)
+by default. Ollama is free, needs no account, and the model runs on the Mac or box itself, so nothing leaves the home.
+Set it up once with `brew install ollama`, `ollama pull gemma3:4b` and `ollama serve` (or a login service). For other
+TV boxes on the same network, start Ollama with `OLLAMA_HOST=0.0.0.0` and put the serving machine's address in the
+setting, for example `http://192.168.1.20:11434`. On an M2 Mac mini Gemma 3 4B answers a search in about 15 seconds
+and builds a recommendation batch in about 40 seconds (in the background). A bigger model such as `gemma3:12b` gives
+better reasons but needs about 8 GB of memory. When the server does not answer, the run falls back to the next method.
+The model gets the same prompt as Claude below.
+
+**With a Bedrock key (Claude).** Used when the Ollama setting is blank. Claude is the recommendation engine. Stream
+sends it:
 
 - what you told it at setup and since: chosen languages and genres, liked titles and disliked titles;
 - your interaction history as a time-ordered list of events, one per line, for example
@@ -248,15 +267,18 @@ Only if that finds nothing does it widen to every language. The results are one 
 After the direct matches come **Related** titles: other titles whose name or description contains the words you
 typed. If nothing matches at all, the list shows your current recommendations instead of an empty screen.
 
-When a key is set and the query is three or more words (for example "feel-good Telugu family comedy"), Stream also
-asks the AI to pick matching titles from the local index. Those appear first, marked "Best match" with a reason.
+When a model is set up and the query is three or more words (for example "feel-good Telugu family comedy"), Stream
+also asks it to pick matching titles from the local index. Those appear first, marked "Best match" with a reason. The
+40 candidates offered to the model are titles whose names or descriptions contain the query's words, then the newest
+unplayed titles in your languages; a language named in the query ("telugu") limits them to that language.
 
 ### What leaves the device
 
 | Situation | Data sent | To |
 |---|---|---|
-| No AI keys | Title names for ratings lookups (next rows); nothing else beyond what the Sasta TV addon itself requests | - |
-| Bedrock key set | Your interaction events, candidate titles and descriptions, search requests of three or more words | Amazon Bedrock, in the region you choose |
+| No model set up | Title names for ratings lookups (next rows); nothing else beyond what the Sasta TV addon itself requests | - |
+| Ollama server set (default) | Your interaction events, candidate titles and descriptions, search requests of three or more words | The Ollama server named in the setting, on this machine or another in your home; nothing leaves the network |
+| Bedrock key set | The same | Amazon Bedrock, in the region you choose |
 | Jev key set | A summary of recent activity or the search request, plus candidate titles and descriptions | TypeSafe's Jev service |
 | Always (ratings lookups) | Title names and years, one title at a time | The Movie Database (TMDb); OMDb as well if an OMDb key is set |
 
@@ -299,6 +321,8 @@ Open **Stream → Settings → AI keys and options**.
 | Setting | Meaning | Default |
 |---|---|---|
 | Use AI for recommendations and search | Master switch | On |
+| Ollama server | Address of an Ollama server running a local model; blank to use Bedrock instead | `http://127.0.0.1:11434` |
+| Ollama model | The model Ollama should answer with | `gemma3:4b` |
 | Amazon Bedrock API key | A Bedrock API key (bearer token), not AWS access keys | empty |
 | Bedrock region | Region the request is sent to | `us-east-1` |
 | Bedrock model ID | Which Claude model to use | `anthropic.claude-opus-5-5` |
@@ -311,7 +335,7 @@ Open **Stream → Settings → AI keys and options**.
 | `script.stream/default.py` | The two screens (home rows and grid), navigation, playback, menus |
 | `script.stream/resources/lib/catalogue.py` | Reading and caching Sasta TV listings, building play links, search ranking |
 | `script.stream/resources/lib/db.py` | The SQLite store |
-| `script.stream/resources/lib/ai.py` | Recommendations and smart search (Bedrock and Jev calls) |
+| `script.stream/resources/lib/ai.py` | Recommendations and smart search (Ollama, Bedrock and Jev calls) |
 | `script.stream/resources/skins/Default/` | Screen layouts and images |
 | `repository.stream/` | The repository installer addon |
 | `zips/` | Generated files Kodi downloads; do not edit by hand |

@@ -263,6 +263,23 @@ def continue_watching(limit=20):
     return [_entry(r) for r in rows]
 
 
+def in_history(key):
+    with _connect() as conn:
+        return conn.execute('SELECT 1 FROM watched WHERE key=?', (key,)).fetchone() is not None
+
+
+def clear_progress(key):
+    """Take a title off Continue Watching: it stays in History and plays from the beginning next time."""
+    with _connect() as conn:
+        conn.execute('UPDATE watched SET position=0 WHERE key=?', (key,))
+
+
+def forget(key):
+    """Remove a title from History (and so from Continue Watching)."""
+    with _connect() as conn:
+        conn.execute('DELETE FROM watched WHERE key=?', (key,))
+
+
 def history_count():
     with _connect() as conn:
         return conn.execute('SELECT COALESCE(SUM(plays), 0) FROM watched').fetchone()[0]

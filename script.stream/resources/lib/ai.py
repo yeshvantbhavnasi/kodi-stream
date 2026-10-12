@@ -1,4 +1,5 @@
-# Recommendations and smart search. Keys come from the addon settings and are never logged.
+# Recommendations and smart search. The model is a local one served by Ollama (Gemma by default, on this machine or
+# another on the network) or Claude on Amazon Bedrock. Keys come from the addon settings and are never logged.
 # Kodi's Python cannot install the Anthropic SDK, so Bedrock is called over plain HTTPS.
 import json
 import re
@@ -11,6 +12,7 @@ import xbmcaddon
 import db
 
 JEV_URL = 'https://api.typesafe.ai/v1/systemone'
+OLLAMA_MODEL = 'gemma3:4b'
 REFRESH_AFTER = 12 * 3600
 PICKS = 15
 
@@ -23,8 +25,26 @@ def enabled():
     return _setting('ai_enabled') != 'false'
 
 
+def ollama_url():
+    """The Ollama server's address (blank in the settings switches it off)."""
+    return _setting('ollama_url').rstrip('/')
+
+
+def provider():
+    """'ollama', 'bedrock' or '' for the model that answers."""
+    if not enabled():
+        return ''
+    return 'ollama' if ollama_url() else 'bedrock' if _setting('bedrock_token') else ''
+
+
 def has_llm():
-    return enabled() and bool(_setting('bedrock_token'))
+    return bool(provider())
+
+
+def engine_name(source):
+    """What produced a batch of suggestions, for the settings tiles."""
+    names = {'ollama': (_setting('ollama_model') or OLLAMA_MODEL) + ' on Ollama', 'bedrock': 'Claude', 'llm': 'Claude', 'jev': 'Jev'}
+    return ' + '.join(names.get(part, part) for part in (source or '').split('+')) if source else ''
 
 
 def has_jev():
@@ -51,6 +71,25 @@ def ask_claude(system, prompt, max_tokens=4000):
     if reply.get('stop_reason') == 'refusal':
         raise RuntimeError('The model declined this request')
     return ''.join(b.get('text', '') for b in reply.get('content', []) if b.get('type') == 'text')
+
+
+def ask_ollama(system, prompt, max_tokens=4000):
+    """One chat request to a model served by Ollama, asked to answer in JSON."""
+    import requests
+    body = {'model': _setting('ollama_model') or OLLAMA_MODEL, 'stream': False, 'format': 'json', 'keep_alive': '30m',
+            'options': {'temperature': 0.2, 'num_ctx': 12288, 'num_predict': max_tokens},
+            'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': prompt}]}
+    r = requests.post(ollama_url() + '/api/chat', json=body, timeout=300)
+    if r.status_code != 200:
+        raise RuntimeError('Ollama returned HTTP {0}: {1}'.format(r.status_code, r.text[:200]))
+    return (r.json().get('message') or {}).get('content', '')
+
+
+def ask(system, prompt, max_tokens=4000):
+    """One question to whichever model is set up: Ollama first, otherwise Claude on Bedrock."""
+    if provider() == 'ollama':
+        return ask_ollama(system, prompt, max_tokens)
+    return ask_claude(system, prompt, max_tokens)
 
 
 def _parse_json(text):
@@ -90,8 +129,11 @@ def _describe(entry):
     return text
 
 
-def _pick(goal_for_jev, system, prompt_intro, pool, count):
-    """Shared pipeline: Jev narrows the pool, Claude picks and explains. Either step may be absent."""
+LANGUAGES = ('telugu', 'tamil', 'hindi', 'malayalam', 'kannada', 'marathi', 'gujarati', 'punjabi', 'bengali', 'english')
+
+
+def _pick(goal_for_jev, system, prompt_intro, pool, count, shortlist_size=60):
+    """Shared pipeline: Jev narrows the pool, the model picks and explains. Either step may be absent."""
     ids = {'c{0}'.format(n): e for n, e in enumerate(pool)}
     order = list(ids)
     source = 'local'
@@ -102,18 +144,20 @@ def _pick(goal_for_jev, system, prompt_intro, pool, count):
         except Exception as e:
             log('Jev ranking skipped: {0}'.format(e))
     if has_llm():
-        shortlist = order[:60]
+        shortlist = order[:shortlist_size]
         listing = '\n'.join('{0}: {1}'.format(cid, _describe(ids[cid])) for cid in shortlist)
         prompt = ('{0}\n\nCandidates:\n{1}\n\nPick the {2} best candidates, best first. Reply with JSON only, shaped as '
-                  '{{"picks": [{{"id": "c0", "reason": "one short sentence for the viewer"}}]}}. Use only ids from the list.'
+                  '{{"picks": [{{"id": "c0", "reason": "why, for the viewer, in at most ten words"}}]}}. Use only ids from the list.'
                   ).format(prompt_intro, listing, count)
         try:
-            picks = _parse_json(ask_claude(system, prompt)).get('picks', [])
+            started = time.time()
+            picks = _parse_json(ask(system, prompt)).get('picks', [])
             chosen = [{'entry': ids[p['id']], 'reason': str(p.get('reason', ''))[:160]} for p in picks if p.get('id') in ids]
+            log('{0} picked {1} of {2} in {3:.1f}s'.format(provider(), len(chosen), len(shortlist), time.time() - started))
             if chosen:
-                return chosen[:count], 'llm+jev' if source == 'jev' else 'llm'
+                return chosen[:count], provider() + ('+jev' if source == 'jev' else '')
         except Exception as e:
-            log('Claude step skipped: {0}'.format(e))
+            log('{0} step skipped: {1}'.format(provider(), e))
     return [{'entry': ids[cid], 'reason': ''} for cid in order[:count]], source
 
 
@@ -256,13 +300,18 @@ def smart_search(query):
     """Natural-language search over the local index. Returns [{'entry', 'reason'}] or [] when AI is off."""
     if not (has_llm() or has_jev()):
         return []
-    pool = db.candidates(150)
+    hits = []
     for word in [w for w in re.findall(r'\w+', query) if len(w) > 3][:4]:
         for hit in db.find_titles(word, 20):
-            if all(hit['item']['name'] != p['item']['name'] for p in pool):
-                pool.append(hit)
+            if all(hit['item']['name'] != p['item']['name'] for p in hits):
+                hits.append(hit)
+    pool = db.only_chosen(db.candidates(150, db.chosen_languages()), lambda e: e.get('group'))
+    pool = hits + [p for p in pool if all(p['item']['name'] != h['item']['name'] for h in hits)]
+    asked = [w for w in re.findall(r'\w+', query.lower()) if w in LANGUAGES]
+    if asked:  # "telugu comedy": only that language's titles are offered
+        pool = [p for p in pool if db.lang_match(p.get('group') or '', asked)] or pool
     if not pool:
         return []
     system = 'You match a viewer\'s request to titles in a fixed catalogue. Only pick titles that genuinely fit.'
-    picks, source = _pick('A title that fits this request: ' + query, system, 'The viewer asked for: ' + query, pool, 12)
+    picks, source = _pick('A title that fits this request: ' + query, system, 'The viewer asked for: ' + query, pool, 8, 40)
     return picks if source != 'local' else []

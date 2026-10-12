@@ -51,9 +51,15 @@ KEY_STEPS = (
 )
 # Stream's own YouTube listings, served under the add-on's namespace so they cache and page like any other folder.
 VIRTUAL = PLUGIN + 'stream/'
+# Channels that are always on the YouTube tab (and on a kids profile's home), whether or not anyone follows them:
+# (row title, channel id). Their newest uploads come from the channel's public feed, so no key or sign-in is needed.
+PINNED = [('Ms Rachel', 'UCG2CL6EUjG8TVT1Tpl9nJdg')]
 UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36')
 _channel_cache = {}
 TAGS = re.compile(r'\[/?(B|I|COLOR[^\]]*|UPPERCASE|LOWERCASE|CR)\]', re.I)
+# Emoji and other pictographs: Kodi's fonts have no glyphs for them, and a title that starts with one stops Kodi's
+# label rendering ("[B]" is all that is shown), so they are dropped from names.
+EMOJI = re.compile('[\U00010000-\U0010FFFF\u2600-\u27BF\u2B00-\u2BFF\uFE0F\u200D]+')
 SKIP = ('sign in', 'sign out', 'switch user', 'setup wizard', 'go back...', 'search')
 
 
@@ -144,7 +150,7 @@ def video_id(link):
 
 
 def clean(label):
-    return TAGS.sub('', label or '').strip()
+    return re.sub(r'\s{2,}', ' ', EMOJI.sub('', TAGS.sub('', label or ''))).strip()
 
 
 def _image(value):
@@ -229,7 +235,7 @@ def search(query, limit=24):
             continue
         seen.add(video_id)
         owner = re.search(r'"ownerText":\{"runs":\[\{"text":"((?:[^"\\]|\\.)+)"', page[m.end():m.end() + 3000])
-        out.append(_video(video_id, _unescape(title), _unescape(owner.group(1)) if owner else ''))
+        out.append(_video(video_id, clean(_unescape(title)), _unescape(owner.group(1)) if owner else ''))
         if len(out) >= limit:
             break
     return out
@@ -276,7 +282,7 @@ def feed(channel_id):
         title = re.search(r'<title>([^<]*)</title>', entry)
         when = re.search(r'<published>([^<]*)</published>', entry)
         if vid and title:
-            out.append(_video(vid.group(1), html.unescape(title.group(1)), by, when.group(1) if when else ''))
+            out.append(_video(vid.group(1), clean(html.unescape(title.group(1))), by, when.group(1) if when else ''))
     return out
 
 
@@ -312,7 +318,14 @@ def virtual(path):
         return subscriptions(db.channels())
     if kind.startswith('search'):
         return search(params.get('q', [''])[0])
+    if kind.startswith('channel'):
+        return sorted(feed(params.get('id', [''])[0]), key=lambda v: v['when'], reverse=True)
     return []
+
+
+def channel_url(channel_id):
+    """A listing of a channel's newest uploads from its public feed."""
+    return '{0}channel/?id={1}'.format(VIRTUAL, channel_id)
 
 
 def subs_url():
@@ -321,6 +334,13 @@ def subs_url():
 
 def search_url(query):
     return '{0}search/?q={1}'.format(VIRTUAL, quote(query))
+
+
+def search_entry(query):
+    """A folder entry that opens a YouTube search for the query, for the end of Stream's own search results."""
+    return {'item': {'t': 'folder', 'name': 'Search YouTube for \u201c{0}\u201d'.format(query), 'url': search_url(query), 'yt': 1,
+                     'plot': 'Videos on YouTube matching \u201c{0}\u201d, played through Kodi\'s YouTube add-on.'.format(query)},
+            'parent': VIRTUAL, 'group': 'YouTube', 'meta': 'YouTube'}
 
 
 def when_text(stamp):

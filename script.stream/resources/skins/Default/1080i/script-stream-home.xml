@@ -370,12 +370,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row0.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -399,14 +400,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row0.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(200) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(200) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -489,12 +491,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row1.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -518,14 +521,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row1.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(201) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(201) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -608,12 +612,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row2.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -637,14 +642,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row2.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(202) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(202) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -727,12 +733,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row3.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -756,14 +763,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row3.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(203) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(203) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -846,12 +854,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row4.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -875,14 +884,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row4.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(204) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(204) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -965,12 +975,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row5.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -994,14 +1005,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row5.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(205) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(205) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1084,12 +1096,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row6.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1113,14 +1126,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row6.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(206) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(206) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1203,12 +1217,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row7.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1232,14 +1247,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row7.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(207) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(207) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1322,12 +1338,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row8.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1351,14 +1368,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row8.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(208) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(208) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1441,12 +1459,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row9.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1470,14 +1489,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row9.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(209) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(209) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1560,12 +1580,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row10.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1589,14 +1610,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row10.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(210) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(210) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1679,12 +1701,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row11.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1708,14 +1731,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row11.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(211) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(211) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1798,12 +1822,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row12.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1827,14 +1852,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row12.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(212) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(212) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1917,12 +1943,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row13.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -1946,14 +1973,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row13.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(213) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(213) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -2036,12 +2064,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row14.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -2065,14 +2094,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row14.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(214) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(214) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -2154,12 +2184,13 @@
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="364">
+                    <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row15.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>
@@ -2183,14 +2214,15 @@
                             <control type="label"><left>0</left><top>258</top><width>200</width><height>34</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Art(thumb))</visible></control>
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="364">
+                    <focusedlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row15.wide))">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(215) + String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>-5</left><top>45</top><width>210</width><height>210</height><texture colordiffuse="FFFFFFFF">white.png</texture><visible>Control.HasFocus(215) + !String.IsEmpty(ListItem.Property(card))</visible></control>
                             <!-- poster tiles: movies and shows -->
                             <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="CC1E1E26">white.png</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Art(thumb))</visible></control>
-                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + String.IsEmpty(ListItem.Property(wide))</visible></control>
+                            <control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(wide))</visible></control>
                             <control type="image"><left>0</left><top>0</top><width>96</width><height>30</height><texture colordiffuse="F0E50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="label"><left>0</left><top>0</top><width>96</width><height>30</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(tag)][/B]</label><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(tag))</visible></control>
                             <control type="image"><left>0</left><top>270</top><width>120</width><height>30</height><texture colordiffuse="D0000000">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + !String.IsEmpty(ListItem.Property(rating))</visible></control>

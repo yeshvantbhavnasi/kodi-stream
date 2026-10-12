@@ -144,7 +144,7 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     video = yt.is_youtube(item.get('url'))
     # Channel names such as '... 4K' and YouTube titles are not release tags.
     titled = item['t'] == 'play' and not cat.is_live(item) and not video
-    clean, tag, note = quality_of(item['name']) if titled else (item['name'], '', '')
+    clean, tag, note = quality_of(item['name']) if titled else (yt.clean(item['name']) if video else item['name'], '', '')
     li = xbmcgui.ListItem(label=label or clean)
     li.setProperty('tag', tag)
     if item.get('img') and not cat.GENERIC_IMG.search(item['img']):
@@ -651,9 +651,15 @@ def context_menu(li, in_grid):
         options.insert(2, ('info', 'Rating, reviews and trailer'))
     if video:
         options.insert(1, ('subscribe', 'Subscribe to channel'))
-    if kind == 'play' and not cat.is_live(item) and db.progress(db.play_key(item))[0] > 30:
+    key = db.play_key(item) if kind == 'play' else None
+    position, _, done = db.progress(key) if key else (0, 0, False)
+    if key and not cat.is_live(item) and position > 30:
         options[0] = ('open', 'Resume')
         options.insert(1, ('restart', 'Play from the beginning'))
+        if not done:
+            options.append(('clear', 'Remove from Continue Watching'))
+    if key and li.getProperty('saved') and db.in_history(key):
+        options.append(('forget', 'Remove from History'))
     if li.getProperty('suggestion'):
         options.append(('dismiss', 'Not interested'))
     if in_grid:
@@ -714,6 +720,14 @@ def context_menu(li, in_grid):
     if action == 'dismiss':
         db.dismiss(item['name'])
         db.log_event('dismissed', item['name'], group, section)
+        return 'changed'
+    if action == 'clear':
+        db.clear_progress(key)
+        notify('Removed from Continue Watching', 2500)
+        return 'changed'
+    if action == 'forget':
+        db.forget(key)
+        notify('Removed from History', 2500)
         return 'changed'
     return 'home'
 
@@ -1003,8 +1017,8 @@ class Grid(xbmcgui.WindowXML):
         with self.ui_lock:
             if self.closed:
                 return
-            if first_page and titles and titles[0].getProperty('wide'):
-                self.setProperty('wide', '1')  # a listing of videos is drawn with wide tiles
+            if first_page and titles and all(t.getProperty('wide') for t in titles):
+                self.setProperty('wide', '1')  # a listing of nothing but videos is drawn with wide tiles
             position = self.panel.getSelectedPosition()
             self.panel.addItems(shown)
             if not first_page and position >= 0:
@@ -1291,7 +1305,7 @@ class Home(xbmcgui.WindowXML):
 
     def settings_tiles(self):
         last = db.meta('recs', {})
-        engine = {'llm+jev': 'Claude + Jev', 'llm': 'Claude', 'jev': 'Jev', 'local': 'your languages and likes'}.get(last.get('source'), 'not run yet')
+        engine = ai.engine_name(last.get('source')) or ('your languages and likes' if last.get('source') == 'local' else 'not run yet')
         profile = db.meta('profile') or {}
         chosen = ', '.join(profile.get('languages', [])) or 'all languages'
         return [
@@ -1345,7 +1359,8 @@ class Home(xbmcgui.WindowXML):
             if picks:
                 rows.insert(1 if rows else 0, ('items', 'Recommended for You',
                                                [entry_item(p, meta=p['reason'], suggestion=True) for p in picks]))
-            return rows + [titles] + self.kids_live_rows()
+            pinned = [('dir', title, yt.channel_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
+            return rows + [titles] + pinned + self.kids_live_rows()
         if key == 'kids':
             return [titles]
         if key == 'live':
@@ -1374,7 +1389,7 @@ class Home(xbmcgui.WindowXML):
 
     def youtube_rows(self):
         """Subscriptions kept in Stream, rows that follow what was watched here, then the add-on's own lists."""
-        rows = []
+        rows = [('dir', title, yt.channel_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
         followed = db.channels()
         if followed:
             rows.append(('dir', 'New from Your Subscriptions', yt.subs_url(), 'YouTube', None))
@@ -1557,7 +1572,8 @@ class Home(xbmcgui.WindowXML):
                     self.getControl(FIRST_ROW + slot).addItems(items)
                     self.setProperty('row{0}.title'.format(slot), title)
                     # A row of videos is drawn with wide tiles (the skin can only switch layouts per row, not per tile).
-                    self.setProperty('row{0}.wide'.format(slot), '1' if items and items[0].getProperty('wide') else '')
+                    # Wide tiles only when every tile is a video; a mixed row keeps posters, with videos letterboxed inside.
+                    self.setProperty('row{0}.wide'.format(slot), '1' if items and all(i.getProperty('wide') for i in items) else '')
                     if slot == 0:
                         self.setProperty('status', '')
                 if slot == 0 and focus:
@@ -1599,6 +1615,13 @@ class Home(xbmcgui.WindowXML):
             self.settling = False
 
     def search(self):
+        if self.tab == 'youtube':
+            query = xbmcgui.Dialog().input('Search YouTube')
+            if query:
+                db.log_event('searched', query, 'YouTube')
+                if open_grid('YouTube: \u201c{0}\u201d'.format(query), url=yt.search_url(query), group='YouTube'):
+                    self.go_home()
+            return
         query = xbmcgui.Dialog().input('Search movies and shows')
         if not query:
             return
@@ -1633,7 +1656,10 @@ class Home(xbmcgui.WindowXML):
                         related.append(dict(hit, meta='Related · ' + cat.title_case(hit.get('group') or '')))
             entries += related[:30]
             if not entries:
-                entries = [dict(p, meta='No match · you might like this') for p in db.suggestions()]
+                entries = [dict(p, meta='No match \u00b7 you might like this') for p in db.suggestions()]
+            # YouTube has an answer for almost anything; its search is one tile away, first when nothing matched here.
+            if yt.installed():
+                entries.insert(0 if not entries or entries[0].get('meta', '').startswith('No match') else len(entries), yt.search_entry(query))
         finally:
             busy.close()
         if open_grid('Results for “{0}”'.format(query), entries=entries):
@@ -1695,7 +1721,7 @@ class Home(xbmcgui.WindowXML):
             made = self.refresh_recommendations()
             source = db.meta('recs', {}).get('source', 'local')
             xbmcgui.Dialog().ok('Stream', 'Recommendations updated ({0}).'.format(
-                {'llm+jev': 'Claude + Jev', 'llm': 'Claude', 'jev': 'Jev'}.get(source, 'using your languages and likes; no AI key is set or it did not respond'))
+                ai.engine_name(source) or 'using your languages and likes; no model is set up or it did not respond')
                 if made else 'Could not build recommendations. The catalogue index is empty or Kodi could not reach Sasta TV.')
             self.go_home()
         elif action == 'clear_recs':
@@ -1887,7 +1913,7 @@ class Home(xbmcgui.WindowXML):
                     BUSY['on'] = False
                 if result == 'home':
                     self.go_home()
-                elif result == 'changed' and self.tab in ('home', 'mylist', 'youtube'):
+                elif result == 'changed' and self.tab in ('home', 'mylist', 'youtube', 'history'):
                     self.load_tab(self.tab)
         elif code == ACTION_INFO and FIRST_ROW <= focus < FIRST_ROW + ROWS:
             self.play_trailer_of(focus)
