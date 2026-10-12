@@ -43,7 +43,7 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Like or dislike a title | Hold OK on the title and pick **Like** or **Dislike** |
 | Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |
 | Resume a title | Play it again; it carries on from where it stopped. A red bar under the poster shows how far in it is. Hold OK and pick **Play from the beginning** to start over |
-| Tidy Continue Watching or History | Hold OK on the tile and pick **Remove from Continue Watching** (the title stays in History and plays from the start next time) or **Remove from History** |
+| Tidy Continue Watching or History | A highlighted part-watched tile shows a red ✕ badge: press the remote's Delete (Clear) key, or hold OK and pick **Remove from Continue Watching**; the title stays in History and plays from the start next time. **Remove from History** is in the same menu |
 | Search YouTube | On the YouTube section the search bar searches YouTube. Elsewhere a **Search YouTube for …** tile sits at the end of the results, first when nothing in the catalogue matched |
 | Browse by genre | The genre strip under the description panel on Movies and Shows (Down from the top bar): OK on Action, Comedy, Thriller & Crime, Romance and so on filters the rows to that genre, one row per language, your first language first. **All** clears it |
 | See everything watched | The **History** section: unfinished titles, then everything played, newest first |
@@ -222,7 +222,19 @@ Candidates are limited to the languages chosen at setup, and anything played, li
 and by the languages of liked titles, then takes turns across languages and types so the row is varied, and picks the
 first 15. Each is labelled "New in <language>". Nothing leaves the device.
 
-**With a local model (Ollama, default).** The *Ollama server* setting points at an [Ollama](https://ollama.com)
+**With the recommendation service (best for several boxes).** `service/recs_server.py` is a small server, standard
+library only, for a Mac or any always-on machine in the home. Each box sends it the same material described below
+(profile, interaction history, candidates) and the service asks the local model through Ollama. It keeps the last
+batch for every box and profile and rebuilds it in the background, so a box gets its row at once and never waits for
+the model; a search is answered on the spot and remembered for a week, so repeating it is instant. One question goes
+to the model at a time, however many boxes ask. Install: copy `service/com.yeshvant.stream-recs.plist` to
+`~/Library/LaunchAgents` (edit the paths, port and `BIND` addresses), `launchctl bootstrap gui/$(id -u) <plist>`, and
+put the address in each box's *Recommendation service* setting, for example `http://<machine>.<tailnet>.ts.net:8770`
+over Tailscale or `http://192.168.1.20:8770` on the LAN. `GET /health` reports the model and whether Ollama answers;
+the log is `~/Library/Logs/stream-recs.log`. With Tailscale Serve enabled on the tailnet, `tailscale serve --bg 8770`
+publishes it over HTTPS instead.
+
+**With a local model (Ollama).** Used when the service setting is blank. The *Ollama server* setting points at an [Ollama](https://ollama.com)
 server, `http://127.0.0.1:11434` by default, and *Ollama model* names the model, `gemma3:4b` (Google's Gemma 3, 4B)
 by default. Ollama is free, needs no account, and the model runs on the Mac or box itself, so nothing leaves the home.
 Set it up once with `brew install ollama`, `ollama pull gemma3:4b` and `ollama serve` (or a login service). For other
@@ -277,7 +289,8 @@ unplayed titles in your languages; a language named in the query ("telugu") limi
 | Situation | Data sent | To |
 |---|---|---|
 | No model set up | Title names for ratings lookups (next rows); nothing else beyond what the Sasta TV addon itself requests | - |
-| Ollama server set (default) | Your interaction events, candidate titles and descriptions, search requests of three or more words | The Ollama server named in the setting, on this machine or another in your home; nothing leaves the network |
+| Recommendation service set | Your interaction events, candidate titles and descriptions, search requests of three or more words | Stream's own service on a machine in your home (or on your tailnet); nothing leaves it |
+| Ollama server set (default) | The same | The Ollama server named in the setting, on this machine or another in your home; nothing leaves the network |
 | Bedrock key set | The same | Amazon Bedrock, in the region you choose |
 | Jev key set | A summary of recent activity or the search request, plus candidate titles and descriptions | TypeSafe's Jev service |
 | Always (ratings lookups) | Title names and years, one title at a time | The Movie Database (TMDb); OMDb as well if an OMDb key is set |
@@ -321,6 +334,7 @@ Open **Stream → Settings → AI keys and options**.
 | Setting | Meaning | Default |
 |---|---|---|
 | Use AI for recommendations and search | Master switch | On |
+| Recommendation service | Address of Stream's recommendation service (`service/recs_server.py`) on a machine in your home; blank to ask Ollama directly | empty |
 | Ollama server | Address of an Ollama server running a local model; blank to use Bedrock instead | `http://127.0.0.1:11434` |
 | Ollama model | The model Ollama should answer with | `gemma3:4b` |
 | Amazon Bedrock API key | A Bedrock API key (bearer token), not AWS access keys | empty |
@@ -335,7 +349,8 @@ Open **Stream → Settings → AI keys and options**.
 | `script.stream/default.py` | The two screens (home rows and grid), navigation, playback, menus |
 | `script.stream/resources/lib/catalogue.py` | Reading and caching Sasta TV listings, building play links, search ranking |
 | `script.stream/resources/lib/db.py` | The SQLite store |
-| `script.stream/resources/lib/ai.py` | Recommendations and smart search (Ollama, Bedrock and Jev calls) |
+| `script.stream/resources/lib/ai.py` | Recommendations and smart search (service, Ollama, Bedrock and Jev calls) |
+| `service/recs_server.py` | The recommendation service for a machine in the home, with its launch agent |
 | `script.stream/resources/skins/Default/` | Screen layouts and images |
 | `repository.stream/` | The repository installer addon |
 | `zips/` | Generated files Kodi downloads; do not edit by hand |

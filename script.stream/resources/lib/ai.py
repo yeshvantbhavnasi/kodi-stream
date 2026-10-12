@@ -1,5 +1,6 @@
-# Recommendations and smart search. The model is a local one served by Ollama (Gemma by default, on this machine or
-# another on the network) or Claude on Amazon Bedrock. Keys come from the addon settings and are never logged.
+# Recommendations and smart search. The picks come from Stream's own recommendation service on a machine in the home
+# (service/recs_server.py, which keeps a batch ready per profile), or straight from a local model served by Ollama
+# (Gemma by default), or from Claude on Amazon Bedrock. Keys come from the addon settings and are never logged.
 # Kodi's Python cannot install the Anthropic SDK, so Bedrock is called over plain HTTPS.
 import json
 import re
@@ -30,11 +31,21 @@ def ollama_url():
     return _setting('ollama_url').rstrip('/')
 
 
+def service_url():
+    """Stream's recommendation service (blank in the settings switches it off)."""
+    return _setting('recs_url').rstrip('/')
+
+
 def provider():
-    """'ollama', 'bedrock' or '' for the model that answers."""
+    """'service', 'ollama', 'bedrock' or '' for what answers."""
     if not enabled():
         return ''
-    return 'ollama' if ollama_url() else 'bedrock' if _setting('bedrock_token') else ''
+    return 'service' if service_url() else 'ollama' if ollama_url() else 'bedrock' if _setting('bedrock_token') else ''
+
+
+def profile_key():
+    """This box and profile, as the service files its batches: 'Living room/default'."""
+    return '{0}/{1}'.format(xbmc.getInfoLabel('System.FriendlyName') or 'kodi', getattr(db, 'ACTIVE', 'default'))
 
 
 def has_llm():
@@ -43,7 +54,8 @@ def has_llm():
 
 def engine_name(source):
     """What produced a batch of suggestions, for the settings tiles."""
-    names = {'ollama': (_setting('ollama_model') or OLLAMA_MODEL) + ' on Ollama', 'bedrock': 'Claude', 'llm': 'Claude', 'jev': 'Jev'}
+    names = {'service': 'the recommendation service', 'ollama': (_setting('ollama_model') or OLLAMA_MODEL) + ' on Ollama',
+             'bedrock': 'Claude', 'llm': 'Claude', 'jev': 'Jev'}
     return ' + '.join(names.get(part, part) for part in (source or '').split('+')) if source else ''
 
 
@@ -132,7 +144,22 @@ def _describe(entry):
 LANGUAGES = ('telugu', 'tamil', 'hindi', 'malayalam', 'kannada', 'marathi', 'gujarati', 'punjabi', 'bengali', 'english')
 
 
-def _pick(goal_for_jev, system, prompt_intro, pool, count, shortlist_size=60):
+def ask_service(kind, system, prompt_intro, candidates, count):
+    """Picks from the recommendation service: [{'name', 'reason'}]. A recommendation request gets the last batch for
+    this profile straight away while the service rebuilds in the background; a search waits for its answer."""
+    import requests
+    body = {'profile': profile_key(), 'kind': kind, 'system': system, 'intro': prompt_intro, 'count': count,
+            'candidates': candidates}
+    r = requests.post(service_url() + '/pick', json=body, timeout=240)
+    if r.status_code != 200:
+        raise RuntimeError('service returned HTTP {0}: {1}'.format(r.status_code, r.text[:200]))
+    reply = r.json()
+    log('service answered {0} ({1}, {2}s{3})'.format(kind, 'fresh' if reply.get('fresh') else 'last batch',
+                                                    reply.get('took', 0), ', rebuilding' if reply.get('building') else ''))
+    return reply.get('picks', [])
+
+
+def _pick(goal_for_jev, system, prompt_intro, pool, count, shortlist_size=60, kind='recommend'):
     """Shared pipeline: Jev narrows the pool, the model picks and explains. Either step may be absent."""
     ids = {'c{0}'.format(n): e for n, e in enumerate(pool)}
     order = list(ids)
@@ -143,7 +170,18 @@ def _pick(goal_for_jev, system, prompt_intro, pool, count, shortlist_size=60):
             source = 'jev'
         except Exception as e:
             log('Jev ranking skipped: {0}'.format(e))
-    if has_llm():
+    if provider() == 'service':
+        shortlist = order[:shortlist_size]
+        try:
+            picks = ask_service(kind, system, prompt_intro, [{'id': cid, 'name': ids[cid]['item']['name'], 'text': _describe(ids[cid])}
+                                                             for cid in shortlist], count)
+            by_name = {ids[cid]['item']['name']: ids[cid] for cid in shortlist}
+            chosen = [{'entry': by_name[p['name']], 'reason': str(p.get('reason', ''))[:160]} for p in picks if p.get('name') in by_name]
+            if chosen:
+                return chosen[:count], 'service' + ('+jev' if source == 'jev' else '')
+        except Exception as e:
+            log('service step skipped: {0}'.format(e))
+    elif has_llm():
         shortlist = order[:shortlist_size]
         listing = '\n'.join('{0}: {1}'.format(cid, _describe(ids[cid])) for cid in shortlist)
         prompt = ('{0}\n\nCandidates:\n{1}\n\nPick the {2} best candidates, best first. Reply with JSON only, shaped as '
@@ -313,5 +351,5 @@ def smart_search(query):
     if not pool:
         return []
     system = 'You match a viewer\'s request to titles in a fixed catalogue. Only pick titles that genuinely fit.'
-    picks, source = _pick('A title that fits this request: ' + query, system, 'The viewer asked for: ' + query, pool, 8, 40)
+    picks, source = _pick('A title that fits this request: ' + query, system, 'The viewer asked for: ' + query, pool, 8, 40, kind='search')
     return picks if source != 'local' else []

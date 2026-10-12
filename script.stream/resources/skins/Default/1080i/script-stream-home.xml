@@ -368,6 +368,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row0.wide))">
@@ -425,6 +427,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -489,6 +493,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row1.wide))">
@@ -546,6 +552,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -610,6 +618,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row2.wide))">
@@ -667,6 +677,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -731,6 +743,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row3.wide))">
@@ -788,6 +802,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -852,6 +868,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row4.wide))">
@@ -909,6 +927,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -973,6 +993,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row5.wide))">
@@ -1030,6 +1052,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -1094,6 +1118,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row6.wide))">
@@ -1151,6 +1177,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -1215,6 +1243,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row7.wide))">
@@ -1272,6 +1302,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -1336,6 +1368,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row8.wide))">
@@ -1393,6 +1427,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -1457,6 +1493,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row9.wide))">
@@ -1514,6 +1552,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -1578,6 +1618,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row10.wide))">
@@ -1635,6 +1677,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -1699,6 +1743,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row11.wide))">
@@ -1756,6 +1802,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -1820,6 +1868,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row12.wide))">
@@ -1877,6 +1927,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -1941,6 +1993,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row13.wide))">
@@ -1998,6 +2052,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -2062,6 +2118,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row14.wide))">
@@ -2119,6 +2177,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
@@ -2182,6 +2242,8 @@
                             <control type="label"><left>286</left><top>220</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>
                             <control type="textbox"><left>10</left><top>108</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>
                             <control type="label"><left>0</left><top>258</top><width>356</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+                            <control type="image"><left>322</left><top>50</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>328</left><top>56</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                         </control>
                     </focusedlayout>
                     <itemlayout width="216" height="364" condition="String.IsEmpty(Window.Property(row15.wide))">
@@ -2239,6 +2301,8 @@
                             <control type="image"><left>160</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
                             <control type="image"><left>180</left><top>292</top><width>20</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>String.IsEmpty(ListItem.Property(card)) + Integer.IsGreater(ListItem.Property(progress),94)</visible></control>
                             <control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>String.IsEmpty(ListItem.Property(card))</visible></control>
+                            <control type="image"><left>166</left><top>0</top><width>34</width><height>34</height><texture colordiffuse="F0E50914">white.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
+                            <control type="image"><left>172</left><top>6</top><width>22</width><height>22</height><texture>close-thin.png</texture><visible>!String.IsEmpty(ListItem.Property(removable))</visible></control>
                             <!-- square cards: channels, languages, settings -->
                             <control type="image"><left>0</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="E61E1E28">white.png</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>
                             <control type="image"><left>22</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(card))</visible></control>

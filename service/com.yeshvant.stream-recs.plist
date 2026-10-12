@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.yeshvant.stream-recs</string>
+    <key>ProgramArguments</key>
+    <array><string>/usr/bin/python3</string><string>/Users/yeshvant/dev/kodi-stream/service/recs_server.py</string></array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PORT</key><string>8770</string>
+        <!-- 127.0.0.1 for Kodi on this Mac; the Tailscale address lets the other TV boxes on the tailnet use it too -->
+        <key>BIND</key><string>127.0.0.1,100.125.214.63</string>
+        <key>OLLAMA_URL</key><string>http://127.0.0.1:11434</string>
+        <key>OLLAMA_MODEL</key><string>gemma3:4b</string>
+    </dict>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>StandardOutPath</key><string>/Users/yeshvant/Library/Logs/stream-recs.log</string>
+    <key>StandardErrorPath</key><string>/Users/yeshvant/Library/Logs/stream-recs.log</string>
+</dict>
+</plist>

@@ -37,6 +37,7 @@ ACTION_LEFT, ACTION_RIGHT = 1, 2
 ACTION_BACK = (9, 10, 92)  # parent dir, previous menu, nav back
 ACTION_CONTEXT = 117
 ACTION_INFO = 11  # the Info key on a remote plays the trailer of the highlighted title
+ACTION_DELETE = 80  # the Delete / Clear key takes a part-watched title off Continue Watching
 ACTION_DOWN = 4
 TRAILER_ID = 150  # the Watch trailer button in the description panel
 FILTER_ID = 160  # the genre strip under the description panel on Movies and Shows
@@ -192,7 +193,21 @@ def entry_item(entry, **kwargs):
     kwargs.setdefault('label', entry.get('label') if entry.get('series') else None)
     kwargs.setdefault('series', entry.get('series'))
     kwargs.setdefault('progress', entry.get('progress', 0))
-    return list_item(entry['item'], entry['parent'], entry.get('group'), saved=True, **kwargs)
+    li = list_item(entry['item'], entry['parent'], entry.get('group'), saved=True, **kwargs)
+    if entry.get('progress'):
+        # A part-watched title shows a red ✕ badge when highlighted: the Delete key, or hold OK, takes it off Continue Watching.
+        li.setProperty('removable', '1')
+        li.setProperty('hint', li.getProperty('hint').replace('Hold OK  ', 'Hold OK  Remove, '))
+    return li
+
+
+def remove_from_continue_watching(li):
+    """Clear a highlighted part-watched title's position. True when something was removed."""
+    if not li or not li.getProperty('removable'):
+        return False
+    db.clear_progress(db.play_key(item_of(li)))
+    notify('Removed from Continue Watching', 2500)
+    return True
 
 
 def tile(label, kind, **props):
@@ -1150,6 +1165,13 @@ class Grid(xbmcgui.WindowXML):
                 NAV['home'] = True
                 self.close()
             return
+        if action.getId() == ACTION_DELETE:
+            li = self.panel.getSelectedItem()
+            if remove_from_continue_watching(li):
+                keep = [self.panel.getListItem(n) for n in range(self.panel.size()) if n != self.panel.getSelectedPosition()]
+                self.panel.reset()
+                self.panel.addItems(keep)
+            return
         if action.getId() == ACTION_INFO:
             li = self.panel.getSelectedItem()
             if li and (is_title(li) or li.getProperty('show')):
@@ -1917,6 +1939,9 @@ class Home(xbmcgui.WindowXML):
                     self.load_tab(self.tab)
         elif code == ACTION_INFO and FIRST_ROW <= focus < FIRST_ROW + ROWS:
             self.play_trailer_of(focus)
+        elif code == ACTION_DELETE and FIRST_ROW <= focus < FIRST_ROW + ROWS:
+            if remove_from_continue_watching(self.getControl(focus).getSelectedItem()):
+                self.load_tab(self.tab)
         elif focus == TABS_ID and code in (ACTION_LEFT, ACTION_RIGHT):
             # Moving along the tabs shows the tab the highlight comes to rest on; focus stays on the tabs.
             key = self.selected_tab()
