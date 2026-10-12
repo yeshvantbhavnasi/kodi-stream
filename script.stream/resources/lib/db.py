@@ -503,6 +503,33 @@ def only_chosen(entries, name_of):
 
 # ---------- cached ratings, posters, reviews and trailers ----------
 
+def top_people(groups=None, limit=30):
+    """Actors and directors that appear most in the looked-up details of titles in the given languages (all when
+    None), for the setup picker. Only titles that have been looked up count, so a fresh install may have few."""
+    chosen = chosen_languages() if groups is None else [g.lower() for g in groups]
+    with _connect() as conn:
+        rows = conn.execute('SELECT m.data, t.grp FROM metadata m JOIN titles t ON t.name = m.name ORDER BY t.last_seen DESC').fetchall()
+    seen = set()
+    count = {}
+    first = {}  # names seen in several titles lead; among the rest, those from the newest titles come first
+    for r in rows:
+        if chosen and not lang_match(r['grp'] or '', chosen):
+            continue
+        try:
+            data = json.loads(r['data']) or {}
+        except ValueError:
+            continue
+        key = (data.get('title'), data.get('year'))
+        if key in seen:
+            continue
+        seen.add(key)
+        for name in (data.get('cast') or [])[:3] + (data.get('directors') or [])[:1]:
+            if name:
+                count[name] = count.get(name, 0) + 1
+                first.setdefault(name, len(first))
+    return [n for n, _ in sorted(count.items(), key=lambda kv: (-kv[1], first[kv[0]]))[:limit]]
+
+
 def get_metadata(name):
     """(data, age in seconds) or None when the title has never been looked up."""
     with _connect() as conn:

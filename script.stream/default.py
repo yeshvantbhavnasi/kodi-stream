@@ -756,7 +756,7 @@ def onboarding(first_run):
     dialog = xbmcgui.Dialog()
     profile = db.meta('profile') or {}
     if first_run:
-        dialog.ok('Welcome to Stream', 'Four quick questions set up your home screen and recommendations.\n'
+        dialog.ok('Welcome to Stream', 'Five quick questions set up your home screen and recommendations.\n'
                                        'You can change the answers later under Settings.\n\n'
                                        'Stream tells its developer when it is first installed, and emails a problem report with its '
                                        'activity log if it crashes. This can be switched off under Settings.')
@@ -766,10 +766,10 @@ def onboarding(first_run):
         picked = dialog.multiselect(title, options, preselect=preset)
         return None if picked is None else [options[n] for n in picked]
 
-    languages = ask('1 of 4 · Which languages do you watch?', db.LANGUAGES, 'languages')
+    languages = ask('1 of 5 · Which languages do you watch?', db.LANGUAGES, 'languages')
     if languages is None:
         if first_run:
-            db.set_meta('profile', {'languages': [], 'genres': [], 'sports': []})
+            db.set_meta('profile', {'languages': [], 'genres': [], 'sports': [], 'people': []})
         return first_run
     if len(languages) > 1:
         # The rows follow this order: the main language first, then the rest as listed.
@@ -784,11 +784,12 @@ def onboarding(first_run):
             if second > 0:
                 rest.insert(0, rest.pop(second))
             languages = languages[:1] + rest
-    genres = ask('2 of 4 · What do you like to watch?', list(ai.GENRES), 'genres')
-    sports = ask('3 of 4 · Which sports do you follow?', list(SPORTS), 'sports')
+    genres = ask('2 of 5 · What do you like to watch?', list(ai.GENRES), 'genres')
+    sports = ask('3 of 5 · Which sports do you follow?', list(SPORTS), 'sports')
     db.set_meta('profile', {'languages': languages,
                             'genres': profile.get('genres', []) if genres is None else genres,
-                            'sports': profile.get('sports', []) if sports is None else sports})
+                            'sports': profile.get('sports', []) if sports is None else sports,
+                            'people': profile.get('people', [])})
     db.set_meta('recs_dirty', True)
 
     # Load the chosen languages so there are real titles to pick from.
@@ -806,15 +807,40 @@ def onboarding(first_run):
         cat.log('setup load failed: {0}'.format(e))
     finally:
         busy.close()
+    # Favourite actors and directors: the names seen most in the looked-up titles of their languages, plus any typed.
+    people = ask_people(dialog, profile.get('people', []), languages)
+    if people is not None:
+        current = db.meta('profile') or {}
+        current['people'] = people
+        db.set_meta('profile', current)
     choices = db.only_chosen(db.titles_in([], 400), lambda e: e.get('group'))[:40]
     if choices:
         labels = ['{0}  [COLOR FF888888]{1}[/COLOR]'.format(e['item']['name'], cat.title_case(e.get('group') or '')) for e in choices]
-        picked = dialog.multiselect('4 of 4 · Pick any you like (optional)', labels)
+        picked = dialog.multiselect('5 of 5 · Pick any you like (optional)', labels)
         for n in picked or []:
             entry = choices[n]
             db.rate(entry['item'], entry['parent'], entry.get('group'), 1)
             db.log_event('liked', entry['item']['name'], entry.get('group'), cat.section_of(entry['parent'])[0])
     return True
+
+
+def ask_people(dialog, current, languages):
+    """'4 of 5': a multiselect of the actors and directors seen most in the chosen languages (with the ones already
+    chosen ticked), and a 'Type a name' entry for anyone else. None when the question was skipped."""
+    TYPE = 'Type a name…'
+    options = list(current)
+    options += [n for n in db.top_people(languages, 30) if n not in options]
+    options.append(TYPE)
+    preset = [n for n, o in enumerate(options) if o in current]
+    picked = dialog.multiselect('4 of 5 · Favourite actors or directors (optional)', options, preselect=preset)
+    if picked is None:
+        return None
+    people = [options[n] for n in picked if options[n] != TYPE]
+    if any(options[n] == TYPE for n in picked):
+        typed = dialog.input('Actors or directors, separated by commas')
+        people += [t.strip() for t in (typed or '').split(',') if t.strip() and t.strip() not in people]
+    db.set_meta('recs_dirty', True)
+    return people[:20]
 
 
 def reset_everything():

@@ -179,6 +179,9 @@ def _describe(entry):
     genres = _genres(item['name'])
     if genres:
         text += ' {' + ', '.join(genres[:3]) + '}'
+    people = _people(item['name'])
+    if people:
+        text += ' <' + ', '.join(people[:3]) + '>'
     if item.get('plot'):
         text += ' - ' + item['plot'][:160]
     return text
@@ -297,6 +300,27 @@ def _genres(name):
     return (cached[0] or {}).get('genres', []) if cached else []
 
 
+def _people(name):
+    """Lead cast and director already looked up for a title; empty when it has not been looked up."""
+    cached = db.get_metadata(name)
+    data = (cached[0] or {}) if cached else {}
+    return [n for n in (data.get('cast') or [])[:4] + (data.get('directors') or [])[:1] if n]
+
+
+def chosen_people():
+    """Actors and directors named at setup."""
+    return [n for n in (db.meta('profile') or {}).get('people', []) if n]
+
+
+def watched_people(limit=5):
+    """The actors and directors this household plays and likes most, from the looked-up details."""
+    taste = {}
+    for entry in db.recent(40) + db.rated(1):
+        for name in _people(entry.get('series') or entry['item']['name']):
+            taste[name] = taste.get(name, 0) + 1
+    return [n for n, c in sorted(taste.items(), key=lambda p: -p[1])[:limit] if c > 1]
+
+
 def _profile_lines():
     """What the viewer told us directly: languages, genres, liked and disliked titles."""
     profile = db.meta('profile') or {}
@@ -305,6 +329,8 @@ def _profile_lines():
         lines.append('Languages they chose: ' + ', '.join(profile['languages']))
     if profile.get('genres'):
         lines.append('Genres they chose: ' + ', '.join(profile['genres']))
+    if profile.get('people'):
+        lines.append('Actors and directors they like: ' + ', '.join(profile['people']))
     liked = [_describe(e)[:100] for e in db.rated(1)[:25]]
     disliked = [_describe(e)[:100] for e in db.rated(-1)[:25]]
     if liked:
@@ -388,10 +414,13 @@ def _local_order(pool):
         for genre in _genres(entry.get('series') or entry['item']['name']):
             taste[genre] = taste.get(genre, 0) + 1
 
+    favourites = set(chosen_people() + watched_people())
+
     def score(entry):
         text = (entry['item']['name'] + ' ' + entry['item'].get('plot', '')).lower()
         match = sum(min(taste.get(g, 0), 3) for g in _genres(entry['item']['name']))
-        return match + sum(1 for w in words if w in text) + (1 if (entry.get('group') or '').lower() in liked_groups else 0)
+        stars = 2 * sum(1 for n in _people(entry['item']['name']) if n in favourites)
+        return match + stars + sum(1 for w in words if w in text) + (1 if (entry.get('group') or '').lower() in liked_groups else 0)
 
     buckets = {}
     for entry in sorted(pool, key=lambda e: -score(e)):
@@ -414,7 +443,9 @@ def recommend(top_groups, force=False):
     if not db.KIDS:
         pool = db.only_chosen(pool, lambda e: e.get('group'))
     order = priority_languages()
-    genres = watched_genres()
+    # Genres: the ones chosen at setup lead, then the ones they actually watch; people likewise.
+    genres = list(dict.fromkeys(list((db.meta('profile') or {}).get('genres', [])) + watched_genres()))[:6]
+    people = list(dict.fromkeys(chosen_people() + watched_people()))[:8]
     # Language shares are applied before the pool is cut, so the second language is not crowded out by the first.
     pool = _by_priority(pool, order, 120)[:120]
     if not pool:
@@ -435,14 +466,16 @@ def recommend(top_groups, force=False):
     if stated:
         intro = 'What the household told us:\n' + '\n'.join('- ' + line for line in stated) + '\n\n' + intro
         goal += '. ' + ' '.join(stated)[:600]
-    if order or genres:
+    if order or genres or people:
         rules = []
         if order:
             shares = [PICKS // 2, PICKS * 3 // 10] + [PICKS // 5] * max(0, len(order) - 2)
             want = ', '.join('about {0} from {1}'.format(n, lang) for n, lang in zip(shares, order[:3]))
             rules.append('favour titles in ' + ', then '.join(order) + ', in that order: ' + want + (', the rest from the other languages' if len(order) > 3 else ''))
         if genres:
-            rules.append('within a language prefer the genres they watch most: ' + ', '.join(genres))
+            rules.append('within a language prefer the genres they chose and watch most: ' + ', '.join(genres))
+        if people:
+            rules.append('titles starring or directed by ' + ', '.join(people) + ' go first when they fit (candidates show their cast in <angle brackets>)')
         intro = 'Priorities: ' + '; '.join(rules) + '.\n\n' + intro
     system = RECOMMENDER + (' This is a children\'s profile: every pick must be suitable for young children.' if db.KIDS else '')
     picks, source = _pick(goal, system, intro, pool, PICKS)
@@ -489,5 +522,7 @@ def smart_search(query):
     if not pool:
         return []
     system = 'You match a viewer\'s request to titles in a fixed catalogue. Only pick titles that genuinely fit.'
-    picks, source = _pick('A title that fits this request: ' + query, system, 'The viewer asked for: ' + query, pool, 8, 40, kind='search')
+    stated = _profile_lines()[:3]  # languages, genres, people: breaks ties, never overrides the request
+    intro = 'The viewer asked for: ' + query + ('\n\nAbout the viewer (only to break ties): ' + '; '.join(stated) if stated else '')
+    picks, source = _pick('A title that fits this request: ' + query, system, intro, pool, 8, 40, kind='search')
     return picks if source != 'local' else []

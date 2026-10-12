@@ -80,14 +80,18 @@ panel shows them off; any key stops it.
 
 ### First-run setup
 
-The first time Stream opens it asks four questions: which languages you watch, what you like to watch, which sports
-you follow, and (optionally) a few titles you already like. The answers can be changed later from
+The first time Stream opens it asks five questions: which languages you watch, what you like to watch, which sports
+you follow, your favourite actors or directors (optional; a list of the names seen most in your languages, or type any
+name), and (optionally) a few titles you already like. The answers can be changed later from
 **Settings → My languages, sports and likes**.
 
 - **Languages** decide what is shown, and in what order: setup asks which language comes first, and its rows lead every section. Movies, Shows and Live TV list only the chosen languages. If a section has
   nothing in those languages, it shows everything rather than an empty screen.
 - **Sports** decide which sections the Sports tab lists first. Live events are always shown.
-- **Genres and liked titles** feed the recommendations.
+- **Genres, favourite people and liked titles** feed the recommendations and smart search: the model is told what
+  you chose, the chosen genres lead the genre priority (then the ones you actually watch), and titles starring or
+  directed by your favourite people (or the people you watch most) go first when they fit. Each candidate the model
+  sees carries its lead cast once the title has been looked up on TMDb.
 
 ### Profiles
 
