@@ -69,8 +69,17 @@ def pretty_model(name):
 
 
 def engine_note():
-    """'  ·  Gemma 3 4B via yeshvants-mac-mini, 09:44' for the Recommended row's title: which model built the current
-    batch, where, and when; 'updating…' is added while the service is rebuilding. Empty without a model."""
+    """'  ·  AI' for the Recommended row's title when a model built the current batch, with 'updating…' added while
+    the service is rebuilding. Empty without a model. engine_detail() has the model, host and time."""
+    last = db.meta('recs', {})
+    source = last.get('source') or ''
+    if not last.get('at') or source in ('', 'local', 'jev'):
+        return ''
+    return '  \u00b7  AI' + ('  \u00b7  updating\u2026' if last.get('pending') else '')
+
+
+def engine_detail():
+    """'  ·  Gemma 3 4B via yeshvants-mac-mini, 09:44': which model built the current batch, where, and when."""
     last = db.meta('recs', {})
     source = last.get('source') or ''
     if not last.get('at') or source in ('', 'local', 'jev'):

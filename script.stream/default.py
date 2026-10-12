@@ -493,6 +493,8 @@ def apply_details(li, data):
         li.setProperty('meta', line)
     if not li.getArt('thumb') and data.get('poster'):
         li.setArt({'thumb': data['poster']})
+    if data.get('backdrop') and not li.getArt('fanart'):
+        li.setArt({'fanart': data['backdrop']})  # the billboard behind the highlighted title
     plot = li.getProperty('plot')
     # The catalogue's descriptions often arrive with their punctuation stripped; TMDb's reads better.
     if data.get('overview') and (not plot or '.' not in plot):
@@ -1588,6 +1590,7 @@ class Home(xbmcgui.WindowXML):
                 for n in range(ROWS):
                     self.setProperty('row{0}.title'.format(n), '')
                     self.setProperty('row{0}.wide'.format(n), '')
+                    self.setProperty('row{0}.top10'.format(n), '')
                     self.getControl(FIRST_ROW + n).reset()
                 self.show_filters(key)
             for row in specs:
@@ -1595,6 +1598,9 @@ class Home(xbmcgui.WindowXML):
                     return
                 if row[0] == 'items':
                     title, items = row[1], row[2]
+                    if title.startswith('Top 10'):
+                        for rank, li in enumerate(items, 1):
+                            li.setProperty('rank', str(rank))
                 else:
                     _, title, url, group, only = row
                     try:
@@ -1616,6 +1622,8 @@ class Home(xbmcgui.WindowXML):
                     # A row of videos is drawn with wide tiles (the skin can only switch layouts per row, not per tile).
                     # Wide tiles only when every tile is a video; a mixed row keeps posters, with videos letterboxed inside.
                     self.setProperty('row{0}.wide'.format(slot), '1' if items and all(i.getProperty('wide') for i in items) else '')
+                    # The Top 10 row draws a big numeral beside each poster.
+                    self.setProperty('row{0}.top10'.format(slot), '1' if title.startswith('Top 10') else '')
                     if slot == 0:
                         self.setProperty('status', '')
                 if slot == 0 and focus:

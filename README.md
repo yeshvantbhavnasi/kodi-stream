@@ -18,6 +18,21 @@ playback to that addon, so Sasta TV must be installed and signed in on the same 
 
 Updates then arrive through the repository.
 
+## Setting up another TV
+
+The same steps on every box, for a Fire TV Stick, Google TV or any Android TV running Kodi:
+
+1. Put the box on the home tailnet: install **Tailscale** (Amazon Appstore on Fire TV, Play Store on Google TV),
+   sign in with the login link or QR code it shows, and accept the VPN prompt. In the Tailscale admin console,
+   open the new device and choose **Disable key expiry** so it never silently signs out.
+2. Install Kodi, then Stream as described under *Install* above.
+3. Open Stream, go through the first-run setup (languages and profiles), and under **Settings → AI** enter the
+   recommendation service key. The service address is already the Mac's Tailscale name, so nothing else is typed.
+4. Within a minute the Recommended for You row shows "· AI", and the Mac's `~/Library/Logs/stream-recs.log` lists
+   the new box by name.
+
+Without Tailscale the box can still browse and play; only recommendations and smart search need the service.
+
 ## Opening Stream
 
 Once installed, Stream opens by itself whenever Kodi starts. Closing Stream returns to Kodi's own home screen, and it can be
@@ -244,9 +259,12 @@ per box (its name and install id) and per profile on that box, so each person on
 goes to the model at a time, however many boxes ask. Install: copy `service/com.yeshvant.stream-recs.plist` to
 `~/Library/LaunchAgents` (edit the paths, port and `BIND` addresses), `launchctl bootstrap gui/$(id -u) <plist>`, and
 put the address in each box's *Recommendation service* setting, for example `http://<machine>.<tailnet>.ts.net:8770`
-over Tailscale or `http://192.168.1.20:8770` on the LAN. Open the same address in a browser for a plain-text status
-page that lists every box and profile's current picks with the model's reason for each, when it was built and how
-long it took, exactly what the model was told (profile, history, priorities) and the candidates offered. `GET /health` reports the model and
+over Tailscale or `http://192.168.1.20:8770` on the LAN. Open the same address in a browser for a web page with one
+tab per box: each profile's current picks with the model's reason for each, when it was built and how long it took,
+and the box's recent searches. When `TOKEN` is set the page asks for the key once and keeps a cookie (`/logout` signs
+out). `/text` is the full plain-text report, which adds exactly what the model was told (profile, history,
+priorities) and the candidates offered. `EMBED_ORIGINS` lists pages allowed to show the web page in a frame, such as
+a Kindle home screen; those pages are also sent the sign-in so they reopen signed in. `GET /health` reports the model and
 whether Ollama answers; `GET /batches` is the same data as JSON; the log is `~/Library/Logs/stream-recs.log`. With Tailscale Serve enabled on the tailnet, `tailscale serve --bg 8770`
 publishes it over HTTPS instead.
 
@@ -368,7 +386,7 @@ Open **Stream → Settings → AI keys and options**.
 | `script.stream/resources/lib/db.py` | The SQLite store |
 | `script.stream/resources/lib/ai.py` | Recommendations and smart search (service, Ollama, Bedrock and Jev calls) |
 | `service/recs_server.py` | The recommendation service for a machine in the home, with its launch agent |
-| `script.stream/resources/skins/Default/` | Screen layouts and images |
+| `script.stream/resources/skins/Default/` | Screen layouts and images, written by `tools/make_skin.py` (edit the generator, then run it) |
 | `repository.stream/` | The repository installer addon |
 | `zips/` | Generated files Kodi downloads; do not edit by hand |
 

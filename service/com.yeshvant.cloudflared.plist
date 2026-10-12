@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Cloudflare Tunnel that publishes the recommendation service as https://recs.senapati.si.
+         The Mac dials out to Cloudflare, so no port forwarding or public address is needed.
+         One-time setup: cloudflared tunnel login; cloudflared tunnel create stream-recs;
+         cloudflared tunnel route dns stream-recs recs.senapati.si; the tunnel id goes in ~/.cloudflared/config.yml. -->
+    <key>Label</key><string>com.yeshvant.cloudflared</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/cloudflared</string>
+        <string>tunnel</string>
+        <string>--config</string><string>/Users/yeshvant/.cloudflared/config.yml</string>
+        <!-- IPv4 and HTTP/2 to the edge: the QUIC-over-IPv6 path registered fine here but carried no traffic -->
+        <string>--edge-ip-version</string><string>4</string>
+        <string>--protocol</string><string>http2</string>
+        <string>run</string>
+        <string>stream-recs</string>
+    </array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>StandardOutPath</key><string>/Users/yeshvant/Library/Logs/cloudflared.log</string>
+    <key>StandardErrorPath</key><string>/Users/yeshvant/Library/Logs/cloudflared.log</string>
+</dict>
+</plist>
