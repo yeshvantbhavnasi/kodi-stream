@@ -16,7 +16,7 @@ JEV_URL = 'https://api.typesafe.ai/v1/systemone'
 OLLAMA_MODEL = 'gemma3:4b'
 REFRESH_AFTER = 3600       # a batch older than this is rebuilt while Stream is open
 PENDING_AFTER = 180        # when the service is rebuilding in the background, ask again this soon
-LAST = {'building': False}  # whether the service said it was still rebuilding after the last request
+LAST = {'building': False, 'model': ''}  # what the service said after the last request: still rebuilding, and which model
 PICKS = 15
 
 
@@ -58,6 +58,31 @@ def profile_key():
 
 def has_llm():
     return bool(provider())
+
+
+def pretty_model(name):
+    """'gemma3:4b' -> 'Gemma 3 4B'; anything else as given."""
+    m = re.match(r'^gemma(\d+)(?:[.:\-]?n?)?[:\-]?(\d+b)?', name or '')
+    if m:
+        return 'Gemma ' + m.group(1) + (' ' + m.group(2).upper() if m.group(2) else '')
+    return name or ''
+
+
+def engine_note():
+    """'  ·  Gemma 3 4B via yeshvants-mac-mini, 09:44' for the Recommended row's title: which model built the current
+    batch, where, and when; 'updating…' is added while the service is rebuilding. Empty without a model."""
+    last = db.meta('recs', {})
+    source = last.get('source') or ''
+    if not last.get('at') or source in ('', 'local', 'jev'):
+        return ''
+    if source.startswith('bedrock') or source.startswith('llm'):
+        model, via = 'Claude', ''
+    else:
+        model = pretty_model(last.get('model') or _setting('ollama_model') or OLLAMA_MODEL)
+        host = re.sub(r'^https?://', '', service_url() if source.startswith('service') else ollama_url()).split(':')[0].split('.')[0]
+        via = ' via ' + host if host and host not in ('127', 'localhost') else ''
+    when = time.strftime('%H:%M', time.localtime(last['at']))
+    return '  \u00b7  {0}{1}, {2}{3}'.format(model, via, when, '  \u00b7  updating\u2026' if last.get('pending') else '')
 
 
 def engine_name(source):
@@ -158,12 +183,13 @@ def ask_service(kind, system, prompt_intro, candidates, count):
     import requests
     body = {'profile': profile_key(), 'kind': kind, 'system': system, 'intro': prompt_intro, 'count': count,
             'candidates': candidates}
-    r = requests.post(service_url() + '/pick', json=body, timeout=240)
+    r = requests.post(service_url() + '/pick', json=body, timeout=240, headers={'X-Stream-Key': _setting('recs_key')})
     if r.status_code != 200:
         raise RuntimeError('service returned HTTP {0}: {1}'.format(r.status_code, r.text[:200]))
     reply = r.json()
     if kind == 'recommend':
         LAST['building'] = bool(reply.get('building'))
+    LAST['model'] = reply.get('model') or LAST['model']
     log('service answered {0} ({1}, {2}s{3})'.format(kind, 'fresh' if reply.get('fresh') else 'last batch',
                                                     reply.get('took', 0), ', rebuilding' if reply.get('building') else ''))
     return reply.get('picks', [])
@@ -429,7 +455,8 @@ def recommend(top_groups, force=False):
                 p['reason'] = 'New in {0}'.format(p['entry']['group'].title())
     changed = db.save_suggestions(picks, source)
     # 'pending' means the service handed back its last batch and is building a new one: ask again in a few minutes.
-    db.set_meta('recs', {'at': time.time(), 'plays': plays, 'source': source, 'pending': source.startswith('service') and LAST['building']})
+    db.set_meta('recs', {'at': time.time(), 'plays': plays, 'source': source, 'model': LAST['model'] or _setting('ollama_model') or OLLAMA_MODEL,
+                         'pending': source.startswith('service') and LAST['building']})
     db.set_meta('recs_dirty', False)
     log('{0} {1} suggestions via {2}'.format('saved' if changed else 'kept', len(picks), source))
     return changed

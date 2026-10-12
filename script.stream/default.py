@@ -1231,6 +1231,7 @@ class Home(xbmcgui.WindowXML):
                 cat.warm_index(ai.REFRESH_AFTER)
                 if not ai.recommend(cat.top_groups()):
                     continue
+                notify('Recommendations updated' + ai.engine_note().replace('  \u00b7  ', ' \u00b7 '), 4000)
                 idle = xbmc.getGlobalIdleTime() >= IDLE_AFTER and not OPEN['grids'] and xbmcgui.getCurrentWindowDialogId() == 9999
                 if self.tab == 'home' and idle and not self.closed:
                     self.load_tab('home')
@@ -1398,7 +1399,7 @@ class Home(xbmcgui.WindowXML):
                     rows.append(('items', title, [entry_item(e) for e in entries]))
             picks = db.suggestions()
             if picks:
-                rows.insert(1 if rows else 0, ('items', 'Recommended for You',
+                rows.insert(1 if rows else 0, ('items', 'Recommended for You' + ai.engine_note(),
                                                [entry_item(p, meta=p['reason'], suggestion=True) for p in picks]))
             pinned = [('dir', title, yt.channel_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
             return rows + [titles] + pinned + self.kids_live_rows()
@@ -1479,7 +1480,7 @@ class Home(xbmcgui.WindowXML):
                 rows.append(('items', 'Continue Watching', [entry_item(e) for e in resume]))
             picks = db.suggestions()
             if picks:
-                rows.append(('items', 'Recommended for You',
+                rows.append(('items', 'Recommended for You' + ai.engine_note(),
                              [entry_item(p, meta=p['reason'] or cat.title_case(p.get('group') or ''), suggestion=True) for p in picks]))
             recent = db.recent(30)
             if recent:
@@ -1822,7 +1823,7 @@ class Home(xbmcgui.WindowXML):
             if (self.tab != 'home' or BUSY['on'] or OPEN['grids'] or xbmc.getGlobalIdleTime() < IDLE_AFTER
                     or xbmc.Player().isPlaying() or xbmcgui.getCurrentWindowDialogId() != 9999):
                 continue
-            row = next((FIRST_ROW + n for n in range(ROWS) if self.getProperty('row{0}.title'.format(n)) == 'Recommended for You'), None)
+            row = next((FIRST_ROW + n for n in range(ROWS) if self.getProperty('row{0}.title'.format(n)).startswith('Recommended for You')), None)
             if row is None:
                 row = next((FIRST_ROW + n for n in range(ROWS) if self.getProperty('row{0}.title'.format(n)).endswith(('Movies', 'Web Series'))), None)
             if row is None:

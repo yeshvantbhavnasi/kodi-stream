@@ -14,8 +14,11 @@ Searches are answered on the spot and remembered, so a repeated query is instant
 
 Settings come from the environment: PORT (8770), BIND (addresses to listen on, comma separated; 127.0.0.1 by
 default, add the machine's Tailscale address so the other boxes on the tailnet can reach it), OLLAMA_URL
-(http://127.0.0.1:11434), OLLAMA_MODEL (gemma3:4b) and STATE (the SQLite file the batches are kept in). With Serve
-enabled on the tailnet, `tailscale serve --bg 8770` publishes it as https://<machine>.<tailnet>.ts.net instead.
+(http://127.0.0.1:11434), OLLAMA_MODEL (gemma3:4b), STATE (the SQLite file the batches are kept in) and TOKEN (when
+set, every request except /health must carry it, as an X-Stream-Key header or ?key=; needed once the service is
+reachable from outside the home). With Serve enabled on the tailnet, `tailscale serve --bg 8770` publishes it as
+https://<machine>.<tailnet>.ts.net; `tailscale funnel --bg 8770` (Funnel enabled) makes that address public, so TV
+boxes that are not on the tailnet can reach it too.
 
 Storage: one SQLite file. `batches` holds the current batch per box, profile and kind (the only thing a box ever
 asks for), and `history` keeps the last 48 batches per key so the page can show how the picks moved; a batch
@@ -36,6 +39,7 @@ BIND = [h.strip() for h in os.environ.get('BIND', '127.0.0.1').split(',') if h.s
 OLLAMA = os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434').rstrip('/')
 MODEL = os.environ.get('OLLAMA_MODEL', 'gemma3:4b')
 STATE = os.environ.get('STATE', os.path.expanduser('~/Library/Application Support/stream-recs/batches.db'))
+TOKEN = os.environ.get('TOKEN', '').strip()
 KEEP = 7 * 24 * 3600  # a remembered search answer is kept this long
 HISTORY = 48          # past batches kept per box, profile and kind
 
@@ -259,11 +263,26 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def allowed(self):
+        """True when no token is set, or the request carries it."""
+        if not TOKEN:
+            return True
+        given = self.headers.get('X-Stream-Key', '')
+        if not given and '?' in self.path:
+            from urllib.parse import parse_qs, urlparse
+            given = parse_qs(urlparse(self.path).query).get('key', [''])[0]
+        if given == TOKEN:
+            return True
+        self._send(401, {'error': 'key required'})
+        return False
+
     def do_GET(self):
         if self.path.startswith('/health'):
             with LOCK:
                 n = len(BATCHES)
             return self._send(200, {'ok': True, 'model': MODEL, 'ollama': ollama_up(), 'batches': n})
+        if not self.allowed():
+            return
         if self.path.startswith('/batches'):
             with LOCK:
                 return self._send(200, BATCHES)
@@ -283,6 +302,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.path.startswith('/pick'):
             return self._send(404, {'error': 'not found'})
+        if not self.allowed():
+            return
         try:
             length = int(self.headers.get('Content-Length') or 0)
             req = json.loads(self.rfile.read(length) or b'{}')

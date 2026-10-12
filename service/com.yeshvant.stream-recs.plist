@@ -12,6 +12,8 @@
         <key>BIND</key><string>127.0.0.1,100.125.214.63</string>
         <key>OLLAMA_URL</key><string>http://127.0.0.1:11434</string>
         <key>OLLAMA_MODEL</key><string>gemma3:4b</string>
+        <!-- the key every box must send (Stream setting "Recommendation service key"); also kept in ~/ollama-home/recs.key -->
+        <key>TOKEN</key><string>CHANGE-ME</string>
     </dict>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
