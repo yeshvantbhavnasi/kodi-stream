@@ -264,7 +264,11 @@ tab per box: each profile's current picks with the model's reason for each, when
 and the box's recent searches. When `TOKEN` is set the page asks for the key once and keeps a cookie (`/logout` signs
 out). `/text` is the full plain-text report, which adds exactly what the model was told (profile, history,
 priorities) and the candidates offered. `EMBED_ORIGINS` lists pages allowed to show the web page in a frame, such as
-a Kindle home screen; those pages are also sent the sign-in so they reopen signed in. `GET /health` reports the model and
+a Kindle home screen; those pages are also sent the sign-in so they reopen signed in. Every pick on the page has **Good** and
+**Not for me** buttons (plain forms, so an e-ink browser can use them): a rating is kept per box and profile in the
+service's database, the next batch for that profile is rebuilt with it, titles marked Not for me are left out of the
+candidates and the model is told to steer away from them, and Good picks steer it towards titles like them. The Rated
+section lists them with an Undo; `GET /feedback` is the same list as JSON. `GET /health` reports the model and
 whether Ollama answers; `GET /batches` is the same data as JSON; the log is `~/Library/Logs/stream-recs.log`. With Tailscale Serve enabled on the tailnet, `tailscale serve --bg 8770`
 publishes it over HTTPS instead.
 
