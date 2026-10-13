@@ -43,6 +43,7 @@ TRAILER_ID = 150  # the Watch trailer button in the description panel
 FILTER_ID = 160  # the genre strip under the description panel on Movies and Shows
 IDLE_AFTER = 60  # seconds without a key press before the home screen starts showing off recommended titles
 NEXT_IN = 10  # seconds the next episode waits before it starts by itself
+NEXT_AT = 60  # seconds before an episode ends (its end titles, mostly) that the Next episode button appears
 START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
 CANCEL_GRACE = 1.5  # seconds after a play request during which a cancel is taken as a repeated OK press
 
@@ -441,27 +442,98 @@ def countdown(nxt):
     return True
 
 
+class NextUp(xbmcgui.WindowXMLDialog):
+    """The Next episode button over the video; choice is 'next', 'credits' (Watch credits or Back), or None."""
+
+    def onClick(self, control_id):
+        self.choice = 'next' if control_id == 301 else 'credits'
+        self.close()
+
+    def onAction(self, action):
+        if action.getId() in ACTION_BACK:
+            self.choice = 'credits'
+            self.close()
+
+
+def offer_next(nxt):
+    """In an episode's last minute, show Next episode over the video with its countdown filling the button.
+    True to skip to it now (OK pressed, or the countdown ran out); False to let this episode play out."""
+    player, monitor = xbmc.Player(), xbmc.Monitor()
+    dialog = NextUp('script-stream-next.xml', ADDON_PATH, 'Default', '1080i')
+    dialog.choice = None
+    dialog.setProperty('next', nxt.getLabel())
+    dialog.setProperty('button', 'Next episode')
+    dialog.show()
+    steps = NEXT_IN * 4
+    try:
+        for n in range(steps + 1):
+            if dialog.choice or not player.isPlayingVideo():
+                break
+            dialog.setProperty('button', 'Next episode in {0}'.format(NEXT_IN - n // 4) if n < steps else 'Next episode')
+            try:
+                fill = dialog.getControl(302)
+                width = int(320 * n / steps)
+                fill.setWidth(max(width, 64))
+                fill.setVisible(width >= 64)
+            except (RuntimeError, TypeError):
+                pass  # the overlay is not drawn yet
+            if monitor.waitForAbort(0.25):
+                return False
+    finally:
+        dialog.close()
+    return dialog.choice != 'credits' and player.isPlayingVideo()
+
+
+def time_left(player):
+    """Seconds left in the playing video, or None while unknown (and for clips too short to have end titles)."""
+    try:
+        total = player.getTotalTime()
+        return total - player.getTime() if total > 300 else None
+    except Exception:
+        return None
+
+
 def autoplay_after(li, window=None):
-    """Wait for an episode to end. When it ends on its own (not by Back), count down and play the next one,
-    and keep going episode after episode until the viewer stops it or the season ends."""
+    """Follow an episode to its end, and keep going episode after episode until the viewer stops or the season
+    ends. In the last minute a Next episode button skips the end titles; when the episode ends on its own
+    instead (not by Back), a countdown plays the next one."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
     while True:
         if monitor.waitForAbort(3):
             return
+        nxt, looked, skip = None, False, False
         while player.isPlayingVideo() and not (window is not None and window.closed):
+            left = time_left(player) if not looked else None
+            if left is not None and 0 < left <= NEXT_AT:
+                looked, nxt = True, next_episode(li)
+                if nxt is not None:
+                    audit.event('next_button', title=nxt.getLabel(), left=int(left))
+                    skip = offer_next(nxt)
+                    if skip:
+                        break
             if monitor.waitForAbort(1):
                 return
-        if monitor.waitForAbort(1.5) or (window is not None and window.closed):
-            return  # a moment for follow() to record how the stream ended
-        if PLAY['ended'] != 'natural':
+        if window is not None and window.closed:
             return
-        nxt = next_episode(li)
-        if nxt is None:
-            return
-        audit.event('autoplay_offer', title=nxt.getLabel())
-        if not countdown(nxt):
-            db.log_event('stayed', nxt.getProperty('name'), li.getProperty('group') or None, 'Autoplay')
-            return
+        if skip:
+            try:
+                duration = player.getTotalTime()
+                db.update_progress(db.play_key(item_of(li)), duration, duration)  # skipping the end titles counts as watched
+            except Exception:
+                pass
+            db.log_event('skipped credits', li.getProperty('name'), li.getProperty('group') or None, 'Autoplay')
+        else:
+            if monitor.waitForAbort(1.5) or (window is not None and window.closed):
+                return  # a moment for follow() to record how the stream ended
+            if PLAY['ended'] != 'natural':
+                return
+            nxt = nxt if looked else next_episode(li)
+            if nxt is None:
+                return
+            audit.event('autoplay_offer', title=nxt.getLabel())
+            if not countdown(nxt):
+                db.log_event('stayed', nxt.getProperty('name'), li.getProperty('group') or None, 'Autoplay')
+                return
         BUSY['on'] = True
         try:
             start(nxt)
