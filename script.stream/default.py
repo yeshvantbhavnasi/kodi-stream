@@ -1336,6 +1336,9 @@ class Home(xbmcgui.WindowXML):
             fresh = discover.new_entries()
             if len(fresh) >= 4:
                 rows.append(('items', 'New This Week', [entry_item(e, meta=cat.title_case(e.get('group') or '')) for e in fresh]))
+            india = discover.india_top_entries()
+            if len(india) >= 3:
+                rows.append(('items', 'Top 10 in India', [entry_item(e, meta=e['meta']) for e in india]))
             top = discover.top_entries()
             if len(top) >= 3:
                 rows.append(('items', 'Top 10 in Your Home', [entry_item(e, meta=e['meta']) for e in top]))

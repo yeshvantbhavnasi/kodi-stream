@@ -1,5 +1,8 @@
 # Rows built from the local index and TMDb: titles like one just watched, browsing by genre, what is new,
 # and what the household plays most. Everything prefers the viewer's languages, first language first.
+import re
+
+import ai
 import catalogue as cat
 import db
 import meta
@@ -107,6 +110,51 @@ def similar_entries(name, show=False, lang='', limit=20):
 def new_entries(limit=24):
     """Titles added to the catalogue this week, in the viewer's languages."""
     return by_language(chosen_only(_dedupe(db.new_titles())), limit)
+
+
+CHART_LANGUAGES = {'te': 'telugu', 'hi': 'hindi', 'en': 'english'}
+CHART_SOURCES = {'netflix': 'Netflix', 'prime': 'Prime Video', 'aha': 'Aha', 'tmdb': 'Trending'}
+
+
+def _plain(text):
+    return re.sub(r'[^a-z0-9]', '', (text or '').lower())
+
+
+def _chart_match(title):
+    """The catalogue entry for a chart title: same name (ignoring punctuation, year and quality words) in the
+    title's language, the right year first for a movie; or None when the catalogue does not have it."""
+    lang = CHART_LANGUAGES[title['lang']]
+    kinds = MOVIE_KINDS if title['kind'] == 'movie' else SHOW_KINDS
+    names = [title['title']] + ([title['title'].split(':')[0]] if ':' in title['title'] else [])
+    for name in names:
+        want = _plain(name)
+        found = [e for e in db.find_by_title(name, kinds, limit=12)
+                 if _plain(meta.split_title(e['item']['name'])[0]) == want and db.lang_match(e.get('group') or '', [lang])]
+        if found:
+            found.sort(key=lambda e: meta.split_title(e['item']['name'])[1] != title.get('year'))
+            return found[0]
+    return None
+
+
+def india_top_entries(limit=10):
+    """India's streaming charts (Netflix, Prime Video, Aha and TMDb buzz, merged by the recommendation service),
+    keeping only titles in the viewer's languages that the catalogue can play, as tiles with their rank."""
+    chosen = db.chosen_languages()
+    out, seen = [], set()
+    for title in ai.charts():
+        lang = CHART_LANGUAGES.get(title.get('lang'))
+        if not lang or (chosen and lang not in chosen):
+            continue
+        entry = _chart_match(title)
+        if not entry or entry['item']['name'] in seen:
+            continue
+        seen.add(entry['item']['name'])
+        charts = ', '.join('{0} #{1}'.format(CHART_SOURCES[s], r)
+                           for s, r in sorted(title.get('ranks', {}).items(), key=lambda p: p[1]) if s in CHART_SOURCES)
+        out.append(dict(entry, meta='#{0} in India · {1}'.format(len(out) + 1, charts), rank=len(out) + 1))
+        if len(out) == limit:
+            break
+    return out
 
 
 def top_entries(limit=10):

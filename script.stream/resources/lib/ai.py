@@ -208,6 +208,27 @@ def ask_service(kind, system, prompt_intro, candidates, count):
     return reply.get('picks', [])
 
 
+CHARTS_FOR = 6 * 3600  # the service rebuilds its charts twice a day; ask for them at most this often
+
+
+def charts():
+    """India's streaming charts merged by the service (GET /top10): [{'title', 'kind', 'lang', 'year', 'ranks', ...}],
+    best first. Kept for six hours; the last list is used while the service cannot be reached."""
+    kept = db.meta('top10_chart') or {}
+    if time.time() - kept.get('fetched', 0) < CHARTS_FOR or not service_url():
+        return kept.get('titles', [])
+    import requests
+    try:
+        r = requests.get(service_url() + '/top10', timeout=20, headers={'X-Stream-Key': _setting('recs_key')})
+        r.raise_for_status()
+        titles = r.json().get('titles') or []
+    except Exception as e:
+        log('charts unavailable: {0}'.format(e))
+        return kept.get('titles', [])
+    db.set_meta('top10_chart', {'fetched': time.time(), 'titles': titles})
+    return titles
+
+
 def _pick(goal_for_jev, system, prompt_intro, pool, count, shortlist_size=60, kind='recommend'):
     """Shared pipeline: Jev narrows the pool, the model picks and explains. Either step may be absent."""
     ids = {'c{0}'.format(n): e for n, e in enumerate(pool)}

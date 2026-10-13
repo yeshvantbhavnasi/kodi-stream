@@ -9,6 +9,9 @@ Searches are answered on the spot and remembered, so a repeated query is instant
                -> {"picks": [{"name": "Sardar 2 (2026)", "reason": "..."}], "model": "gemma3:4b",
                    "fresh": true | false, "took": 12.3, "building": true | false}
     GET  /health  -> {"ok": true, "model": "gemma3:4b", "ollama": true, "batches": 3}
+    GET  /top10   -> India's streaming charts merged into one ranking (see charts.py), rebuilt every 12 hours:
+                   {"at": 1791855969, "sources": {"netflix": 20, ...}, "titles": [{"title", "kind", "lang", "year",
+                   "tmdb", "score", "ranks": {"netflix": 1, "tmdb": 5}}]}
     GET  /         a web page with one tab per box: each profile's current picks with the reasons, and recent searches
                    (?device=<box> picks the tab; plain markup that the Kindle's browser draws well)
     GET  /text     a plain-text page: every box and profile's current picks, the reasons, and what the model was told
@@ -43,6 +46,8 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlparse
 
+import charts
+
 PORT = int(os.environ.get('PORT', '8770'))
 BIND = [h.strip() for h in os.environ.get('BIND', '127.0.0.1').split(',') if h.strip()]
 OLLAMA = os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434').rstrip('/')
@@ -58,6 +63,9 @@ LOCK = threading.Lock()        # guards BATCHES and BUILDING
 MODEL_LOCK = threading.Lock()  # one question to the model at a time
 BATCHES = {}                   # key -> {'digest', 'picks', 'at', 'model', 'took'}
 BUILDING = set()               # keys being rebuilt right now
+TOP10 = {}                     # the merged charts, see charts.build()
+TOP10_FILE = os.path.join(os.path.dirname(STATE), 'top10.json')
+TOP10_EVERY = 12 * 3600
 
 
 def log(msg):
@@ -421,6 +429,28 @@ def login_page(error='', embed=False):
                      handoff('') if embed else '')
 
 
+def refresh_top10():
+    """Rebuild the merged charts now and then every TOP10_EVERY seconds; the last good list is kept on disk."""
+    global TOP10
+    try:
+        with open(TOP10_FILE) as f:
+            TOP10 = json.load(f)
+    except (OSError, ValueError):
+        pass
+    while True:
+        if time.time() - TOP10.get('at', 0) >= TOP10_EVERY - 60:
+            try:
+                built = charts.build(log)
+                if built['titles']:
+                    TOP10 = built
+                    os.makedirs(os.path.dirname(TOP10_FILE), exist_ok=True)
+                    with open(TOP10_FILE, 'w') as f:
+                        json.dump(TOP10, f)
+            except Exception as e:
+                log('top10: build failed: {0}'.format(e))
+        time.sleep(600)
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, data):
         body = json.dumps(data).encode()
@@ -496,6 +526,8 @@ class Handler(BaseHTTPRequestHandler):
         if is_page and not self.path.startswith('/text'):
             # The Kindle tab is told the sign-in, so it can open signed in next time even without the cookie.
             return self._html(200, web_page(q.get('device', ''), carry, handoff(SESSION) if embed and SESSION else ''))
+        if self.path.startswith('/top10'):
+            return self._send(200, TOP10 or {'at': 0, 'sources': {}, 'titles': []})
         if self.path.startswith('/batches'):
             with LOCK:
                 return self._send(200, BATCHES)
@@ -565,6 +597,7 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     load()
     log('serving on {0} port {1}, model {2} at {3}, {4} batches remembered'.format(', '.join(BIND), PORT, MODEL, OLLAMA, len(BATCHES)))
+    threading.Thread(target=refresh_top10, daemon=True).start()
     servers = [ThreadingHTTPServer((host, PORT), Handler) for host in BIND]
     for server in servers[1:]:
         threading.Thread(target=server.serve_forever, daemon=True).start()
