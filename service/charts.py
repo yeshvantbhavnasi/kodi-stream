@@ -148,7 +148,7 @@ def build(log=print):
     for t in titles:
         t['score'] = round(t['score'], 1)
     log('top10: built {0} titles from {1}'.format(len(titles), report))
-    return {'at': int(time.time()), 'sources': report, 'titles': titles[:60]}
+    return {'at': int(time.time()), 'sources': report, 'titles': titles[:150]}  # enough for a Top 10 per language and kind
 
 
 if __name__ == '__main__':
