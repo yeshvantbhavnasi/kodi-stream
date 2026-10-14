@@ -70,6 +70,9 @@ Rows appear only when there is something to put in them, and your first language
 
 - **Continue Watching**, **Recommended for You** and **Recently Played**.
 - **New This Week**: titles that appeared in the catalogue in the last seven days (after Stream has been installed for a couple of days).
+- **Top 10 Telugu Movies**, **Top 10 Telugu Shows**, and the same for each of your languages: India's streaming charts
+  (Netflix, Aha and TMDb's buzz), one row per language with movies and shows apart, keeping only titles the catalogue
+  can play. A language needs at least three playable titles for its row to appear.
 - **Top 10 in Your Home**: what every profile on this device played most in the last month.
 - **More like …**: two rows of titles like the ones watched last, from TMDb's picks that exist in the catalogue, filled out with titles of the same genres in the same language.
 - **Liked by You**, live events, then movies and web series by language, English and Kids, and YouTube.
@@ -166,8 +169,9 @@ tiles, play with OK like any other title, and show up in Continue Watching and H
 ### Episodes
 
 Inside a show, episodes are shown as a compact list of names in order, not as poster tiles. A show opens on the season watched last, and the list opens on the episode to carry on with: the last one played if it is unfinished, otherwise the one after it. Watched episodes are ticked, a part-watched episode shows where it
-stopped, and the list opens on the next episode to watch. Recently Played and Continue Watching show the show's name
-with the episode.
+stopped, and the list opens on the next episode to watch. Recently Played and Continue Watching show a show once, as one
+tile with the show's name and the season and episode it is on (for example **S2 · E5**); OK carries on with that episode.
+History still lists every episode. **Remove from History** on a show's tile removes all its episodes.
 
 When an episode plays to the end, Stream shows **Up next** with the following episode and starts it after ten seconds.
 Press Back (or Cancel) to stay where you are. Stopping an episode yourself never starts the next one. The season's own
@@ -218,6 +222,7 @@ Everything Stream remembers lives in SQLite files in Kodi's addon data folder fo
 4. The next time the Home tab loads, it queries the database:
    - **Continue Watching** shows `watched` rows stopped after the first 30 seconds and not yet finished (90% played). The Home rows reload as soon as playback stops.
    - **Recently Played** shows the 30 most recent `watched` rows, newest first; the row never grows beyond 30.
+   - Both rows fold a show's episodes into one tile: the episode played last stands for the show. The History tab is not folded.
 5. Languages you play most are counted (`state.json`) and their rows move to the top of each tab.
 
 ### How My List works
