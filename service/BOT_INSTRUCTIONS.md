@@ -114,6 +114,102 @@ The reply is `{"ok": true, "name": "daily-picks", "kept": 20}`; `kept` is how ma
 the first 20), not how many matched. `{"error": "key required"}` means the PIN was wrong. Remove the list with
 `DELETE https://recs.senapati.si/lists?name=daily-picks&pin=<PIN>`.
 
+## The devices and what each one is getting
+
+Every TV in the house runs Stream with one or more profiles; the service knows each as a profile key, `<box>/<profile>`
+(for example `living-room/default` or `bedroom/kids`). Every call below takes the PIN as `?pin=<PIN>`, an
+`X-Stream-Pin` header, or `"pin"` in a JSON body.
+
+### List the devices
+
+```
+GET https://recs.senapati.si/devices?pin=<PIN>
+```
+
+```json
+{"devices": [
+  {"profile": "living-room/default", "box": "living-room", "name": "default", "last_seen": 1793083739,
+   "picks_at": 1793080000, "picks": 15, "model": "gemma3:4b",
+   "rows_at": 1793083739, "rows": 24, "catalogue_at": 1793083700, "catalogue": 2400,
+   "lists": ["for-living-room"], "feedback": 3}
+]}
+```
+
+Newest first. `picks_at` is when the box last asked the local model for its picks (`picks` is how many it got),
+`rows_at` when it last reported the rows it is showing, `catalogue_at` when it last shared its catalogue, `lists`
+the names of lists posted for this profile alone (household-wide lists are not repeated here), and `feedback` how
+many good/bad verdicts the household gave on the web page. Times are Unix seconds.
+
+### List the recommendations a device is getting
+
+```
+GET https://recs.senapati.si/recs?pin=<PIN>&profile=living-room/default
+```
+
+Leave `profile` out for every device at once. For each profile:
+
+- `model`: the local AI's current picks, `{"at", "model", "picks": [{"name", "reason"}]}`. Names are catalogue
+  names, exactly as the box spells them.
+- `lists`: the lists posted for this profile, household-wide ones included, newest first, each with its `items`
+  and `exclude`.
+- `showing` (and `showing_at`): every row the box is showing right now with the titles in each, as the box built
+  them; the Top Picks row comes first.
+- `feedback`: `{title: "good" | "bad"}` from the web page.
+
+`GET /batches` and `GET /history` (service key) give the raw model batches and how they moved; `/recs` is the
+compact view meant for a bot.
+
+### Update the recommendations for one device
+
+The same `POST /lists` as above, with the profile key instead of `""`:
+
+```
+POST https://recs.senapati.si/lists
+Content-Type: application/json
+
+{"pin": "<PIN>", "name": "living-room-picks", "title": "Picked for the Living Room", "by": "<your name>",
+ "profile": "living-room/default",
+ "items": [{"title": "Sardar 2", "year": "2026", "kind": "movie", "lang": "te", "reason": "A big-screen spy thriller"}]}
+```
+
+Only that box's profile shows it; a household-wide `daily-picks` list keeps showing on every box. Use one `name`
+per device and post it again to replace it; `DELETE /lists?name=living-room-picks&pin=<PIN>` removes it. The local
+model's own picks cannot be edited directly: they are rebuilt by the box from its history. To steer them, post a
+list (it leads the Top Picks row), or mark a pick with `POST /feedback` (`{"profile", "name", "verdict": "good" |
+"bad" | "clear"}`), which the model is told on its next run.
+
+## The Top 20 chart
+
+The boxes show one **Top 10 Telugu Movies**, **Top 10 Telugu Shows** and so on per language and kind, from one
+merged chart the service builds twice a day by scraping Netflix's weekly Top 10 for India, Prime Video's and Aha's
+Top 10 rails and TMDb's buzz (`GET /top10` shows it). A bot can post that chart instead, from whatever listings it
+has read (Netflix, Prime Video, Aha, X and so on):
+
+```
+POST https://recs.senapati.si/top10
+Content-Type: application/json
+
+{"pin": "<PIN>", "by": "<your name>", "hold": 24,
+ "items": [
+   {"title": "Sardar 2", "kind": "movie", "lang": "te", "year": "2026", "ranks": {"netflix": 1, "aha": 2, "x": 4}},
+   {"title": "The Family Man", "kind": "show", "lang": "hi", "year": "2019", "ranks": {"prime": 1}}
+ ]}
+```
+
+| Field | Rule |
+|---|---|
+| `items` | Up to 40 (a Top 20 of movies and a Top 20 of shows fit). Best first when no ranks are given |
+| `items[].title` | The title as released, no year in the name |
+| `items[].kind` | `movie` or `show` |
+| `items[].lang` | `te`, `hi` or `en` (the boxes build rows for these three); other languages are kept but not shown. Blank to have the service look it up on TMDb, with the year |
+| `items[].year` | Four digits; blank to look it up |
+| `items[].ranks` | `{source: rank}`: the title's place on each listing, 1 to 50. Sources: `netflix`, `prime`, `aha`, `tmdb`, `x`, or any other word. A title earns 11 − rank from every source it is on (TMDb counts 0.6); the chart is sorted by that score. The boxes caption a title with its Netflix, Prime Video, Aha and Trending (`tmdb`) ranks |
+| `hold` | Hours the posted chart stays before the service's own scrape takes over again: 1 to 168, 24 by default |
+
+The reply is `{"ok": true, "kept": 2, "hold_until": 1793170000}`. `GET /top10` then serves your chart, with `by` and
+`hold_until`, and each box picks it up within six hours and keeps only the titles it can play. Post again any time
+to replace it; `DELETE /top10?pin=<PIN>` drops it so the next scrape (within ten minutes) takes over.
+
 ## Cadence and limits
 
 - Once a day, post the whole list again: 20 titles, all of them chosen afresh (carry over a title only if it is still

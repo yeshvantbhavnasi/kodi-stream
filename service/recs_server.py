@@ -32,6 +32,16 @@ Searches are answered on the spot and remembered, so a repeated query is instant
     POST /catalogue from a box: the titles its index holds, newest first per language and kind. GET /titles
                    (key, or ?pin=) with lang, kind, days and limit lists them across boxes; /context carries the
                    newest per language as "catalogue".
+    GET  /devices  (pin) every box and profile the service has heard from, newest first, with when it last asked for
+                   picks, posted its rows and its catalogue, and which lists are posted for it alone:
+                   {"devices": [{"profile": "living-room/default", "box": "living-room", "name": "default", ...}]}
+    GET  /recs     (pin; ?profile=<key>) the recommendations one box (or every box) is getting: the model's current
+                   picks with their reasons, the lists posted for it, and the rows it is showing.
+    POST /top10   (pin) a Top 20 chart from a bot, in place of the scraped one: {"pin", "by", "hold": 24,
+                   "items": [{"title": "Sardar 2", "kind": "movie", "lang": "te", "year": "2026",
+                   "ranks": {"netflix": 1, "prime": 3, "aha": 2, "x": 5}}]}. Missing lang/year are looked up on TMDb.
+                   The posted chart is served by GET /top10 and the scraper stands back for `hold` hours (24 by
+                   default, at most 168); DELETE /top10?pin= drops it so the next scrape takes over.
     GET  /cricket  live and upcoming cricket matches from ESPN's public feed (see cricket.py), refreshed every 30
                    minutes: {"at", "matches": [{"name", "abbr", "series", "start", "state", "status", "india", "major"}]}
     GET  /context  (pin) what a posting bot needs: the current list, whether anything changed since it was posted
@@ -364,6 +374,105 @@ def lists_for(profile=''):
         rows = conn.execute("SELECT * FROM lists WHERE profile='' OR profile=? ORDER BY at DESC", (profile or '',)).fetchall()
     return [{'name': r['name'], 'title': r['title'], 'by': r['by'], 'profile': r['profile'], 'at': r['at'],
              'items': json.loads(r['items'] or '[]'), 'exclude': json.loads(r['exclude'] or '[]')} for r in rows]
+
+
+def devices():
+    """Every box and profile the service has heard from, newest first: when it last asked for picks (the model's
+    batch), posted its rows and its catalogue, and the lists posted for it alone."""
+    seen = {}
+
+    def entry(profile):
+        box, _, name = profile.partition('/')
+        return seen.setdefault(profile, {'profile': profile, 'box': box, 'name': name or 'default', 'picks_at': 0, 'picks': 0,
+                                         'model': '', 'rows_at': 0, 'rows': 0, 'catalogue_at': 0, 'catalogue': 0,
+                                         'lists': [], 'feedback': 0})
+    with LOCK:
+        batches = [dict(b) for b in BATCHES.values() if (b.get('kind') or 'recommend') == 'recommend']
+    for b in batches:
+        d = entry(b.get('profile') or 'default')
+        if b.get('at', 0) > d['picks_at']:
+            d.update(picks_at=b.get('at', 0), picks=len(b.get('picks') or []), model=b.get('model') or '')
+    for profile, sh in shown_for().items():
+        entry(profile).update(rows_at=sh['at'], rows=len(sh['rows']))
+    with connect() as conn:
+        for r in conn.execute('SELECT profile, at, titles FROM catalogue'):
+            entry(r['profile']).update(catalogue_at=r['at'], catalogue=len(json.loads(r['titles'] or '[]')))
+        for r in conn.execute("SELECT name, profile FROM lists WHERE profile<>'' ORDER BY at DESC"):
+            if r['profile'] in seen:
+                seen[r['profile']]['lists'].append(r['name'])
+        for r in conn.execute('SELECT profile, COUNT(*) AS n FROM feedback GROUP BY profile'):
+            if r['profile'] in seen:
+                seen[r['profile']]['feedback'] = r['n']
+    for d in seen.values():
+        d['last_seen'] = max(d['picks_at'], d['rows_at'], d['catalogue_at'])
+    return sorted(seen.values(), key=lambda d: -d['last_seen'])
+
+
+def recs_for(profile=''):
+    """What one box's profile (or every one) is being recommended: the model's current picks with the reasons, the
+    lists posted for it (household-wide ones included), and the rows it is showing."""
+    with LOCK:
+        batches = {b.get('profile') or 'default': dict(b) for key, b in sorted(BATCHES.items(), key=lambda kv: kv[1].get('at', 0))
+                   if (b.get('kind') or 'recommend') == 'recommend'}
+    shown = shown_for(profile)
+    out = {}
+    for key in sorted(set(batches) | set(shown)):
+        if profile and key != profile:
+            continue
+        b = batches.get(key, {})
+        out[key] = {'model': {'at': b.get('at', 0), 'model': b.get('model', ''), 'picks': b.get('picks') or []},
+                    'lists': lists_for(key), 'showing': shown.get(key, {}).get('rows', []),
+                    'showing_at': shown.get(key, {}).get('at', 0), 'feedback': feedback_for(key)}
+    return out
+
+
+CHART_KINDS = {'movie': 'movie', 'movies': 'movie', 'film': 'movie', 'tv': 'tv', 'show': 'tv', 'shows': 'tv', 'series': 'tv'}
+
+
+def post_top10(by, items, hold):
+    """A Top 20 chart from a bot, stored in the cache table as the chart GET /top10 serves and held against the
+    scraper for `hold` hours. Each item: title, kind (movie or show), lang, year, ranks {source: rank}; lang and year
+    are looked up on TMDb when missing. Ranks give the score (11 - rank per source, times the source's weight, 1.0
+    for a source charts.py does not know such as 'x'); items with no ranks keep the order they were posted in."""
+    global TOP10
+    clean, lookup = [], {}
+    for n, item in enumerate(list(items or [])[:LIST_ITEMS * 2]):
+        if not isinstance(item, dict) or not str(item.get('title') or '').strip():
+            continue
+        kind = CHART_KINDS.get(str(item.get('kind') or 'movie').lower(), 'movie')
+        title = str(item['title'])[:200].strip()
+        ranks = {}
+        for source, rank in (item.get('ranks') or {}).items() if isinstance(item.get('ranks'), dict) else ():
+            try:
+                ranks[str(source)[:20].lower()] = max(1, min(int(rank), 50))
+            except (TypeError, ValueError):
+                pass
+        info = {'lang': str(item.get('lang') or '')[:5].lower(), 'year': str(item.get('year') or '')[:4], 'tmdb': item.get('tmdb')}
+        if not info['lang'] or not info['year']:
+            found = charts.identify(title, kind, lookup)
+            info = {k: info[k] or found.get(k) for k in info}
+        score = sum(charts.WEIGHTS.get(src, 1.0) * max(0, 11 - rank) for src, rank in ranks.items())
+        clean.append({'title': title, 'kind': kind, 'lang': info['lang'] or '', 'year': info['year'] or '', 'tmdb': info['tmdb'],
+                      'score': round(score, 1), 'ranks': ranks, 'order': n})
+    if any(t['ranks'] for t in clean):
+        clean.sort(key=lambda t: (-t['score'], min(t['ranks'].values()) if t['ranks'] else 99, t['order']))
+    for t in clean:
+        del t['order']
+    hold = max(1, min(int(hold or 24), 7 * 24))
+    chart = {'at': int(time.time()), 'sources': {'posted': len(clean)}, 'by': by, 'hold_until': int(time.time() + hold * 3600),
+             'titles': clean}
+    with LOCK:
+        TOP10 = chart
+    cache_put('top10', chart)
+    return len(clean)
+
+
+def drop_top10():
+    """Forget a posted chart; the scraper rebuilds at its next look (within ten minutes)."""
+    global TOP10
+    with LOCK:
+        TOP10 = {}
+    cache_put('top10', {})
 
 
 def context_for_bot():
@@ -770,7 +879,7 @@ def refresh_top10():
     global TOP10
     TOP10 = cache_get('top10')
     while True:
-        if time.time() - TOP10.get('at', 0) >= TOP10_EVERY - 60:
+        if time.time() - TOP10.get('at', 0) >= TOP10_EVERY - 60 and TOP10.get('hold_until', 0) < time.time():
             try:
                 built = charts.build(log)
                 if built['titles']:
@@ -867,6 +976,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, CRICKET or {'at': 0, 'matches': []}) if self.pin_ok() else None
         if self.path.startswith('/rows') and self.query().get('pin'):
             return self._send(200, {'rows': shown_for(self.query().get('profile', ''))}) if self.pin_ok() else None
+        if self.path.startswith('/devices') and self.query().get('pin'):
+            return self._send(200, {'devices': devices()}) if self.pin_ok() else None
+        if self.path.startswith('/recs') and self.query().get('pin'):
+            return self._send(200, {'recs': recs_for(self.query().get('profile', ''))}) if self.pin_ok() else None
         if self.path.startswith('/titles') and self.query().get('pin'):
             if not self.pin_ok():
                 return
@@ -903,6 +1016,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {'titles': catalogue_titles(q.get('lang', ''), q.get('kind', ''), days, min(limit, 1000))})
         if self.path.startswith('/rows'):
             return self._send(200, {'rows': shown_for(q.get('profile', ''))})
+        if self.path.startswith('/devices'):
+            return self._send(200, {'devices': devices()})
+        if self.path.startswith('/recs'):
+            return self._send(200, {'recs': recs_for(q.get('profile', ''))})
         if self.path.startswith('/history'):
             with connect() as conn:
                 rows = conn.execute('SELECT key, at, model, took, picks FROM history ORDER BY at DESC LIMIT 500').fetchall()
@@ -959,6 +1076,23 @@ class Handler(BaseHTTPRequestHandler):
                              str(body.get('profile') or '').strip()[:200], items, body.get('exclude') or [])
             log('list "{0}" by {1}: {2} titles, from {3}'.format(name, body.get('by') or '?', kept, self.headers.get('Cf-Connecting-Ip') or self.client_address[0]))
             return self._send(200, {'ok': True, 'name': name, 'kept': kept})
+        if self.path.startswith('/top10'):
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 200000)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            if not self.pin_ok(body):
+                return
+            items = body.get('items')
+            if not isinstance(items, list) or not items:
+                return self._send(400, {'error': 'items needed'})
+            try:
+                kept = post_top10(str(body.get('by') or '').strip()[:60], items, body.get('hold') or 24)
+            except (TypeError, ValueError):
+                return self._send(400, {'error': 'hold must be hours'})
+            log('top10 chart by {0}: {1} titles, from {2}'.format(body.get('by') or '?', kept, self.headers.get('Cf-Connecting-Ip') or self.client_address[0]))
+            return self._send(200, {'ok': True, 'kept': kept, 'hold_until': TOP10.get('hold_until', 0)})
         if self.path.startswith('/rows'):
             if not self.allowed():
                 return
@@ -1019,6 +1153,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send(500, {'error': str(e)})
 
     def do_DELETE(self):
+        if self.path.startswith('/top10'):
+            if not self.pin_ok():
+                return
+            drop_top10()
+            log('posted top10 chart removed')
+            return self._send(200, {'ok': True})
         if self.path.startswith('/related'):
             if not self.pin_ok():
                 return
