@@ -219,6 +219,8 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     li.setProperty('parent', parent or '')
     li.setProperty('group', group or '')
     li.setProperty('series', series or '')
+    if item.get('season'):
+        li.setProperty('season', item['season'])  # saved episodes remember their season, for the S/E tag and Up Next
     li.setProperty('saved', '1' if saved else '')
     li.setProperty('suggestion', '1' if suggestion else '')
     return li
@@ -234,6 +236,33 @@ def entry_item(entry, **kwargs):
         # A part-watched title: the Delete key, or hold OK, takes it off Continue Watching.
         li.setProperty('removable', '1')
         li.setProperty('hint', li.getProperty('hint').replace('Hold OK  ', 'Hold OK  Remove, ').replace('Press and hold  ', 'Press and hold  Remove, '))
+    return li
+
+
+def episode_tag(item):
+    """'S2 · E5' for an episode, from its season folder ("Season 2") or its name ("Episode 5. Show S02 1080",
+    "S02E05", "Ep 5"). Whichever part cannot be found is left out; '' when neither is known."""
+    name = item.get('name') or ''
+    season = re.search(r'(\d+)', item.get('season') or '') or re.search(r'\bS(?:eason)?\s*0*(\d{1,2})(?=\b|E\d)', name, re.I)
+    episode = (re.search(r'\bS\d{1,2}\s*E0*(\d{1,3})\b', name, re.I)
+               or re.search(r'\b(?:Episode|Ep|E)\.?\s*0*(\d{1,3})\b', name, re.I)
+               or re.match(r'\s*0*(\d{1,3})\b', name))
+    parts = ['S' + str(int(season.group(1)))] if season else []
+    if episode:
+        parts.append('E' + str(int(episode.group(1))))
+    return ' · '.join(parts)
+
+
+def watched_item(entry):
+    """A tile for Continue Watching and Recently Played. An episode is shown as its show (one tile per show, see
+    db.recent(fold=True)), tagged with the season and episode it is on; OK carries on with that episode."""
+    series = entry.get('series')
+    if not series:
+        return entry_item(entry)
+    tag = episode_tag(entry['item'])
+    note = 'Resume ' + tag if entry.get('progress') else tag
+    li = entry_item(entry, label=quality_of(series)[0] or series, meta=note or cat.title_case(entry.get('group') or ''))
+    li.setProperty('folded', '1')
     return li
 
 
@@ -379,6 +408,7 @@ def start(li, restart=False):
         player.stop()
         monitor.waitForAbort(1)
     if series and li.getProperty('season'):
+        item['season'] = li.getProperty('season')  # kept with the history entry, so its tile can say S2 · E5
         db.set_meta('last:' + series, {'season': li.getProperty('season'), 'episode': item['name']})
     if not cat.play(parent, item, group, series, label):
         xbmcgui.Dialog().ok('Stream', 'This title can only be opened from the Sasta TV addon itself.')
@@ -866,7 +896,10 @@ def context_menu(li, in_grid):
         notify('Removed from Continue Watching', 2500)
         return 'changed'
     if action == 'forget':
-        db.forget(key)
+        if li.getProperty('folded'):
+            db.forget_show(li.getProperty('series'), group)  # the tile stands for the whole show
+        else:
+            db.forget(key)
         notify('Removed from History', 2500)
         return 'changed'
     return 'home'
@@ -2036,9 +2069,9 @@ class Home(xbmcgui.WindowXML):
             fresh = discover.new_entries()
             if len(fresh) >= 4:
                 rows.append(('items', 'New This Week', [entry_item(e, meta=cat.title_case(e.get('group') or '')) for e in fresh]))
-            india = discover.india_top_entries()
-            if len(india) >= 3:
-                rows.append(('items', 'Top 10 in India', [entry_item(e, meta=e['meta']) for e in india]))
+            # A Top 10 per language, with movies and shows apart: 'Top 10 Telugu Movies', 'Top 10 Telugu Shows', ...
+            for lang, kind, chart in discover.india_top_rows():
+                rows.append(('items', 'Top 10 {0} {1}'.format(lang, kind), [entry_item(e, meta=e['meta']) for e in chart]))
             top = discover.top_entries()
             if len(top) >= 3:
                 rows.append(('items', 'Top 10 in Your Home', [entry_item(e, meta=e['meta']) for e in top]))
@@ -2167,9 +2200,9 @@ class Home(xbmcgui.WindowXML):
         titles = ('dir', 'Movies and Shows', cat.URLS['kids'], 'Kids', None)
         if key == 'home':
             rows = []
-            for title, entries in (('Continue Watching', db.continue_watching()), ('Recently Played', db.recent(30))):
+            for title, entries in (('Continue Watching', db.continue_watching(fold=True)), ('Recently Played', db.recent(30, fold=True))):
                 if entries:
-                    rows.append(('items', title, [entry_item(e) for e in entries]))
+                    rows.append(('items', title, [watched_item(e) for e in entries]))
             picks = db.suggestions()
             if picks:
                 rows.insert(1 if rows else 0, ('items', 'Recommended for You' + ai.engine_note(),
@@ -2250,9 +2283,9 @@ class Home(xbmcgui.WindowXML):
         english_tv = [('dir', 'English TV Shows', u['english_tv'], 'English', None)] if english else []
         if key == 'home':
             rows = []
-            resume = db.continue_watching()
+            resume = db.continue_watching(fold=True)
             if resume:
-                rows.append(('items', 'Continue Watching', [entry_item(e) for e in resume]))
+                rows.append(('items', 'Continue Watching', [watched_item(e) for e in resume]))
             for title, entries in recs.rows(fetch=True):  # every visit to Home asks the service for new lists and rebuilds
                 tiles = []
                 for e in entries:

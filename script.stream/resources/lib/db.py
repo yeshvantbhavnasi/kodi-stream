@@ -301,19 +301,34 @@ def _note(row):
     return ''
 
 
-def recent(limit=30):
+def _fold(rows, limit):
+    """Newest first, one row per show: an episode stands for its whole show, so only the latest one is kept."""
+    seen, out = set(), []
+    for r in rows:
+        mark = ('show', r['series'], r['grp']) if r['series'] else ('key', r['key'])
+        if mark in seen:
+            continue
+        seen.add(mark)
+        out.append(r)
+        if len(out) == limit:
+            break
+    return out
+
+
+def recent(limit=30, fold=False):
+    """Played titles, newest first. With fold, a show appears once, as the episode played last."""
     with _connect() as conn:
-        rows = conn.execute('SELECT * FROM watched ORDER BY played_at DESC LIMIT ?', (limit,)).fetchall()
-    return [_entry(r) for r in rows]
+        rows = conn.execute('SELECT * FROM watched ORDER BY played_at DESC LIMIT ?', (limit * 8 if fold else limit,)).fetchall()
+    return [_entry(r) for r in (_fold(rows, limit) if fold else rows)]
 
 
-def continue_watching(limit=20):
-    """Titles stopped part-way: past the first 30 seconds and not yet watched to the end."""
+def continue_watching(limit=20, fold=False):
+    """Titles stopped part-way: past the first 30 seconds and not yet watched to the end. With fold, one per show."""
     with _connect() as conn:
         rows = conn.execute(
             "SELECT * FROM watched WHERE position > 30 AND duration > 0 AND done = 0 AND key NOT LIKE 'live:%' "
-            'ORDER BY played_at DESC LIMIT ?', (limit,)).fetchall()
-    return [_entry(r) for r in rows]
+            'ORDER BY played_at DESC LIMIT ?', (limit * 8 if fold else limit,)).fetchall()
+    return [_entry(r) for r in (_fold(rows, limit) if fold else rows)]
 
 
 def in_history(key):
@@ -331,6 +346,12 @@ def forget(key):
     """Remove a title from History (and so from Continue Watching)."""
     with _connect() as conn:
         conn.execute('DELETE FROM watched WHERE key=?', (key,))
+
+
+def forget_show(series, group):
+    """Remove every episode of a show from History (and so from Continue Watching)."""
+    with _connect() as conn:
+        conn.execute("DELETE FROM watched WHERE series=? AND COALESCE(grp, '')=?", (series, group or ''))
 
 
 def history_count():

@@ -354,9 +354,8 @@ def build():
     fresh = discover.new_entries(ROW_SIZE)
     if len(fresh) >= 4:
         rows.append(('New Releases', _with_meta(fresh)))
-    india = discover.india_top_entries()
-    if len(india) >= 3:
-        rows.append(('Top 10 in India', [dict(e, meta=e['meta']) for e in india]))
+    for lang, kind, chart in discover.india_top_rows():
+        rows.append(('Top 10 {0} {1}'.format(lang, kind), [dict(e, meta=e['meta']) for e in chart]))
     home = discover.top_entries()
     if len(home) >= 3:
         rows.append(('Top 10 in Your Home', [dict(e, meta=e['meta']) for e in home]))

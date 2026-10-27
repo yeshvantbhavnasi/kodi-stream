@@ -233,14 +233,18 @@ def list_entries(items, limit=40):
     return out
 
 
-def india_top_entries(limit=10):
-    """India's streaming charts (Netflix, Prime Video, Aha and TMDb buzz, merged by the recommendation service),
-    keeping only titles in the viewer's languages that the catalogue can play, as tiles with their rank."""
+def india_top_rows(limit=10, least=3):
+    """India's streaming charts (Netflix, Prime Video, Aha and TMDb buzz, merged by the recommendation service), split
+    into one Top 10 per language and kind: [(language, 'Movies' | 'Shows', [tiles with their rank])], the viewer's
+    languages in their own order, movies before shows. Only titles the catalogue can play are kept, and a row with fewer
+    than `least` of them is left out."""
     chosen = db.chosen_languages()
-    out, seen = [], set()
+    langs = [l for l in chosen if l in CHART_LANGUAGES.values()] if chosen else list(CHART_LANGUAGES.values())
+    buckets = {(lang, kind): [] for lang in langs for kind in ('movie', 'tv')}
+    seen = set()
     for title in ai.charts():
-        lang = CHART_LANGUAGES.get(title.get('lang'))
-        if not lang or (chosen and lang not in chosen):
+        bucket = buckets.get((CHART_LANGUAGES.get(title.get('lang')), title.get('kind')))
+        if bucket is None or len(bucket) == limit:
             continue
         entry = _chart_match(title)
         if not entry or entry['item']['name'] in seen:
@@ -248,10 +252,18 @@ def india_top_entries(limit=10):
         seen.add(entry['item']['name'])
         charts = ', '.join('{0} #{1}'.format(CHART_SOURCES[s], r)
                            for s, r in sorted(title.get('ranks', {}).items(), key=lambda p: p[1]) if s in CHART_SOURCES)
-        out.append(dict(entry, meta='#{0} in India · {1}'.format(len(out) + 1, charts), rank=len(out) + 1))
-        if len(out) == limit:
-            break
-    return out
+        bucket.append(dict(entry, charts=charts))
+    rows = []
+    for lang in langs:
+        for kind, label in (('movie', 'Movies'), ('tv', 'Shows')):
+            found = buckets[(lang, kind)]
+            if len(found) < least:
+                continue
+            name = cat.title_case(lang)
+            tiles = [dict(e, meta='#{0} {1} {2} in India · {3}'.format(n, name, label, e.pop('charts')), rank=n)
+                     for n, e in enumerate(found, 1)]
+            rows.append((name, label, tiles))
+    return rows
 
 
 def top_entries(limit=10):
