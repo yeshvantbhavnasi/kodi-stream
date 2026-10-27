@@ -588,11 +588,14 @@ def refresh_videos():
         return 0
     gathered = 0
     pinned = [{'id': cid, 'name': name} for name, cid in yt.PINNED]
-    sources = [('pinned', lambda: yt.subscriptions(pinned, 40))]
-    if not db.KIDS:
+    sources = [('pinned', lambda: yt.subscriptions(pinned, 40, rpc=cat.rpc))]
+    if db.KIDS:
+        for title, query in yt.TODDLER_ROWS:
+            sources.append(('search', lambda q=query: yt.search(q, 20)))
+    else:
         followed = db.channels()
         if followed:
-            sources.append(('subs', lambda: yt.subscriptions(followed, 80)))
+            sources.append(('subs', lambda: yt.subscriptions(followed, 80, rpc=cat.rpc)))
         for video, name in db.recent_videos(3):
             sources.append(('related', lambda v=video: cat.get_dir(yt.related_url(v))))
         for name in db.recent_titles(3):

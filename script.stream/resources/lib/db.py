@@ -421,7 +421,7 @@ def index_videos(source, items):
                 continue
             conn.execute('INSERT INTO videos (id, name, channel, item, source, published, first_seen, last_seen) VALUES (?,?,?,?,?,?,?,?) '
                          'ON CONFLICT(id) DO UPDATE SET name=excluded.name, channel=excluded.channel, item=excluded.item, '
-                         "source=CASE WHEN videos.source LIKE excluded.source || '%' THEN videos.source ELSE videos.source || ',' || excluded.source END, "
+                         "source=CASE WHEN ',' || videos.source || ',' LIKE '%,' || excluded.source || ',%' THEN videos.source ELSE videos.source || ',' || excluded.source END, "
                          'published=excluded.published, last_seen=excluded.last_seen',
                          (vid, item['name'], item.get('by') or '', json.dumps(item), source, item.get('when') or '', now, now))
         conn.execute('DELETE FROM videos WHERE last_seen < ?', (now - 14 * 24 * 3600,))

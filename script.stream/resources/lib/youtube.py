@@ -53,7 +53,18 @@ KEY_STEPS = (
 VIRTUAL = PLUGIN + 'stream/'
 # Channels that are always on the YouTube tab (and on a kids profile's home), whether or not anyone follows them:
 # (row title, channel id). Their newest uploads come from the channel's public feed, so no key or sign-in is needed.
-PINNED = [('Ms Rachel', 'UCG2CL6EUjG8TVT1Tpl9nJdg')]
+PINNED = [('Ms Rachel', 'UCG2CL6EUjG8TVT1Tpl9nJdg'), ('Ms Apple', 'UCneD8oYNapJ7AfhTGfiuWvg')]
+# What a toddler who is learning to talk watches: rows of Ms Rachel and Ms Apple videos by what they teach. Each is a
+# YouTube search (no key needed) kept to those two channels, so the rows fill with their videos first.
+TODDLER_ROWS = [
+    ('First Words with Ms Rachel', 'Ms Rachel first words toddler'),
+    ('Learn to Talk', 'Ms Rachel Ms Apple learn to talk speech practice'),
+    ('Songs to Sing Along', 'Ms Rachel songs for littles sing along'),
+    ('Animal Sounds', 'Ms Rachel animal sounds toddler'),
+    ('Baby Sign Language', 'Ms Rachel baby sign language'),
+    ('Colours, Shapes and Numbers', 'Ms Rachel learn colors shapes numbers toddler'),
+    ('Ms Apple: Learn and Play', 'Ms Apple toddler learning toy play'),
+]
 UA = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36')
 _channel_cache = {}
 TAGS = re.compile(r'\[/?(B|I|COLOR[^\]]*|UPPERCASE|LOWERCASE|CR)\]', re.I)
@@ -193,7 +204,7 @@ def classify(entry):
 
 def listing(rpc, link):
     if link.startswith(VIRTUAL):
-        return virtual(link[len(VIRTUAL):])
+        return virtual(link[len(VIRTUAL):], rpc)
     if not installed():
         return []  # a saved row from before the add-on was removed: shown as empty rather than failing
     result = rpc('Files.GetDirectory', {'directory': link, 'media': 'video',
@@ -296,8 +307,21 @@ def uploads_url(channel_id):
     return '{0}playlist/UU{1}/'.format(PLUGIN, channel_id[2:])
 
 
-def subscriptions(channels, limit=48):
-    """New videos across the followed channels, newest first. Feeds are read in parallel; a failing one is skipped."""
+def uploads(rpc, channel_id, by=''):
+    """A channel's newest uploads through the add-on's playlist listing (no key needed): the stand-in for YouTube's
+    public feeds, which have stopped answering."""
+    out = []
+    for item in listing(rpc, uploads_url(channel_id)):
+        if item['t'] == 'play':
+            item.setdefault('by', by)
+            item.setdefault('when', '')
+            out.append(item)
+    return out
+
+
+def subscriptions(channels, limit=48, rpc=None):
+    """New videos across the followed channels, newest first. Feeds are read in parallel; a channel whose feed fails
+    is read through the add-on's uploads playlist when an rpc is given, otherwise skipped."""
     results = {}
 
     def fetch(channel):
@@ -305,6 +329,11 @@ def subscriptions(channels, limit=48):
             results[channel['id']] = feed(channel['id'])
         except Exception as e:
             xbmc.log('STREAM YT: feed failed for {0}: {1}'.format(channel['name'], e), xbmc.LOGINFO)
+            if rpc is not None:
+                try:
+                    results[channel['id']] = uploads(rpc, channel['id'], channel['name'])
+                except Exception as e2:
+                    xbmc.log('STREAM YT: uploads failed for {0}: {1}'.format(channel['name'], e2), xbmc.LOGINFO)
     threads = [threading.Thread(target=fetch, args=(c,), daemon=True) for c in channels]
     for t in threads:
         t.start()
@@ -315,16 +344,21 @@ def subscriptions(channels, limit=48):
     return videos[:limit]
 
 
-def virtual(path):
-    """Stream's own listings: stream/subs/ (new from followed channels) and stream/search/?q=..."""
+def virtual(path, rpc=None):
+    """Stream's own listings: stream/subs/ (new from followed channels), stream/search/?q=... and stream/channel/?id=..."""
     kind, _, query = path.partition('?')
     params = parse_qs(query)
     if kind.startswith('subs'):
-        return subscriptions(db.channels())
+        return subscriptions(db.channels(), rpc=rpc)
     if kind.startswith('search'):
         return search(params.get('q', [''])[0])
     if kind.startswith('channel'):
-        return sorted(feed(params.get('id', [''])[0]), key=lambda v: v['when'], reverse=True)
+        channel_id = params.get('id', [''])[0]
+        try:
+            return sorted(feed(channel_id), key=lambda v: v['when'], reverse=True)
+        except Exception as e:
+            xbmc.log('STREAM YT: feed failed for {0}: {1}'.format(channel_id, e), xbmc.LOGINFO)
+            return uploads(rpc, channel_id) if rpc is not None else []
     return []
 
 

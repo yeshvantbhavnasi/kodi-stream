@@ -250,6 +250,14 @@ Holding OK on a title opens a small menu. **Add to My List** stores the title in
 `listed` event; **Remove from My List** deletes the row and writes `unlisted`. The **My List** tab reads that table,
 newest first. Saved live channels are looked up again when played, because their links expire.
 
+### The kids profile
+
+A kids profile shows children's titles and channels only. Its home is built for a toddler learning to talk: Ms Rachel
+and Ms Apple lead (their newest uploads, through the YouTube add-on), then rows of their videos by what they teach:
+First Words, Learn to Talk, Songs to Sing Along, Animal Sounds, Baby Sign Language, Colours, Shapes and Numbers, and
+Ms Apple: Learn and Play. The children's movies and shows and the kids channels follow. The rows are listed in
+`youtube.py` (`PINNED` and `TODDLER_ROWS`), so they can be changed as the child grows.
+
 ### How recommendations work
 
 **The engine (`recs.py`).** Every row on Home is cut from one ranking of the whole local index (every indexed movie and

@@ -2209,8 +2209,10 @@ class Home(xbmcgui.WindowXML):
             if picks:
                 rows.insert(1 if rows else 0, ('items', 'Recommended for You' + ai.engine_note(),
                                                [entry_item(p, meta=p['reason'], suggestion=True) for p in picks]))
-            pinned = [('dir', title, yt.channel_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
-            return rows + [titles] + pinned + self.kids_live_rows()
+            # A toddler learning to talk: Ms Rachel and Ms Apple first, then their videos by what they teach.
+            learning = [('dir', title, yt.uploads_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
+            learning += [('dir', title, yt.search_url(query), 'YouTube', None) for title, query in yt.TODDLER_ROWS]
+            return rows + learning + [titles] + self.kids_live_rows()
         if key == 'kids':
             return [titles]
         if key == 'live':
@@ -2239,7 +2241,7 @@ class Home(xbmcgui.WindowXML):
 
     def youtube_rows(self):
         """Subscriptions kept in Stream, rows that follow what was watched here, then the add-on's own lists."""
-        rows = [('dir', title, yt.channel_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
+        rows = [('dir', title, yt.uploads_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
         followed = db.channels()
         if followed:
             rows.append(('dir', 'New from Your Subscriptions', yt.subs_url(), 'YouTube', None))
