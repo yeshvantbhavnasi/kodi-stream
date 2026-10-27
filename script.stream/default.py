@@ -26,7 +26,7 @@ import recs  # noqa: E402
 import report  # noqa: E402
 import youtube as yt  # noqa: E402
 
-ROWS = 20
+ROWS = 24
 ROW_LIMIT = 40  # tiles per row before See all; a TV stick holds sixteen rows of forty posters comfortably
 TABS_ID = 100
 CLOSE_ID = 110

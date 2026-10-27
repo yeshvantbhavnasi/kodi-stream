@@ -354,7 +354,7 @@ def build():
     fresh = discover.new_entries(ROW_SIZE)
     if len(fresh) >= 4:
         rows.append(('New Releases', _with_meta(fresh)))
-    for lang, kind, chart in discover.india_top_rows():
+    for lang, kind, chart in discover.india_top_rows()[:3]:  # the first language's movies and shows, then the next language
         rows.append(('Top 10 {0} {1}'.format(lang, kind), [dict(e, meta=e['meta']) for e in chart]))
     home = discover.top_entries()
     if len(home) >= 3:

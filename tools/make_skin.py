@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate Stream's skin: the Home and Grid windows and the images they draw with.
 
-The Home window has twenty identical rows, each with its own billboard group and tile layouts, so the XML is
+The Home window has twenty-four identical rows, each with its own billboard group and tile layouts, so the XML is
 written from one template here rather than kept by hand. Run after changing anything below:
 
     python3 tools/make_skin.py
@@ -28,7 +28,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'script.st
 XML = os.path.join(ROOT, '1080i')
 MEDIA = os.path.join(ROOT, 'media')
 
-ROWS = 20
+ROWS = 24
 FIRST = 200
 TABS, CLOSE, SEARCH, GEAR, PROFILE, FILTER, BACK = 100, 110, 120, 130, 140, 160, 170
 TOUCH = {'on': False}  # set while the touch layouts are written

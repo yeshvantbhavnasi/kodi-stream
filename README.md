@@ -78,9 +78,9 @@ first language leads every list:
 - **Because you watched …**: two rows of titles like the ones watched last, from TMDb's picks that exist in the
   catalogue, filled out with titles of the same genres in the same language.
 - **New Releases**: titles that appeared in the catalogue in the last seven days (after Stream has been installed for a couple of days).
-- **Top 10 Telugu Movies**, **Top 10 Telugu Shows**, and the same for each of your languages: India's streaming charts
-  (Netflix, Aha and TMDb's buzz), one row per language with movies and shows apart, keeping only titles the catalogue
-  can play. A language needs at least three playable titles for its row to appear.
+- **Top 10 Telugu Movies**, **Top 10 Telugu Shows** and the next language's movies: India's streaming charts (Netflix,
+  Aha and TMDb's buzz), one row per language and kind, keeping only titles the catalogue can play. A row needs at
+  least three playable titles to appear.
 - **Top 10 in Your Home**: what every profile on this device played most in the last month.
 - Genre rows in your first two languages, named after what you watch most: **Telugu Thrillers**, **Hindi Comedies** and so on.
 - **Highly Rated in …**, **Shows to Binge**, **YouTube for You**, **More videos like …**, **On Netflix** / **On Aha** /
