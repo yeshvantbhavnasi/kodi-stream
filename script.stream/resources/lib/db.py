@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS ratings (
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL, action TEXT, name TEXT, grp TEXT, kind TEXT, detail TEXT);
 CREATE TABLE IF NOT EXISTS channels (id TEXT PRIMARY KEY, name TEXT, img TEXT, added_at REAL);
+CREATE TABLE IF NOT EXISTS videos (
+    id TEXT PRIMARY KEY, name TEXT, channel TEXT, item TEXT, source TEXT, published TEXT, first_seen REAL, last_seen REAL);
 '''
 
 
@@ -107,6 +109,9 @@ def play_key(item):
 
 def init():
     with _connect() as conn:
+        # The videos table was first written with a column SQLite reserves ("by"); start it afresh.
+        if any(r['name'] == 'by' for r in conn.execute('PRAGMA table_info(videos)').fetchall()):
+            conn.execute('DROP TABLE videos')
         conn.executescript(SCHEMA)
         # One-time move from the older name-keyed history table.
         old = conn.execute("SELECT COUNT(*) FROM history").fetchone()[0]
@@ -170,6 +175,54 @@ def candidates(limit=120, groups=None):
     preferred = [g.lower() for g in (groups or [])]
     rows.sort(key=lambda r: preferred.index((r['grp'] or '').lower()) if (r['grp'] or '').lower() in preferred else len(preferred))
     return [dict(_entry(r), kind=r['kind']) for r in rows[:limit]]
+
+
+def all_titles():
+    """Every indexed movie and show (children's titles on a kids profile), newest first, with kind and first_seen."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT * FROM titles WHERE kind {0} 'Kids' ORDER BY first_seen DESC, rowid ASC".format('=' if KIDS else '!=')).fetchall()
+    return [dict(_entry(r), kind=r['kind'], first_seen=r['first_seen']) for r in rows]
+
+
+def metadata_all():
+    """{title name: looked-up details} for every title that has been looked up."""
+    with _connect() as conn:
+        rows = conn.execute('SELECT name, data FROM metadata').fetchall()
+    out = {}
+    for r in rows:
+        try:
+            data = json.loads(r['data'])
+        except ValueError:
+            continue
+        if data:
+            out[r['name']] = data
+    return out
+
+
+def metadata_missing(limit=100):
+    """Indexed titles in the chosen languages that have never been looked up, newest first: [(name, is_show, language)]."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT name, kind, grp FROM titles WHERE kind != 'Kids' AND name NOT IN (SELECT name FROM metadata) "
+                            'ORDER BY first_seen DESC, rowid ASC LIMIT ?', (limit * 4,)).fetchall()
+    chosen = chosen_languages()
+    out = [(r['name'], r['kind'] != 'Movies', r['grp'] or '') for r in rows if not chosen or lang_match(r['grp'] or '', chosen)]
+    return out[:limit]
+
+
+def watched_names():
+    with _connect() as conn:
+        rows = conn.execute('SELECT name, series FROM watched').fetchall()
+    return {r['name'] for r in rows} | {r['series'] for r in rows if r['series']}
+
+
+def rated_names():
+    with _connect() as conn:
+        return {r['name'] for r in conn.execute('SELECT name FROM ratings').fetchall()}
+
+
+def dismissed_names():
+    with _connect() as conn:
+        return {r['name'] for r in conn.execute('SELECT name FROM suggestions WHERE dismissed=1').fetchall()}
 
 
 def find_titles(text, limit=60):
@@ -333,6 +386,48 @@ def toggle_channel(channel_id, name, img=''):
             return False
         conn.execute('INSERT INTO channels VALUES (?,?,?,?)', (channel_id, name, img, time.time()))
         return True
+
+
+# ---------- YouTube videos gathered for recommendations ----------
+
+def index_videos(source, items):
+    """Remember videos from one source (a channel feed, a related-videos list, a search), newest first."""
+    now = time.time()
+    with _connect() as conn:
+        for item in items:
+            vid = item.get('id') or ''
+            if not vid:
+                continue
+            conn.execute('INSERT INTO videos (id, name, channel, item, source, published, first_seen, last_seen) VALUES (?,?,?,?,?,?,?,?) '
+                         'ON CONFLICT(id) DO UPDATE SET name=excluded.name, channel=excluded.channel, item=excluded.item, '
+                         "source=CASE WHEN videos.source LIKE excluded.source || '%' THEN videos.source ELSE videos.source || ',' || excluded.source END, "
+                         'published=excluded.published, last_seen=excluded.last_seen',
+                         (vid, item['name'], item.get('by') or '', json.dumps(item), source, item.get('when') or '', now, now))
+        conn.execute('DELETE FROM videos WHERE last_seen < ?', (now - 14 * 24 * 3600,))
+
+
+def all_videos(limit=1500):
+    """Every gathered video not yet played here: [{'id', 'item', 'source', 'published', 'first_seen'}], newest first."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT * FROM videos WHERE 'yt:' || id NOT IN (SELECT key FROM watched) "
+                            'ORDER BY last_seen DESC, published DESC LIMIT ?', (limit,)).fetchall()
+    return [{'id': r['id'], 'item': json.loads(r['item']), 'source': r['source'] or '', 'published': r['published'] or '',
+             'first_seen': r['first_seen']} for r in rows]
+
+
+def watched_channels(limit=40):
+    """{channel name: plays} for the YouTube videos played here, so their channels can lead."""
+    with _connect() as conn:
+        rows = conn.execute("SELECT item, plays FROM watched WHERE key LIKE 'yt:%' ORDER BY played_at DESC LIMIT ?", (limit,)).fetchall()
+    out = {}
+    for r in rows:
+        try:
+            by = (json.loads(r['item']) or {}).get('by') or ''
+        except ValueError:
+            continue
+        if by:
+            out[by] = out.get(by, 0) + max(1, r['plays'] or 1)
+    return out
 
 
 def channels_version():

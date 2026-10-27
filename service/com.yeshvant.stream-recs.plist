@@ -14,6 +14,8 @@
         <key>OLLAMA_MODEL</key><string>gemma3:4b</string>
         <!-- the key every box must send (Stream setting "Recommendation service key"); also kept in ~/ollama-home/recs.key -->
         <key>TOKEN</key><string>CHANGE-ME</string>
+        <!-- the pin another bot or person sends to post a list (POST /lists); the service key works too -->
+        <key>POST_PIN</key><string>CHANGE-ME-TOO</string>
         <!-- the Kindle home screen, which shows the web page in its Recs tab and keeps its sign-in -->
         <key>EMBED_ORIGINS</key><string>http://192.168.1.175:8765</string>
     </dict>

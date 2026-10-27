@@ -1,6 +1,7 @@
 # Rows built from the local index and TMDb: titles like one just watched, browsing by genre, what is new,
 # and what the household plays most. Everything prefers the viewer's languages, first language first.
 import re
+import time
 
 import ai
 import catalogue as cat
@@ -134,6 +135,102 @@ def _chart_match(title):
             found.sort(key=lambda e: meta.split_title(e['item']['name'])[1] != title.get('year'))
             return found[0]
     return None
+
+
+def match_title(title, year='', kind='', lang=''):
+    """The catalogue entry for a title named from outside (a chart, a bot's list): same name ignoring punctuation,
+    year and quality words; kind 'movie' or 'show' (either when blank); lang a TMDb code ('te') or a section name
+    ('Telugu'), any language when blank. None when the catalogue does not have it."""
+    kinds = MOVIE_KINDS if kind == 'movie' else SHOW_KINDS if kind in ('show', 'tv') else TITLE_KINDS
+    code = (lang or '').lower().strip()
+    group = CHART_LANGUAGES.get(code) or next((name for name, c in meta.LANG_CODES.items() if c == code), '') or code
+    title, named_year = meta.split_title(title or '')  # 'Nayyi Navelli (2026) PreDVD' -> 'Nayyi Navelli', '2026'
+    year = str(year or named_year or '')
+    names = [title] + ([title.split(':')[0]] if ':' in title else [])
+    # The language asked for first; failing that the household's languages (a Hindi show often sits in the dubbed
+    # sections), then any language.
+    languages = [group] if group else []
+    languages += [l for l in db.chosen_languages() if l not in languages] + ['']
+    for name in names:
+        want = _plain(name)
+        if not want:
+            continue
+        # 'Court: State vs A Nobody' is listed as 'Court State Vs. A Nobody': fetch by the first words, compare without punctuation
+        words = re.findall(r'[A-Za-z0-9]+', name)
+        hits = db.find_by_title(name, kinds, limit=12)
+        if words:
+            hits += db.find_by_title(' '.join(words[:2]), kinds, limit=40)
+            if len(words[0]) > 3:
+                hits += db.find_by_title(words[0], kinds, limit=60)  # 'Search- The Naina Murder Case'
+        same = [e for e in hits if _plain(meta.split_title(e['item']['name'])[0]) == want]
+        for language in languages:
+            found = [e for e in same if not language or db.lang_match(e.get('group') or '', [language])]
+            if found:
+                # the right year first, and a clean copy before a cinema recording of the same film
+                found.sort(key=lambda e: (meta.split_title(e['item']['name'])[1] != year, meta.is_cinema_copy(e['item']['name'])))
+                return found[0]
+    return None
+
+
+FOUND_KEEP = 7 * 24 * 3600
+
+
+def find_outside(title, year='', kind='', lang=''):
+    """A posted title the local index lacks, searched for in the catalogue itself (the index only holds the newest
+    pages of each section). A hit is indexed, so later matching is local; the answer, found or not, is kept a week."""
+    key = 'found:{0}:{1}:{2}'.format(_plain(title), year or '', (lang or '').lower())
+    saved = db.meta(key)
+    if saved and time.time() - saved.get('at', 0) < FOUND_KEEP:
+        return saved.get('entry')
+    kinds = MOVIE_KINDS if kind == 'movie' else SHOW_KINDS if kind in ('show', 'tv') else TITLE_KINDS
+    code = (lang or '').lower().strip()
+    group = CHART_LANGUAGES.get(code) or next((name for name, c in meta.LANG_CODES.items() if c == code), '') or code
+    title, named_year = meta.split_title(title or '')
+    year = str(year or named_year or '')
+    # 'Stree 2: Sarkate Ka Aatank' is listed as plain 'Stree 2': the part before a colon is searched for and accepted too
+    variants = [title] + ([title.split(':')[0].strip()] if ':' in title else [])
+    wanted = {_plain(v) for v in variants if _plain(v)}
+    entry = None
+    try:
+        for query in reversed(variants):  # the short form first: the catalogue's search likes short queries
+            hits = cat.rank_results(query, cat.search(query))
+            hits.sort(key=lambda f: meta.is_cinema_copy(f['item']['name']))  # a clean copy before a cinema recording
+            for found in hits:
+                name = found['item']['name']
+                section_kind, section_lang = cat.section_of(found['parent'])
+                if found['item']['t'] not in ('play', 'folder') or section_kind not in kinds:
+                    continue
+                if _plain(meta.split_title(name)[0]) not in wanted:
+                    continue
+                language = section_lang or found.get('group') or ''
+                if group and not db.lang_match(language, [group]):
+                    continue
+                found_year = meta.split_title(name)[1]
+                if year and found_year and found_year != year:
+                    continue
+                entry = {'item': found['item'], 'parent': found['parent'], 'group': language}
+                db.index_titles(found['parent'], language, section_kind, [found['item']])
+                break
+            if entry:
+                break
+    except Exception as e:
+        cat.log('catalogue search for "{0}" failed: {1}'.format(title, e))
+    db.set_meta(key, {'at': time.time(), 'entry': entry})
+    return entry
+
+
+def list_entries(items, limit=40):
+    """Catalogue entries for a posted list's items, in the list's order, each carrying the item's reason."""
+    out, seen = [], set()
+    for item in items:
+        entry = match_title(item.get('title') or '', item.get('year') or '', item.get('kind') or '', item.get('lang') or '')
+        if not entry or entry['item']['name'] in seen:
+            continue
+        seen.add(entry['item']['name'])
+        out.append(dict(entry, reason=(item.get('reason') or '')[:160]))
+        if len(out) >= limit:
+            break
+    return out
 
 
 def india_top_entries(limit=10):

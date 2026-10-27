@@ -229,6 +229,30 @@ def charts():
     return titles
 
 
+LISTS_FOR = 600  # ask the service for the posted lists at most this often
+
+
+def lists(fresh=False):
+    """Lists another bot or person posted to the service for this box (GET /lists): [{'name', 'title', 'by', 'at',
+    'items': [{'title', 'year', 'kind', 'lang', 'reason'}]}], newest first. Kept ten minutes unless fresh is asked
+    for; the last copy is used while the service cannot be reached."""
+    kept = db.meta('bot_lists') or {}
+    if (time.time() - kept.get('fetched', 0) < LISTS_FOR and not fresh) or not service_url():
+        return kept.get('lists', [])
+    import requests
+    from urllib.parse import quote
+    try:
+        r = requests.get(service_url() + '/lists?profile=' + quote(profile_key(), safe=''), timeout=20,
+                         headers={'X-Stream-Key': _setting('recs_key')})
+        r.raise_for_status()
+        found = r.json().get('lists') or []
+    except Exception as e:
+        log('lists unavailable: {0}'.format(e))
+        return kept.get('lists', [])
+    db.set_meta('bot_lists', {'fetched': time.time(), 'lists': found})
+    return found
+
+
 def _pick(goal_for_jev, system, prompt_intro, pool, count, shortlist_size=60, kind='recommend'):
     """Shared pipeline: Jev narrows the pool, the model picks and explains. Either step may be absent."""
     ids = {'c{0}'.format(n): e for n, e in enumerate(pool)}
@@ -449,8 +473,10 @@ def _local_order(pool):
     return [e for group in zip_longest(*buckets.values()) for e in group if e]
 
 
-def recommend(top_groups, force=False):
-    """Build and store a new batch of suggestions when the last one is stale. Returns True if a batch was saved."""
+def recommend(top_groups, force=False, pool=None):
+    """Build and store a new batch of suggestions when the last one is stale. Returns True if a batch was saved.
+    pool: candidates already ranked by the local scorer (recs.pool_for_model), best first; without it the newest
+    unplayed titles are offered."""
     plays = db.history_count()
     last = db.meta('recs', {})
     age = time.time() - last.get('at', 0)
@@ -460,18 +486,22 @@ def recommend(top_groups, force=False):
         return False
     # Every unplayed title is fetched (the first language alone can hold hundreds), so the language shares below
     # are taken from the whole index rather than from whatever a cut by preference happened to leave.
-    pool = db.candidates(2000, top_groups)
-    if not db.KIDS:
-        pool = db.only_chosen(pool, lambda e: e.get('group'))
+    ranked = pool is not None
+    if not ranked:
+        pool = db.candidates(2000, top_groups)
+        if not db.KIDS:
+            pool = db.only_chosen(pool, lambda e: e.get('group'))
     order = priority_languages()
     # Genres: the ones chosen at setup lead, then the ones they actually watch; people likewise.
     genres = list(dict.fromkeys(list((db.meta('profile') or {}).get('genres', [])) + watched_genres()))[:6]
     people = list(dict.fromkeys(chosen_people() + watched_people()))[:8]
     # Language shares are applied before the pool is cut, so the second language is not crowded out by the first.
-    pool = _by_priority(pool, order, 120)[:120]
+    if not ranked:
+        pool = _by_priority(pool, order, 120)[:120]
+        if pool:
+            pool = _by_priority(_local_order(pool), order)
     if not pool:
         return False
-    pool = _by_priority(_local_order(pool), order)
     timeline = _timeline()
     watched = db.recent(30)
     stated = _profile_lines()

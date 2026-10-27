@@ -286,6 +286,11 @@ def feed(channel_id):
     return out
 
 
+def related_url(video):
+    """The add-on's list of videos related to one video (works without a key)."""
+    return '{0}special/related_videos/?video_id={1}'.format(PLUGIN, video)
+
+
 def uploads_url(channel_id):
     """The add-on's listing of everything a channel uploaded (its UU playlist works without a key)."""
     return '{0}playlist/UU{1}/'.format(PLUGIN, channel_id[2:])

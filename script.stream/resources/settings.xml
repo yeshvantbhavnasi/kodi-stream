@@ -2,6 +2,7 @@
 <settings>
     <category label="General">
         <setting id="autostart" type="bool" label="Open Stream when Kodi starts" default="true"/>
+        <setting id="touch" type="enum" label="Touch screen layout (Auto: on for iPhone and iPad)" values="Auto|On|Off" default="0"/>
     </category>
     <category label="AI">
         <setting id="ai_enabled" type="bool" label="Use AI for recommendations and search" default="true"/>

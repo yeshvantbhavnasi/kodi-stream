@@ -17,6 +17,16 @@ Searches are answered on the spot and remembered, so a repeated query is instant
     GET  /text     a plain-text page: every box and profile's current picks, the reasons, and what the model was told
     GET  /batches  the same as JSON; GET /history the past batches, newest first
     POST /feedback profile, name, verdict (good | bad | clear) from the web page's buttons; GET /feedback lists them
+    POST /lists   a list of titles from another bot or person, shown on the boxes as a row of its own:
+                   {"pin": "...", "name": "weekend", "title": "Weekend Picks", "by": "Claude", "profile": "",
+                    "items": [{"title": "Sardar 2", "year": "2026", "kind": "movie", "lang": "te", "reason": "..."}]}
+                   The pin is POST_PIN (or ?pin= / X-Stream-Pin); profile "" means every box, otherwise one box's
+                   profile key as /batches shows it. Posting a name again replaces that list; DELETE /lists?name=
+                   removes one. GET /lists?profile=<key> is what a box asks for: {"lists": [...]} newest first.
+                   A list holds at most 20 items; the boxes show the posted titles as their Top Picks row.
+    GET  /context  (pin) what a posting bot needs: the current list, whether anything changed since it was posted
+                   (needs_update), and per box profile what the household told us and watched (as the box sent it),
+                   the catalogue titles it offered (names to use verbatim) and the web page's good/bad verdicts.
     GET  /login    a sign-in form for the pages above when TOKEN is set; the key is checked once and a browser keeps a
                    cookie (a hash of the key, never the key itself); GET /logout forgets it
 
@@ -54,6 +64,7 @@ OLLAMA = os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434').rstrip('/')
 MODEL = os.environ.get('OLLAMA_MODEL', 'gemma3:4b')
 STATE = os.environ.get('STATE', os.path.expanduser('~/Library/Application Support/stream-recs/batches.db'))
 TOKEN = os.environ.get('TOKEN', '').strip()
+POST_PIN = os.environ.get('POST_PIN', '').strip() or TOKEN  # what a bot must send to post a list
 EMBED_ORIGINS = [o.strip().rstrip('/') for o in os.environ.get('EMBED_ORIGINS', '').split(',') if o.strip()]  # pages that may frame /
 SESSION = hashlib.sha256(('stream-recs-web:' + TOKEN).encode()).hexdigest() if TOKEN else ''  # the browser cookie
 KEEP = 7 * 24 * 3600  # a remembered search answer is kept this long
@@ -79,6 +90,7 @@ CREATE TABLE IF NOT EXISTS batches (key TEXT PRIMARY KEY, profile TEXT, kind TEX
 CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, at REAL, model TEXT, took REAL, picks TEXT);
 CREATE INDEX IF NOT EXISTS history_key ON history (key, at);
 CREATE TABLE IF NOT EXISTS feedback (profile TEXT, name TEXT, verdict TEXT, at REAL, PRIMARY KEY (profile, name));
+CREATE TABLE IF NOT EXISTS lists (name TEXT PRIMARY KEY, title TEXT, by TEXT, profile TEXT, at REAL, items TEXT);
 '''
 JSON_COLUMNS = ('candidates', 'picks')
 
@@ -160,6 +172,63 @@ def rate(profile, name, verdict):
             conn.execute('INSERT OR REPLACE INTO feedback (profile, name, verdict, at) VALUES (?,?,?,?)', (profile, name, verdict, time.time()))
         else:
             conn.execute('DELETE FROM feedback WHERE profile=? AND name=?', (profile, name))
+
+
+# ---------- lists posted by other bots and people ----------
+
+LIST_ITEMS = 20  # a list is the day's picks: twenty at a time
+
+
+def save_list(name, title, by, profile, items):
+    """Keep (or replace) a posted list. Items are trimmed to title, year, kind, lang and reason."""
+    clean = []
+    for item in items[:LIST_ITEMS]:
+        if not isinstance(item, dict) or not str(item.get('title') or '').strip():
+            continue
+        clean.append({'title': str(item.get('title'))[:200].strip(), 'year': str(item.get('year') or '')[:4],
+                      'kind': str(item.get('kind') or '')[:10].lower(), 'lang': str(item.get('lang') or '')[:20].lower(),
+                      'reason': str(item.get('reason') or '')[:200].strip()})
+    with connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO lists (name, title, by, profile, at, items) VALUES (?,?,?,?,?,?)',
+                     (name, title, by, profile, time.time(), json.dumps(clean)))
+    return len(clean)
+
+
+def delete_list(name):
+    with connect() as conn:
+        conn.execute('DELETE FROM lists WHERE name=?', (name,))
+
+
+def lists_for(profile=''):
+    """Lists posted for everyone plus those for one box's profile, newest first."""
+    with connect() as conn:
+        rows = conn.execute("SELECT * FROM lists WHERE profile='' OR profile=? ORDER BY at DESC", (profile or '',)).fetchall()
+    return [{'name': r['name'], 'title': r['title'], 'by': r['by'], 'profile': r['profile'], 'at': r['at'],
+             'items': json.loads(r['items'] or '[]')} for r in rows]
+
+
+def context_for_bot():
+    """Everything a posting bot needs, built from what the boxes sent and the web page's verdicts."""
+    with LOCK:
+        batches = [(key, dict(b)) for key, b in BATCHES.items() if (b.get('kind') or 'recommend') == 'recommend']
+    posted = lists_for()
+    current = posted[0] if posted else None
+    latest = 0
+    profiles = []
+    for key, b in sorted(batches, key=lambda kv: -kv[1].get('at', 0)):
+        profile = b.get('profile') or key.split('|')[0]
+        intro = (b.get('intro') or '').strip()
+        profiles.append({'profile': profile, 'at': b.get('at', 0), 'about': intro[:12000],
+                         'candidates': list(b.get('candidates') or [])[:100], 'feedback': feedback_for(profile)})
+        latest = max(latest, b.get('at', 0))
+    with connect() as conn:
+        row = conn.execute('SELECT MAX(at) AS at FROM feedback').fetchone()
+    latest = max(latest, (row['at'] if row and row['at'] else 0))
+    needs = current is None or time.time() - current['at'] > 20 * 3600 or latest > current['at']
+    return {'generated': time.time(), 'list': current, 'needs_update': needs,
+            'reason': ('no list posted yet' if current is None else 'the list is a day old' if time.time() - current['at'] > 20 * 3600
+                       else 'new activity since the list was posted' if latest > current['at'] else 'nothing changed since the list was posted'),
+            'profiles': profiles}
 
 
 def guidance(req):
@@ -287,6 +356,16 @@ def page():
     lines = ['STREAM RECOMMENDATIONS',
              'Model {0} through Ollama at {1}: {2}. {3} batches remembered.'.format(MODEL, OLLAMA, 'answering' if ollama_up() else 'NOT answering', len(items)),
              '']
+    for posted in lists_for():
+        lines.append('=' * 78)
+        lines.append('List "{0}" by {1} for {2}, posted {3}, {4} titles'.format(
+            posted['title'] or posted['name'], posted['by'] or '?', posted['profile'] or 'every box',
+            time.strftime('%a %d %b %H:%M', time.localtime(posted['at'])), len(posted['items'])))
+        for n, item in enumerate(posted['items']):
+            lines.append('{0:>3}. {1} ({2}) {3} {4}'.format(n + 1, item['title'], item['year'] or '?', item['kind'], item['lang']).rstrip())
+            if item['reason']:
+                lines.append('     ' + item['reason'])
+        lines.append('')
     for key, b in items:
         kind = b.get('kind') or ('search' if '|search|' in key else 'recommend')
         heading = ('Search: ' + (b.get('intro') or '').replace('The viewer asked for: ', '')[:120] if kind == 'search'
@@ -502,6 +581,18 @@ class Handler(BaseHTTPRequestHandler):
             self._send(401, {'error': 'key required'})
         return False
 
+    def pin_ok(self, body=None):
+        """True when the request carries the posting pin (header, ?pin= or in the body), or the service key."""
+        if not POST_PIN:
+            return True
+        given = self.headers.get('X-Stream-Pin', '') or self.query().get('pin', '') or str((body or {}).get('pin') or '')
+        if given and hmac.compare_digest(given, POST_PIN):
+            return True
+        if TOKEN and self.allowed():
+            return True
+        self._send(401, {'error': 'pin required'})
+        return False
+
     def cookie(self, value, age):
         # Through the tunnel the page is https; Secure + SameSite=None lets the Kindle's framed tab keep the cookie.
         https = self.headers.get('X-Forwarded-Proto', '') == 'https'
@@ -519,6 +610,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._redirect('/' + ('?embed=1' if embed else '')) if not TOKEN or self.signed_in() else self._html(200, login_page(embed=embed))
         if self.path.startswith('/logout'):
             return self._redirect('/login' + ('?embed=1' if embed else ''), [self.cookie('', 0)])
+        if self.path.startswith('/context'):
+            return self._send(200, context_for_bot()) if self.pin_ok() else None
         is_page = self.path == '/' or self.path.startswith(('/?', '/text', '/index'))
         if not self.allowed(is_page):
             return
@@ -533,6 +626,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, BATCHES)
         if self.path.startswith('/feedback'):
             return self._send(200, all_feedback())
+        if self.path.startswith('/lists'):
+            return self._send(200, {'lists': lists_for(q.get('profile', ''))})
         if self.path.startswith('/history'):
             with connect() as conn:
                 rows = conn.execute('SELECT key, at, model, took, picks FROM history ORDER BY at DESC LIMIT 500').fetchall()
@@ -573,6 +668,22 @@ class Handler(BaseHTTPRequestHandler):
             q = self.query()
             carry = '&'.join(p for p in ('embed=1' if q.get('embed') == '1' else '', 's=' + q['s'] if q.get('s') else '') if p)
             return self._redirect('/?device={0}{1}'.format(quote(q.get('device', '')), '&' + carry if carry else ''))
+        if self.path.startswith('/lists'):
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 200000)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            if not self.pin_ok(body):
+                return
+            name = str(body.get('name') or '').strip()[:60]
+            items = body.get('items')
+            if not name or not isinstance(items, list):
+                return self._send(400, {'error': 'name and items needed'})
+            kept = save_list(name, str(body.get('title') or '').strip()[:80], str(body.get('by') or '').strip()[:60],
+                             str(body.get('profile') or '').strip()[:200], items)
+            log('list "{0}" by {1}: {2} titles, from {3}'.format(name, body.get('by') or '?', kept, self.headers.get('Cf-Connecting-Ip') or self.client_address[0]))
+            return self._send(200, {'ok': True, 'name': name, 'kept': kept})
         if not self.path.startswith('/pick'):
             return self._send(404, {'error': 'not found'})
         if not self.allowed():
@@ -589,6 +700,18 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             log('request failed: {0}'.format(e))
             self._send(500, {'error': str(e)})
+
+    def do_DELETE(self):
+        if not self.path.startswith('/lists'):
+            return self._send(404, {'error': 'not found'})
+        if not self.pin_ok():
+            return
+        name = self.query().get('name', '').strip()
+        if not name:
+            return self._send(400, {'error': 'name needed'})
+        delete_list(name)
+        log('list "{0}" removed'.format(name))
+        self._send(200, {'ok': True})
 
     def log_message(self, fmt, *args):
         pass  # the build log above is enough

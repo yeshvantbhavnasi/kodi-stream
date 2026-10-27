@@ -328,6 +328,19 @@ def showable(items):
     return [i for i in items if i['t'] in ('play', 'folder')]
 
 
+def folder_depth(url):
+    """How deep a catalogue folder sits: 'Telugu/STAR MAA/' is 2, 'Telugu/STAR MAA/Show/' is 3; 0 when unknown."""
+    path = _b64(parse_qs(urlparse(url).query).get('sdirurl', [''])[0]).replace('//', '/').strip('/')
+    return len([p for p in path.split('/') if p]) if path else 0
+
+
+def is_category(url):
+    """True for a folder that lists shows rather than being one: on the TV Shows section the level under a language
+    is channels and categories (STAR MAA, Awards and Other Shows); their sub-folders are the shows."""
+    kind, _ = section_of(url)
+    return kind == 'TV Shows' and 0 < folder_depth(url) <= 2
+
+
 def _b64(value):
     try:
         return base64.b64decode(value or '').decode('utf-8')

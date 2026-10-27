@@ -57,7 +57,8 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 | Stop a stream and keep browsing | Back while the video is playing. The stream stops and you return to where you were |
 | Add or remove a title from My List | Hold OK (or press the menu key) on the title |
 | Like or dislike a title | Hold OK on the title and pick **Like** or **Dislike** |
-| Hide a suggestion | Hold OK on it in "Recommended for You" and pick **Not interested** |
+| Open a title | OK on a movie or show opens its page: Play (or Resume), Trailer, My List, Like and Dislike, then a show's seasons and episodes or a movie's **More like this** row. OK on an episode plays it |
+| Hide a suggestion | Hold OK on it in "Top Picks for You" and pick **Not interested** |
 | Resume a title | Play it again; it carries on from where it stopped. A red bar under the poster shows how far in it is. Hold OK and pick **Play from the beginning** to start over |
 | Tidy Continue Watching or History | On a part-watched tile press the remote's Delete (Clear) key, or hold OK and pick **Remove from Continue Watching**; the title stays in History and plays from the start next time. **Remove from History** is in the same menu |
 | Search YouTube | On the YouTube section the search bar searches YouTube. Elsewhere a **Search YouTube for …** tile sits at the end of the results, first when nothing in the catalogue matched |
@@ -66,17 +67,25 @@ Everything works with the remote's direction pad, OK and Back; no mouse or point
 
 ### What the home screen shows
 
-Rows appear only when there is something to put in them, and your first language leads every list:
+Rows are built by the recommendation engine (see *How recommendations work*) from everything the catalogue holds, up
+to forty titles each with **See all** at the end. They appear only when there is something to put in them, and your
+first language leads every list:
 
-- **Continue Watching**, **Recommended for You** and **Recently Played**.
-- **New This Week**: titles that appeared in the catalogue in the last seven days (after Stream has been installed for a couple of days).
-- **Top 10 in Your Home**: what every profile on this device played most in the last month.
-- **More like …**: two rows of titles like the ones watched last, from TMDb's picks that exist in the catalogue, filled out with titles of the same genres in the same language.
-- **Liked by You**, live events, then movies and web series by language, English and Kids, and YouTube.
+- **Continue Watching** and **Top Picks for You**: the best of the whole catalogue for this household. A list posted
+  to the recommendation service by another bot leads the row (see *How recommendations work*), then a model's own
+  picks with their reasons when one is set up, then the local ranking, mostly movies.
+- **Tonight: Movies, Shows and Videos**: the top picks with the best YouTube videos for you mixed in.
+- **Because you watched …**: two rows of titles like the ones watched last, from TMDb's picks that exist in the
+  catalogue, filled out with titles of the same genres in the same language.
+- **New Releases**: titles that appeared in the catalogue in the last seven days (after Stream has been installed for a couple of days).
+- **Top 10 in India** (the streaming charts) and **Top 10 in Your Home** (what every profile on this device played most in the last month).
+- Genre rows in your first two languages, named after what you watch most: **Telugu Thrillers**, **Hindi Comedies** and so on.
+- **Highly Rated in …**, **Shows to Binge**, **YouTube for You**, **More videos like …**, **On Netflix** / **On Aha** /
+  **On Prime Video** (where the titles originally stream, from TMDb), **Hidden Gems**, **My List**, live events and YouTube.
 
-The description panel shows the rating, length (or number of seasons), genres, cast and director once a title has been
-looked up. After a minute without a key press the home screen walks the highlight along the recommended titles so the
-panel shows them off; any key stops it.
+The billboard shows the highlighted title's rating, length (or number of seasons), genres and a short synopsis; its own
+page (OK) has the cast, where it streams, the trailer, and a show's episodes. After a minute without a key press the
+home screen walks the highlight along the top picks so the billboard shows them off; any key stops it.
 
 ### First-run setup
 
@@ -157,16 +166,22 @@ tiles, play with OK like any other title, and show up in Continue Watching and H
      and press Save. Then choose **Saved, sign in** and enter the code at google.com/device (Google warns that the app
      is unverified: it is your own project, continue).
   The rows appear on the YouTube tab as soon as the key is in and you are signed in.
-- **Trailers.** Every movie and show has a **Watch trailer** button in its description panel: press Up from the
-  highlighted tile to reach it and Down to come back (inside a listing, Up from the top row), or hold OK and choose it
-  from the menu, or press the remote's Info key. Up on a title with no trailer moves straight to the row above. The trailer TMDb lists is used when there is one; otherwise Stream searches YouTube for
-  the title and plays the best match. Trailers play through the YouTube add-on, with no advertisements, and need no
+- **Trailers.** Hold OK on a movie or show and choose **Watch trailer**, or press the remote's Info key. The trailer
+  TMDb lists is used when there is one; otherwise Stream searches YouTube for the title and plays the best match. Trailers play through the YouTube add-on, with no advertisements, and need no
   key or account.
 
-### Episodes
+### Title pages and episodes
 
-Inside a show, episodes are shown as a compact list of names in order, not as poster tiles. A show opens on the season watched last, and the list opens on the episode to carry on with: the last one played if it is unfinished, otherwise the one after it. Watched episodes are ticked, a part-watched episode shows where it
-stopped, and the list opens on the next episode to watch. Recently Played and Continue Watching show the show's name
+OK on a movie or show opens its page: the backdrop, rating, year, length, genres, language, where it streams in India,
+synopsis and cast, with pill buttons for Play (Resume when part-watched), Trailer, My List, Like and Dislike. A movie's
+page ends with a **More like this** row; a show's page has its seasons as chips and the chosen season's episodes as a
+row of stills, each with its number, length, name and a watched tick, and the highlighted episode's synopsis beneath.
+Moving along the season chips shows that season without pressing OK.
+
+Episode names, stills, lengths and synopses come from TMDb; when TMDb only numbers a show's episodes, Wikipedia's
+episode tables are read instead (many Indian shows are covered there), and failing both the provider's own "Episode 3"
+is shown. Names are kept for a week. A show opens on the season watched last and the row on the episode to carry on
+with: the last one played if it is unfinished, otherwise the one after it. Continue Watching shows the show's name
 with the episode.
 
 When an episode plays to the end, Stream shows **Up next** with the following episode and starts it after ten seconds.
@@ -228,7 +243,28 @@ newest first. Saved live channels are looked up again when played, because their
 
 ### How recommendations work
 
-A new batch is built in the background when the addon opens, if the last batch is more than an hour old or three or
+**The engine (`recs.py`).** Every row on Home is cut from one ranking of the whole local index (every indexed movie and
+show not yet played, rated or dismissed, in the chosen languages). Each title is scored on the box itself, in well under
+a second, from: the language order chosen at setup (first language leading), the genres chosen and the genres of what
+is watched and liked (from TMDb's genres, or words in the description for titles not yet looked up), favourite actors
+and directors, TMDb's or IMDb's rating, a place in India's streaming charts, how recently it reached the catalogue,
+and what was disliked (its genres and director count against). The rows then come from that ranking: Top Picks
+(language shares applied: about half from the first language, a third from the second), genre rows for the genres
+rated highest, Highly Rated, Shows to Binge, the streaming services with the most titles (TMDb's providers for India,
+fetched with each title's details), and Hidden Gems (well rated, few votes, in the catalogue for a while). A model,
+when one is set up, no longer chooses from the newest titles: it re-ranks the scorer's best 120 and explains its 15
+picks, which lead the Top Picks row. Rows are kept for an hour and rebuilt in the background, sooner when something
+is played, rated or dismissed. Titles are looked up on TMDb a few dozen at a time in the background, so the genre,
+rating and service rows fill in over the first day on a new installation.
+
+**YouTube.** Videos are gathered into a local index (`videos`) by the same background pass: new uploads from followed
+and pinned channels, videos related to the ones played last (through the YouTube add-on), and YouTube's results for
+the movies and shows played last (songs and interviews) and for the latest trailers in the chosen languages. They are
+scored by source, channel (channels played or followed here lead), words shared with recently watched titles, and
+age; shorts are left out. **YouTube for You** and **More videos like …** are built from that, and **Tonight** mixes the
+top picks with the best videos, movies and videos side by side.
+
+**The model's batch.** A new batch is built in the background when the addon opens, if the last batch is more than an hour old or three or
 more titles have been played since, and then every hour while Stream stays open (the same hourly pass re-reads the
 first pages of the catalogue's sections). When the recommendation service answers with its last batch and says it is
 rebuilding, Stream asks again three minutes later for the fresh one. Home's rows are redrawn as soon as nobody has
@@ -277,6 +313,28 @@ candidates and the model is told to steer away from them, and Good picks steer i
 section lists them with an Undo; `GET /feedback` is the same list as JSON. `GET /health` reports the model and
 whether Ollama answers; `GET /batches` is the same data as JSON; the log is `~/Library/Logs/stream-recs.log`. With Tailscale Serve enabled on the tailnet, `tailscale serve --bg 8770`
 publishes it over HTTPS instead.
+
+**Lists from another bot or person.** The service also takes ready-made lists and the boxes show each as a row of
+its own, titled as posted, with the poster's reason under every title. Any bot or script posts one:
+
+```
+curl -X POST https://recs.senapati.si/lists -H 'Content-Type: application/json' -d '{
+  "pin": "<POST_PIN>", "name": "weekend", "title": "Weekend Picks", "by": "Claude", "profile": "",
+  "items": [{"title": "Sardar 2", "year": "2026", "kind": "movie", "lang": "te", "reason": "A big-screen thriller"},
+            {"title": "The Legend of Hanuman", "kind": "show", "lang": "telugu", "reason": "Binge it"}]}'
+```
+
+`pin` is the service's `POST_PIN` (the service key also works); `name` identifies the list, so posting it again replaces
+it and `DELETE /lists?name=weekend&pin=…` removes it; `profile` is blank for every box or one box's profile key as
+`/batches` shows it; `kind` is `movie` or `show` (blank for either) and `lang` a language name or TMDb code (blank for
+any). A list holds twenty items, the day's picks, and is meant to be posted afresh every day. Each box asks
+`GET /lists?profile=<its key>` every half hour and matches the titles to its catalogue by name, year and language, so
+a title the catalogue does not carry is simply left out. The matched titles lead the **Top Picks for You** row, with
+the poster's name in its heading and the reason under each poster, ahead of the model's picks and the local ranking;
+played and dismissed titles are left out. `/text` lists what is posted. `GET /context?pin=…` gives a posting bot what
+it needs: the current list, whether anything changed since it was posted (`needs_update`, so a daily run can stop
+early), and per profile what the household told the box and watched, the catalogue titles the box offered (to use
+verbatim) and the web page's verdicts. `service/BOT_INSTRUCTIONS.md` is the brief to hand a bot that will do the posting.
 
 **With a local model (Ollama).** Used when the service setting is blank. The *Ollama server* setting points at an [Ollama](https://ollama.com)
 server, `http://127.0.0.1:11434` by default, and *Ollama model* names the model, `gemma3:4b` (Google's Gemma 3, 4B)
@@ -391,7 +449,9 @@ Open **Stream → Settings → AI keys and options**.
 
 | Path | Purpose |
 |---|---|
-| `script.stream/default.py` | The two screens (home rows and grid), navigation, playback, menus |
+| `script.stream/default.py` | The screens (home rows, title page, grid), navigation, playback, menus |
+| `script.stream/resources/lib/recs.py` | The recommendation engine: scoring the index and the YouTube video index, building the home rows |
+| `script.stream/resources/lib/episodes.py` | Episode names, stills and synopses from TMDb and Wikipedia |
 | `script.stream/resources/lib/catalogue.py` | Reading and caching Sasta TV listings, building play links, search ranking |
 | `script.stream/resources/lib/db.py` | The SQLite store |
 | `script.stream/resources/lib/ai.py` | Recommendations and smart search (service, Ollama, Bedrock and Jev calls) |

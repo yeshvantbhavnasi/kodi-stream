@@ -3,6 +3,7 @@ import re
 import sys
 import threading
 import time
+from urllib.parse import parse_qsl
 
 import xbmc
 import xbmcaddon
@@ -18,12 +19,15 @@ import audit  # noqa: E402
 import catalogue as cat  # noqa: E402
 import db  # noqa: E402
 import discover  # noqa: E402
+import downloads as dl  # noqa: E402
+import episodes  # noqa: E402
 import meta  # noqa: E402
+import recs  # noqa: E402
 import report  # noqa: E402
 import youtube as yt  # noqa: E402
 
-ROWS = 16
-ROW_LIMIT = 24  # tiles per row; kept modest so low-memory TV sticks are not asked to hold hundreds of posters
+ROWS = 20
+ROW_LIMIT = 40  # tiles per row before See all; a TV stick holds sixteen rows of forty posters comfortably
 TABS_ID = 100
 CLOSE_ID = 110
 SEARCH_ID = 120
@@ -36,11 +40,17 @@ EPISODE_LIST = 51   # the same screen shows episodes as a text list instead of p
 ACTION_LEFT, ACTION_RIGHT = 1, 2
 ACTION_BACK = (9, 10, 92)  # parent dir, previous menu, nav back
 ACTION_CONTEXT = 117
-ACTION_INFO = 11  # the Info key on a remote plays the trailer of the highlighted title
+ACTION_INFO = 11  # the Info key on a remote plays the trailer of the highlighted title (also in the hold-OK menu)
 ACTION_DELETE = 80  # the Delete / Clear key takes a part-watched title off Continue Watching
 ACTION_DOWN = 4
-TRAILER_ID = 150  # the Watch trailer button in the description panel
 FILTER_ID = 160  # the genre strip under the description panel on Movies and Shows
+BACK_ID = 170  # the Back button on inner screens of the touch layout
+# Touch screens: Kodi turns a tap into a mouse click, a long press into a right click (the context menu) and a
+# one-finger swipe into these gestures; a two-finger swipe left is Back.
+ACTION_MOUSE = range(100, 108)
+ACTION_RIGHT_CLICK = 101
+SWIPE_UP = range(531, 541)
+SWIPE_DOWN = range(541, 551)
 IDLE_AFTER = 60  # seconds without a key press before the home screen starts showing off recommended titles
 NEXT_IN = 10  # seconds the next episode waits before it starts by itself
 NEXT_AT = 60  # seconds before an episode ends (its end titles, mostly) that the Next episode button appears
@@ -51,6 +61,31 @@ TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Li
         ('kids', 'Kids'), ('youtube', 'YouTube'), ('mylist', 'My List'), ('history', 'History')]
 KIDS_TABS = [('home', 'Home'), ('kids', 'Movies and Shows'), ('live', 'Kids TV'), ('mylist', 'My List'), ('history', 'History')]
 CURRENT = {'profile': None}  # the viewer profile in use
+
+
+def touch_mode():
+    """Phones and tablets get the touch layout. Setting: 0 Auto (iPhone and iPad), 1 On, 2 Off."""
+    choice = ADDON.getSetting('touch') or '0'
+    if choice != '0':
+        return choice == '1'
+    return xbmc.getCondVisibility('System.Platform.IOS + !System.Platform.TVOS')
+
+
+TOUCH = touch_mode()
+
+
+def skin(name):
+    return 'script-stream-{0}{1}.xml'.format(name, '-touch' if TOUCH and name in ('home', 'grid') else '')
+
+
+def touch_words(hint):
+    """The remote's wording of a hint, said for a finger: a title plays on a second tap (the first shows it off)."""
+    if not TOUCH:
+        return hint
+    for word in ('Play', 'Resume', 'Open'):
+        hint = hint.replace('OK  ' + word, 'Tap again  ' + word)
+    return hint.replace('OK  Choose', 'Tap  Choose').replace('Hold OK', 'Press and hold')
+
 
 # Sports the viewer can follow, and the words that identify each in the catalogue's section names.
 SPORTS = {
@@ -175,10 +210,10 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
         hint += '     Hold OK  Subscribe to channel, My List'
     elif (titled or item['t'] == 'folder') and not series and cat.section_of(parent or '')[0]:
         hint += '     Hold OK  My List, Like'   # a movie or show from the catalogue
-        li.setProperty('trailer', 'find')  # shows the Watch trailer button; TMDb's own pick replaces this once looked up
+        li.setProperty('trailer', 'find')  # has a trailer (hold OK or Info); TMDb's own pick replaces this once looked up
     else:
         hint += '     Hold OK  More options'
-    li.setProperty('hint', hint)
+    li.setProperty('hint', touch_words(hint))
     li.setProperty('url', item.get('url', ''))
     li.setProperty('i', str(item.get('i', 1)))
     li.setProperty('parent', parent or '')
@@ -198,7 +233,7 @@ def entry_item(entry, **kwargs):
     if entry.get('progress'):
         # A part-watched title: the Delete key, or hold OK, takes it off Continue Watching.
         li.setProperty('removable', '1')
-        li.setProperty('hint', li.getProperty('hint').replace('Hold OK  ', 'Hold OK  Remove, '))
+        li.setProperty('hint', li.getProperty('hint').replace('Hold OK  ', 'Hold OK  Remove, ').replace('Press and hold  ', 'Press and hold  Remove, '))
     return li
 
 
@@ -215,7 +250,7 @@ def tile(label, kind, **props):
     li = xbmcgui.ListItem(label=label)
     li.setProperty('t', kind)
     li.setProperty('card', '1')
-    li.setProperty('hint', 'OK  Choose')
+    li.setProperty('hint', touch_words('OK  Choose'))
     for key, value in props.items():
         li.setProperty(key, value)
     return li
@@ -459,7 +494,7 @@ def offer_next(nxt):
     """In an episode's last minute, show Next episode over the video with its countdown filling the button.
     True to skip to it now (OK pressed, or the countdown ran out); False to let this episode play out."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
-    dialog = NextUp('script-stream-next.xml', ADDON_PATH, 'Default', '1080i')
+    dialog = NextUp(skin('next'), ADDON_PATH, 'Default', '1080i')
     dialog.choice = None
     dialog.setProperty('next', nxt.getLabel())
     dialog.setProperty('button', 'Next episode')
@@ -547,7 +582,8 @@ def autoplay_after(li, window=None):
 def is_title(li):
     """True for movies and shows from the catalogue (not channels, episodes, tiles or 'See all')."""
     return (li.getProperty('t') in ('play', 'folder') and not li.getProperty('logo') and not li.getProperty('series')
-            and not li.getProperty('show') and li.getLabel() != 'See all ›' and bool(cat.section_of(li.getProperty('parent'))[0]))
+            and not li.getProperty('show') and li.getLabel() != 'See all ›' and bool(cat.section_of(li.getProperty('parent'))[0])
+            and not (li.getProperty('t') == 'folder' and cat.is_category(li.getProperty('url'))))
 
 
 def apply_details(li, data):
@@ -710,6 +746,8 @@ def activate(li, trail=()):
 def context_menu(li, in_grid):
     """Long-press / menu-key actions. Returns 'home', 'changed' or None."""
     kind = li.getProperty('t')
+    if kind == 'download':
+        return download_menu(li)
     if kind not in ('play', 'folder') or li.getLabel() == 'See all ›':
         return 'home' if in_grid and xbmcgui.Dialog().contextmenu(['Go to Home']) == 0 else None
     item, parent, group = item_of(li), li.getProperty('parent'), li.getProperty('group') or None
@@ -751,6 +789,10 @@ def context_menu(li, in_grid):
         options.append(('forget', 'Remove from History'))
     if li.getProperty('suggestion'):
         options.append(('dismiss', 'Not interested'))
+    if can_download(li):
+        saved = dl.find(key)
+        options.insert(1, ('download', 'Downloaded ✓' if saved and saved.get('state') == 'done'
+                           else 'Downloading…' if saved and saved.get('state') in dl.ACTIVE else 'Download'))
     if in_grid:
         options.append(('home', 'Go to Home'))
     choice = xbmcgui.Dialog().contextmenu([label for _, label in options])
@@ -762,6 +804,13 @@ def context_menu(li, in_grid):
     if action == 'restart':
         start(li, restart=True)
         return None
+    if action == 'download':
+        saved = dl.find(key)
+        if saved and saved.get('state') in ('done',) + dl.ACTIVE:
+            notify('It is on the Downloads tab')
+            return None
+        download(li)
+        return 'changed'
     if action == 'info':
         details(li)
         return None
@@ -802,6 +851,7 @@ def context_menu(li, in_grid):
         value = 0 if rating == wanted else wanted
         db.rate(item, parent, group, value)
         db.set_meta('recs_dirty', True)
+        recs.mark_dirty()
         if value:
             db.log_event('liked' if value > 0 else 'disliked', item['name'], group, section)
         notify({1: 'Liked', -1: 'Disliked', 0: 'Rating removed'}[value], 2500)
@@ -809,6 +859,7 @@ def context_menu(li, in_grid):
     if action == 'dismiss':
         db.dismiss(item['name'])
         db.log_event('dismissed', item['name'], group, section)
+        recs.mark_dirty()
         return 'changed'
     if action == 'clear':
         db.clear_progress(key)
@@ -819,6 +870,182 @@ def context_menu(li, in_grid):
         notify('Removed from History', 2500)
         return 'changed'
     return 'home'
+
+
+# ---------- downloads (touch screens) ----------
+
+def can_download(li):
+    """Movies and episodes from the catalogue; not live channels or YouTube videos."""
+    if not TOUCH or li.getProperty('t') != 'play':
+        return False
+    item = item_of(li)
+    return not cat.is_live(item) and not yt.is_youtube(item.get('url')) and bool(cat.play_url(li.getProperty('parent'), item))
+
+
+def capture(li):
+    """The title's real video address. Sasta TV only gives it to Kodi's player, so the title is started with the
+    sound off and stopped as soon as it plays. Returns (url, headers) or None."""
+    item, parent = item_of(li), li.getProperty('parent')
+    target = cat.play_url(parent, item)
+    if not target:
+        return None
+    player, monitor = xbmc.Player(), xbmc.Monitor()
+    if player.isPlaying():
+        player.stop()
+        monitor.waitForAbort(1)
+    muted = xbmc.getCondVisibility('Player.Muted')
+    if not muted:
+        xbmc.executebuiltin('Mute')
+    PLAY['cancel'] = True  # nothing should treat this short playback as watching
+    progress = xbmcgui.DialogProgress()
+    progress.create('Stream', 'Getting {0} ready to download…'.format(li.getLabel()))
+    threading.Thread(target=lambda: cat.rpc('Files.GetDirectory', {'directory': target}), daemon=True).start()
+    found = None
+    try:
+        for step in range(START_TIMEOUT * 2):
+            if progress.iscanceled() or monitor.waitForAbort(0.5):
+                break
+            progress.update(min(95, int(100 * step / (START_TIMEOUT * 2))))
+            if player.isPlaying():
+                try:
+                    found = player.getPlayingFile()
+                except Exception:
+                    found = None
+                if found:
+                    break
+    finally:
+        progress.close()
+        if player.isPlaying():
+            player.stop()
+        threading.Thread(target=stop_late_arrival, daemon=True).start()
+        monitor.waitForAbort(0.5)
+        if not muted and xbmc.getCondVisibility('Player.Muted'):
+            xbmc.executebuiltin('Mute')
+    if not found or not found.lower().startswith('http'):
+        audit.event('download_capture_failed', title=li.getLabel(), got=(found or '')[:40])
+        return None
+    url, _, extra = found.partition('|')
+    headers = dict(parse_qsl(extra)) if extra else {}  # Kodi's 'url|Header=value&...' form
+    return url, headers
+
+
+def download(li):
+    """Queue a title for the service to fetch."""
+    item = item_of(li)
+    key = db.play_key(item)
+    existing = dl.find(key)
+    if existing and existing.get('state') == 'done':
+        notify('Already downloaded. It is on the Downloads tab.')
+        return False
+    got = capture(li)
+    if not got:
+        xbmcgui.Dialog().ok('Stream', 'This title could not be prepared for download. Try again, or try another title.')
+        return False
+    series = li.getProperty('series') or ''
+    label = '{0} · {1}'.format(series, item['name']) if series else li.getLabel()
+    dl.add(key, got[0], got[1], item, li.getProperty('parent'), li.getProperty('group'), series, label,
+           plot=li.getProperty('plot'), meta=li.getProperty('meta'))
+    audit.event('download_queued', title=label)
+    db.log_event('downloaded', label, li.getProperty('group') or None, cat.section_of(li.getProperty('parent'))[0])
+    notify('Downloading {0}. It continues while Stream or Kodi is open.'.format(label), 5000)
+    return True
+
+
+def download_tile(entry):
+    """A tile on the Downloads tab: plays the saved file, or shows how far its download has got."""
+    item = dict(entry['item'])
+    thumb = dl.thumb_path(entry)
+    if thumb:
+        item['img'] = thumb  # saved beside the video, so the poster shows without a connection
+    position, duration, done = db.progress(entry['key'])
+    watched = int(100 * position / duration) if duration and position > 30 and not done else 0
+    finished = entry.get('state') == 'done'
+    li = list_item(item, entry['parent'], entry.get('group') or None, meta=dl.status(entry),
+                   label=entry['label'], progress=watched if finished else dl.percent(entry))
+    li.setProperty('t', 'download')
+    li.setProperty('did', entry['id'])
+    li.setProperty('trailer', '')
+    li.setProperty('plot', entry.get('plot') or item.get('plot', ''))
+    if finished:
+        li.setProperty('hint', ('Tap  Resume' if watched else 'Tap  Play') + '     Press and hold  Delete')
+    else:
+        li.setProperty('hint', 'Press and hold  Cancel or continue')
+    return li
+
+
+def play_download(li, restart=False):
+    entry = dl.load(li.getProperty('did'))
+    if not entry or entry.get('state') != 'done' or not os.path.exists(dl.video_path(entry)):
+        notify('Still downloading' if entry and entry.get('state') != 'done' else 'This download is missing')
+        return
+    key, label = entry['key'], entry['label']
+    position, duration, done = db.progress(key)
+    resume = position if (not restart and not done and position > 30) else 0
+    item = xbmcgui.ListItem(label=label)
+    item.setArt({'thumb': dl.thumb_path(entry)})
+    db.add_history(entry['item'], entry['parent'], entry.get('group') or None, entry.get('series') or None, label)
+    player, monitor = xbmc.Player(), xbmc.Monitor()
+    PLAY['cancel'], PLAY['since'] = False, time.time()
+    player.play(dl.video_path(entry), item)
+    for _ in range(40):
+        if player.isPlayingVideo() or monitor.waitForAbort(0.25):
+            break
+    if resume:
+        try:
+            player.seekTime(resume)
+        except Exception:
+            pass
+    kind = cat.section_of(entry['parent'])[0]
+    db.log_event('played', label, entry.get('group') or None, kind, 'downloaded copy')
+    threading.Thread(target=follow, args=(key, label, entry.get('group') or None, kind, False), daemon=True).start()
+
+
+def download_menu(li):
+    """Long press on a Downloads tile. Returns 'changed' when the tab should be redrawn."""
+    entry = dl.load(li.getProperty('did'))
+    if not entry:
+        return 'changed'
+    if entry.get('state') == 'done':
+        position, _, done = db.progress(entry['key'])
+        options = [('play', 'Resume' if position > 30 and not done else 'Play')]
+        if position > 30:
+            options.append(('restart', 'Play from the beginning'))
+        options.append(('delete', 'Delete download'))
+    else:
+        options = []
+        if entry.get('state') in ('expired', 'failed'):
+            options.append(('again', 'Continue download'))
+        options.append(('delete', 'Cancel download'))
+    choice = xbmcgui.Dialog().contextmenu([label for _, label in options])
+    if choice < 0:
+        return None
+    action = options[choice][0]
+    if action in ('play', 'restart'):
+        play_download(li, restart=action == 'restart')
+        return None
+    if action == 'again':
+        source = list_item(entry['item'], entry['parent'], entry.get('group') or None, series=entry.get('series') or None)
+        got = capture(source)
+        if not got:
+            xbmcgui.Dialog().ok('Stream', 'The title could not be reached. Check the connection and try again.')
+            return None
+        dl.add(entry['key'], got[0], got[1], entry['item'], entry['parent'], entry.get('group'), entry.get('series'), entry['label'])
+        notify('Continuing ' + entry['label'])
+        return 'changed'
+    if xbmcgui.Dialog().yesno('Stream', '{0} {1}?'.format('Delete' if entry.get('state') == 'done' else 'Cancel the download of', entry['label'])):
+        dl.cancel(entry)
+        notify('Removed ' + entry['label'], 2500)
+        return 'changed'
+    return None
+
+
+def online(timeout=3):
+    import socket
+    try:
+        socket.create_connection(('sastatv.com', 443), timeout).close()
+        return True
+    except OSError:
+        return False
 
 
 # ---------- first-run setup ----------
@@ -863,6 +1090,7 @@ def onboarding(first_run):
                             'sports': profile.get('sports', []) if sports is None else sports,
                             'people': profile.get('people', [])})
     db.set_meta('recs_dirty', True)
+    recs.mark_dirty()
 
     # Load the chosen languages so there are real titles to pick from.
     busy = xbmcgui.DialogProgressBG()
@@ -912,6 +1140,7 @@ def ask_people(dialog, current, languages):
         typed = dialog.input('Actors or directors, separated by commas')
         people += [t.strip() for t in (typed or '').split(',') if t.strip() and t.strip() not in people]
     db.set_meta('recs_dirty', True)
+    recs.mark_dirty()
     return people[:20]
 
 
@@ -980,10 +1209,375 @@ def sport_match(name):
 
 # ---------- screens ----------
 
+def first_tap(window, control, li):
+    """Touch: True when this tap only highlights an entry rather than acting on it. Movies and shows open their own
+    page on the first tap, so nothing is held back any more; kept for layouts that still want a two-tap flow."""
+    if not TOUCH or not is_title(li) or True:
+        return False
+    key = (control.getId(), control.getSelectedPosition(), li.getLabel())
+    if window.armed == key:
+        window.armed = None
+        return False
+    window.armed = key
+    return True
+
+# ---------- a title's own page ----------
+
+PLAY_B, TRAILER_B, LIST_B, LIKE_B, DISLIKE_B = 301, 302, 303, 304, 305
+SEASONS_ID, EPISODES_ID, ALIKE_ID = 310, 320, 330
+SEASON_LIKE = re.compile(r'season|series|part|vol|chapter|\d', re.I)
+
+
+def open_title(li, trail=()):
+    """Show a movie's or show's page. Returns True when the viewer chose Home, so callers can close too."""
+    audit.event('open', screen=li.getProperty('name') or li.getLabel())
+    win = TitlePage(skin('title'), ADDON_PATH, 'Default', '1080i')
+    win.setup(li)
+    was_busy, BUSY['on'] = BUSY['on'], False
+    OPEN['grids'] += 1
+    try:
+        win.doModal()
+    finally:
+        BUSY['on'] = was_busy
+        OPEN['grids'] -= 1
+    win.finish()
+    fallback = win.fallback
+    del win
+    if fallback:
+        return activate(li, trail)  # not a show after all (a channel or category): open it as a listing
+    return NAV['home']
+
+
+def episode_label(name, number, info):
+    """'3. Kishkindha Bound' when the episode's name is known; the provider's 'Episode 3' otherwise."""
+    return episodes.describe(number, info, quality_of(name)[0])
+
+
+class TitlePage(xbmcgui.WindowXML):
+    def setup(self, li):
+        self.li = li
+        self.name = li.getProperty('name') or li.getLabel()
+        self.show = li.getProperty('t') == 'folder'
+        self.url, self.parent, self.group = li.getProperty('url'), li.getProperty('parent'), li.getProperty('group') or None
+        self.data = {}
+        self.seasons = []        # [(label, url)] for a show
+        self.season = None       # the label of the season whose episodes are on screen
+        self.episode_items = []  # the ListItems of that season, in order
+        self.fallback = False    # set when the folder turns out to list shows rather than seasons
+        self.ready = self.closed = False
+        self.loading = 0
+        self.workers = []
+        self.ui_lock = threading.Lock()
+
+    def spawn(self, target, *args):
+        thread = threading.Thread(target=target, args=args, daemon=True)
+        self.workers.append(thread)
+        thread.start()
+
+    def finish(self):
+        self.closed = True
+        for thread in self.workers:
+            thread.join(3)
+
+    def close(self):
+        if not self.closed:
+            self.closed = True
+            xbmcgui.WindowXML.close(self)
+
+    def onInit(self):
+        if self.ready:
+            return
+        self.ready = True
+        self.setProperty('kids', '1' if db.KIDS else '')
+        self.setProperty('show', '1' if self.show else '')
+        self.setProperty('section', 'Episodes' if self.show else 'More like this')
+        self.describe()
+        self.setProperty('status', 'Loading…' if self.show else '')
+        self.spawn(self.load)
+        self.spawn(watch_visibility, self)
+
+    def describe(self):
+        """Title, facts, synopsis, cast and artwork from what the tile already knows, then from TMDb."""
+        li = self.li
+        clean, tag, note = quality_of(self.name) if not self.show else (self.name, '', '')
+        self.setProperty('title', self.data.get('title') or clean)
+        facts = [meta.rating_text(self.data), self.data.get('year', ''), meta.length_text(self.data),
+                 ', '.join(self.data.get('genres', [])[:3]), cat.title_case(self.group or ''), meta.provider_text(self.data), note]
+        if not self.data:
+            facts = [li.getProperty('meta')]
+        self.setProperty('meta', ' · '.join(f for f in facts if f))
+        plot = li.getProperty('plot')
+        if self.data.get('overview') and (not plot or '.' not in plot):
+            plot = self.data['overview']
+        self.setProperty('plot', plot or '')
+        self.setProperty('cast', meta.people_text(self.data) or li.getProperty('cast'))
+        self.setProperty('fanart', self.data.get('backdrop') or li.getArt('fanart') or '')
+        self.setProperty('poster', li.getArt('thumb') or self.data.get('poster') or '')
+        self.labels()
+
+    def labels(self):
+        """The buttons' wording: Resume or Play (and which episode), My List and Like states."""
+        rating = db.rating(self.name)
+        self.setProperty('list_label', '✓  My List' if db.in_mylist(self.name) else '+  My List')
+        self.setProperty('like_label', '✓  Liked' if rating > 0 else 'Like')
+        self.setProperty('dislike_label', '✓  Disliked' if rating < 0 else 'Dislike')
+        if self.show:
+            self.setProperty('play_label', 'Play')
+        else:
+            position, duration, done = db.progress(db.play_key(item_of(self.li)))
+            self.setProperty('play_label', 'Resume' if position > 30 and duration > 0 and not done else 'Play')
+
+    # ---- loading ----
+
+    def load(self):
+        try:
+            self.data = meta.lookup(self.name, self.show, lang=self.group or '') or {}
+            if self.closed:
+                return
+            apply_details(self.li, self.data)
+            self.describe()
+            if self.show:
+                self.load_seasons()
+            else:
+                self.load_alike()
+        except Exception:
+            audit.error('title.load')
+            self.setProperty('status', '')
+
+    def load_alike(self):
+        alike = discover.similar_entries(self.name, False, self.group or '', 24)
+        if self.closed:
+            return
+        items = [entry_item(e, meta=cat.title_case(e.get('group') or '')) for e in alike]
+        with self.ui_lock:
+            if self.closed:
+                return
+            self.getControl(ALIKE_ID).reset()
+            if items:
+                self.getControl(ALIKE_ID).addItems(items)
+            else:
+                self.setProperty('section', '')
+        if items:
+            enrich(self.getControl(ALIKE_ID), lambda: not self.closed, 12, self.ui_lock)
+
+    def load_seasons(self):
+        try:
+            folders = [f for f in cat.showable(cat.get_dir(self.url)) if f['t'] == 'folder']
+        except Exception as e:
+            self.setProperty('status', 'Could not load: {0}'.format(e))
+            return
+        if self.closed:
+            return
+        if folders and sum(1 for f in folders if SEASON_LIKE.search(f['name'])) < (len(folders) + 1) // 2:
+            # Sub-folders with names like shows, not seasons: this is a channel or category, so show it as a listing.
+            self.fallback = True
+            self.close()
+            return
+        if not folders:
+            # A show without season folders: its episodes sit directly under it.
+            self.seasons = [('Episodes', self.url)]
+        else:
+            folders.sort(key=lambda f: episodes.season_number(f['name']))
+            self.seasons = [(cat.title_case(f['name']), f['url']) for f in folders]
+        last = (db.meta('last:' + self.name) or {}).get('season')
+        chosen = next((n for n, (label, _) in enumerate(self.seasons) if label.lower() == (last or '').lower()), 0)
+        with self.ui_lock:
+            if self.closed:
+                return
+            chips = self.getControl(SEASONS_ID)
+            chips.reset()
+            chips.addItems([xbmcgui.ListItem(label=label) for label, _ in self.seasons])
+            chips.selectItem(chosen)
+        self.show_season(chosen)
+
+    def show_season(self, index):
+        """Put one season's episodes on screen, named from TMDb or Wikipedia when they know the show."""
+        label, url = self.seasons[index]
+        self.season = label
+        self.setProperty('season', label)
+        self.loading += 1
+        token = self.loading
+        self.setProperty('status', 'Loading {0}…'.format(label))
+        try:
+            found = [i for i in cat.showable(cat.get_dir(url)) if i['t'] == 'play']
+        except Exception as e:
+            self.setProperty('status', 'Could not load: {0}'.format(e))
+            return
+        if self.closed or token != self.loading:
+            return
+        found.sort(key=lambda i: cat.natural_key(i['name']))
+        known = {}
+        try:
+            known = episodes.names(self.name, label, self.group or '', self.data) if found else {}
+        except Exception as e:
+            cat.log('episode names failed: {0}'.format(e))
+        if self.closed or token != self.loading:
+            return
+        marks = db.progress_for([db.play_key(i) for i in found])
+        last = db.last_played([db.play_key(i) for i in found])
+        items, upnext = [], None
+        for n, i in enumerate(found):
+            number = episodes.episode_number(i['name']) or n + 1
+            info = known.get(number) or {}
+            position, duration, done = marks.get(db.play_key(i), (0, 0, False))
+            percent = int(100 * position / duration) if (duration and position > 30 and not done) else 0
+            li = list_item(i, url, self.group or self.name, meta='', label=episode_label(i['name'], number, info),
+                           series=self.name, progress=max(1, percent) if percent else 0)
+            li.setProperty('number', str(number))
+            li.setProperty('season', label)
+            li.setProperty('done', '1' if done else '')
+            li.setProperty('plot', info.get('plot') or (i.get('plot') if '.' in (i.get('plot') or '') else '') or self.getProperty('plot'))
+            if info.get('runtime'):
+                li.setProperty('length', '{0}m'.format(int(info['runtime'])))
+            note = 'Watched' if done else ('Resume from ' + clock(position) if position > 30 else '')
+            li.setProperty('meta', ' · '.join(x for x in (li.getProperty('length'), note) if x))
+            if info.get('still'):
+                li.setArt({'thumb': info['still']})
+            elif not li.getArt('thumb') and self.getProperty('fanart'):
+                li.setArt({'thumb': self.getProperty('fanart')})
+            if last and db.play_key(i) == last[0]:
+                upnext = n if not last[1] else min(n + 1, len(found) - 1)
+            items.append(li)
+        if upnext is None:
+            upnext = next((n for n, i in enumerate(found) if not marks.get(db.play_key(i), (0, 0, False))[2]), 0)
+        with self.ui_lock:
+            if self.closed or token != self.loading:
+                return
+            row = self.getControl(EPISODES_ID)
+            row.reset()
+            row.addItems(items)
+            if items:
+                row.selectItem(upnext)
+            self.episode_items = items
+        self.setProperty('status', '' if items else 'No episodes found')
+        if items:
+            self.setProperty('play_label', '{0} {1}'.format('Resume' if items[upnext].getProperty('progress') else 'Play',
+                                                           'E{0}'.format(items[upnext].getProperty('number'))))
+
+    def refresh(self):
+        """After playback: progress marks, the Play button and the episode row are brought up to date."""
+        if self.closed:
+            return
+        self.labels()
+        if self.show and self.seasons:
+            index = next((n for n, (label, _) in enumerate(self.seasons) if label == self.season), 0)
+            self.show_season(index)
+
+    # ---- actions ----
+
+    def play(self, li):
+        start(li)
+        if xbmc.Player().isPlaying():
+            self.spawn(self.after_playback, li)
+
+    def after_playback(self, li):
+        if li.getProperty('series'):
+            autoplay_after(li, self)  # returns once the viewer stops watching, or the season runs out
+        else:
+            follow_until_done(self)
+        self.refresh()
+
+    def play_pressed(self):
+        if self.show:
+            if not self.episode_items:
+                return
+            row = self.getControl(EPISODES_ID)
+            self.play(self.episode_items[max(0, row.getSelectedPosition())])
+        else:
+            self.play(self.li)
+
+    @exclusive
+    def onClick(self, control_id):
+        if control_id == BACK_ID:
+            if not stop_if_playing_behind():
+                self.close()
+        elif control_id == PLAY_B:
+            self.play_pressed()
+        elif control_id == TRAILER_B:
+            watch_trailer(self.li)
+        elif control_id == LIST_B:
+            item, parent, group = item_of(self.li), self.parent, self.group
+            added = db.toggle_mylist(item, parent, group)
+            db.log_event('listed' if added else 'unlisted', item['name'], group, cat.section_of(parent)[0])
+            notify(('Added to' if added else 'Removed from') + ' My List', 2000)
+            self.labels()
+        elif control_id in (LIKE_B, DISLIKE_B):
+            item, parent, group = item_of(self.li), self.parent, self.group
+            value = 1 if control_id == LIKE_B else -1
+            if db.rating(self.name) == value:
+                value = 0
+            db.rate(item, parent, group, value)
+            db.log_event('liked' if value > 0 else 'disliked' if value < 0 else 'unrated', item['name'], group, cat.section_of(parent)[0])
+            db.set_meta('recs_dirty', True)
+            recs.mark_dirty()
+            self.labels()
+        elif control_id == SEASONS_ID:
+            index = self.getControl(SEASONS_ID).getSelectedPosition()
+            if 0 <= index < len(self.seasons) and self.seasons[index][0] != self.season:
+                self.spawn(self.show_season, index)
+            else:
+                self.setFocusId(EPISODES_ID)
+        elif control_id == EPISODES_ID:
+            row = self.getControl(EPISODES_ID)
+            index = row.getSelectedPosition()
+            if 0 <= index < len(self.episode_items):
+                self.play(self.episode_items[index])
+        elif control_id == ALIKE_ID:
+            li = self.getControl(ALIKE_ID).getSelectedItem()
+            if li is not None and is_title(li):
+                if open_title(li):
+                    self.close()
+
+    def onAction(self, action):
+        if self.closed or BUSY['on']:
+            return
+        code = action.getId()
+        if code in ACTION_BACK:
+            if not stop_if_playing_behind():
+                self.close()
+            return
+        focus = self.getFocusId()
+        if focus == SEASONS_ID and code in (ACTION_LEFT, ACTION_RIGHT):
+            # Moving along the season chips shows that season's episodes without needing OK.
+            index = self.getControl(SEASONS_ID).getSelectedPosition()
+            if 0 <= index < len(self.seasons) and self.seasons[index][0] != self.season:
+                self.spawn(self.show_season, index)
+        elif code == ACTION_CONTEXT or (TOUCH and code == ACTION_RIGHT_CLICK):
+            BUSY['on'] = True
+            try:
+                target = self.li
+                if focus == ALIKE_ID:
+                    target = self.getControl(ALIKE_ID).getSelectedItem() or self.li
+                elif focus == EPISODES_ID and self.episode_items:
+                    target = self.episode_items[max(0, self.getControl(EPISODES_ID).getSelectedPosition())]
+                result = context_menu(target, True)
+            finally:
+                BUSY['on'] = False
+            if result == 'home':
+                NAV['home'] = True
+                self.close()
+            elif result == 'changed' or target is self.li:
+                self.labels()
+        elif code == ACTION_INFO:
+            BUSY['on'] = True
+            try:
+                watch_trailer(self.li)
+            finally:
+                BUSY['on'] = False
+
+
+def follow_until_done(window):
+    """Wait while a movie plays from a title page, so the page can refresh its Resume button afterwards."""
+    player, monitor = xbmc.Player(), xbmc.Monitor()
+    while player.isPlayingVideo() and not window.closed:
+        if monitor.waitForAbort(1):
+            return
+
+
 def open_grid(title, url=None, entries=None, group=None, trail=(), plot=''):
     """Show a full-screen grid. Returns True when the viewer chose Home, so callers can close too."""
     audit.event('open', screen=title)
-    win = Grid('script-stream-grid.xml', ADDON_PATH, 'Default', '1080i')
+    win = Grid(skin('grid'), ADDON_PATH, 'Default', '1080i')
     win.setup(title, url, entries, group, trail, plot)
     # The click that opened this screen is still "in progress" underneath; let the new screen take key presses.
     was_busy, BUSY['on'] = BUSY['on'], False
@@ -1008,11 +1602,28 @@ class Grid(xbmcgui.WindowXML):
         self.closed = False
         self.workers = []
         self.ui_lock = threading.Lock()
+        self.armed = None  # touch: the title shown off by a first tap; a second tap on it plays
 
     def spawn(self, target, *args):
         thread = threading.Thread(target=target, args=args, daemon=True)
         self.workers.append(thread)
         thread.start()
+
+    def pager(self):
+        """Touch: a finger scrolls the tiles without moving the highlight, so the next page is fetched when the
+        last screenful comes into view rather than when the highlight nears the end."""
+        monitor = xbmc.Monitor()
+        while not self.closed and not monitor.waitForAbort(1):
+            if not self.next_url or self.loading or self.view != PANEL:
+                continue
+            try:
+                pages = int(xbmc.getInfoLabel('Container({0}).NumPages'.format(PANEL)) or 0)
+                page = int(xbmc.getInfoLabel('Container({0}).CurrentPage'.format(PANEL)) or 0)
+            except ValueError:
+                continue
+            if pages and page >= pages - 1:
+                url, self.next_url = self.next_url, None
+                self.load(url)
 
     def finish(self):
         """Mark the window closed and give its background work a moment to stop before the window is dropped."""
@@ -1045,6 +1656,8 @@ class Grid(xbmcgui.WindowXML):
         self.setProperty('status', 'Loading…')
         self.spawn(self.load, self.url)
         self.spawn(watch_visibility, self)
+        if TOUCH:
+            self.spawn(self.pager)
 
     def title_items(self, url, titles):
         """Build tiles for a listing. Inside a show, episodes are put in order and marked with their progress."""
@@ -1195,19 +1808,14 @@ class Grid(xbmcgui.WindowXML):
 
     @exclusive
     def onClick(self, control_id):
-        if control_id == TRAILER_ID and not self.loading:
-            li = self.panel.getSelectedItem()
-            if li and (is_title(li) or li.getProperty('show')):
-                BUSY['on'] = True
-                try:
-                    watch_trailer(li)
-                finally:
-                    BUSY['on'] = False
+        if control_id == BACK_ID:
+            if not stop_if_playing_behind():
+                self.close()
             return
         if control_id not in (PANEL, EPISODE_LIST) or self.loading:
             return
         li = self.panel.getSelectedItem()
-        if li is None:
+        if li is None or first_tap(self, self.panel, li):
             return
         kind = li.getProperty('t')
         if kind == 'home':
@@ -1221,6 +1829,8 @@ class Grid(xbmcgui.WindowXML):
                                              url=li.getProperty('url') + cat.quote(query, safe=''), group=self.group))
         elif kind == 'filter':
             self.leave_if_home(open_grid(li.getLabel(), url=li.getProperty('url'), group=self.group))
+        elif is_title(li):
+            self.leave_if_home(open_title(li))
         elif kind == 'play':
             start(li)
             if xbmc.Player().isPlaying():
@@ -1241,20 +1851,13 @@ class Grid(xbmcgui.WindowXML):
     def onAction(self, action):
         if self.closed or BUSY['on']:
             return
-        try:
-            on_button = self.getFocusId() == TRAILER_ID
-        except Exception:
-            on_button = False
-        if on_button and (action.getId() in ACTION_BACK or action.getId() in (ACTION_DOWN, ACTION_LEFT, ACTION_RIGHT)):
-            self.setFocusId(self.view)  # the button hands back to the tiles
-            return
         if action.getId() in ACTION_BACK:
             if not stop_if_playing_behind():
                 self.close()
             return
         if not self.ready or self.loading:
             return
-        if action.getId() == ACTION_CONTEXT:
+        if action.getId() == ACTION_CONTEXT or (TOUCH and action.getId() == ACTION_RIGHT_CLICK):
             li = self.panel.getSelectedItem()
             BUSY['on'] = True
             try:
@@ -1302,18 +1905,30 @@ class Home(xbmcgui.WindowXML):
         self.ui_lock = threading.Lock()   # held for every change to the row controls
         self.pending = ('home', 0)
         self.settling = False
-        self.hero_row = FIRST_ROW
         self.filter = None  # genre chosen on the Movies or Shows strip
         self.strip_for = None  # which tab the strip's chips were built for
+        self.armed = None  # touch: the title shown off by a first tap
         HOME['window'] = self
         self.setProperty('kids', '1' if db.KIDS else '')
         tabs = []
-        for key, label in (KIDS_TABS if db.KIDS else TABS):
+        names = list(KIDS_TABS if db.KIDS else TABS)
+        if TOUCH:
+            # A phone's top bar has less room: My List and History move to Settings, and Downloads takes their place.
+            names = [t for t in names if t[0] not in ('mylist', 'history')] + [('downloads', 'Downloads')]
+        for key, label in names:
             li = xbmcgui.ListItem(label=label)
             li.setProperty('key', key)
             tabs.append(li)
         self.getControl(TABS_ID).addItems(tabs)
-        self.load_tab('home')
+        if TOUCH and any(e.get('state') == 'done' for e in dl.all_entries()) and not online():
+            # No connection: open where something can still be watched.
+            self.getControl(TABS_ID).selectItem([n for n, _ in names].index('downloads'))
+            self.load_tab('downloads')
+            notify('No connection. Showing your downloads.', 4000)
+        else:
+            self.load_tab('home')
+        if TOUCH:
+            self.spawn(self.download_progress)
         self.spawn(self.background)
         self.spawn(self.keeper)
         self.spawn(self.billboard)
@@ -1329,9 +1944,17 @@ class Home(xbmcgui.WindowXML):
                 continue
             try:
                 cat.warm_index(ai.REFRESH_AFTER)
-                if not ai.recommend(cat.top_groups()):
+                meta.warm(120)
+                gathered = recs.refresh_videos()
+                if recs.resolve_lists() or gathered:
+                    recs.mark_dirty()
+                made = ai.recommend(cat.top_groups(), pool=recs.pool_for_model())
+                if made:
+                    recs.mark_dirty()
+                    notify('Recommendations updated' + ai.engine_note().replace('  \u00b7  ', ' \u00b7 '), 4000)
+                if not recs.stale():
                     continue
-                notify('Recommendations updated' + ai.engine_note().replace('  \u00b7  ', ' \u00b7 '), 4000)
+                recs.rows(force=True)
                 idle = xbmc.getGlobalIdleTime() >= IDLE_AFTER and not OPEN['grids'] and xbmcgui.getCurrentWindowDialogId() == 9999
                 if self.tab == 'home' and idle and not self.closed:
                     self.load_tab('home')
@@ -1342,9 +1965,14 @@ class Home(xbmcgui.WindowXML):
         """Keep the local index and the suggestions fresh without holding up the screen."""
         try:
             cat.warm_index()
-            # Show the new row straight away only if the viewer has not started navigating; otherwise it appears next time Home loads.
-            if ai.recommend(cat.top_groups()) and not self.touched and not self.closed and self.tab == 'home':
-                self.load_tab('home')
+            meta.warm(40)
+            gathered = recs.refresh_videos()
+            gathered = recs.resolve_lists() or gathered  # both run; either makes the rows stale
+            # Show the new rows straight away only if the viewer has not started navigating; otherwise they appear next time Home loads.
+            if ai.recommend(cat.top_groups(), pool=recs.pool_for_model()) or gathered:
+                recs.rows(force=True)
+                if not self.touched and not self.closed and self.tab == 'home':
+                    self.load_tab('home')
         except Exception as e:
             cat.log('background refresh failed: {0}'.format(e))
             audit.error('home.background')
@@ -1449,6 +2077,15 @@ class Home(xbmcgui.WindowXML):
         return rows
 
     def settings_tiles(self):
+        tiles = []
+        if TOUCH:
+            tiles = [tile('My List', 'setting', action='open_mylist', meta='{0} titles'.format(len(db.mylist())),
+                          plot='Titles you saved with Add to My List. Press and hold any title to add it.'),
+                     tile('History', 'setting', action='open_history', meta='{0} played'.format(db.history_count()),
+                          plot='Everything played on this profile, newest first, with unfinished titles at the top.')]
+        return tiles + self.option_tiles()
+
+    def option_tiles(self):
         last = db.meta('recs', {})
         engine = ai.engine_name(last.get('source')) or ('your languages and likes' if last.get('source') == 'local' else 'not run yet')
         profile = db.meta('profile') or {}
@@ -1465,7 +2102,7 @@ class Home(xbmcgui.WindowXML):
                  plot='Sign in to YouTube and add your own Google API key (pasted from a phone or computer). '
                       'Related Videos work without a key; your Subscriptions, History, Recommendations and Trending need it.'),
             tile('Refresh', 'setting', action='refresh', meta='Last built with: ' + engine,
-                 plot='Build a new Recommended for You row now.'),
+                 plot='Rebuild the Top Picks and the other recommendation rows now.'),
             tile('Reset', 'setting', action='clear_recs', plot='Remove the saved recommendations.'),
             tile('Forget', 'setting', action='clear_history',
                  plot='Forget everything played, including resume points and watched episodes.'),
@@ -1484,6 +2121,39 @@ class Home(xbmcgui.WindowXML):
                  plot='Set or change the PIN that is asked for when someone tries to leave a kids profile, switch profile or close Stream from it. '
                       'Without a PIN a child holding the remote can wander into everything else.'),
         ]
+
+    def download_rows(self):
+        entries = dl.all_entries()
+        if db.KIDS:
+            entries = [e for e in entries if cat.section_of(e['parent'])[0] == 'Kids' or (e.get('group') or '').lower() == 'kids']
+        going = [download_tile(e) for e in entries if e.get('state') != 'done']
+        saved = [download_tile(e) for e in entries if e.get('state') == 'done']
+        return ([('items', 'Downloading', going)] if going else []) + ([('items', 'Downloaded', saved)] if saved else [])
+
+    def download_progress(self):
+        """While the Downloads tab shows: keep the tiles' progress current, and redraw when a download finishes."""
+        monitor = xbmc.Monitor()
+        while not self.closed and not monitor.waitForAbort(2):
+            if self.tab != 'downloads' or BUSY['on']:
+                continue
+            finished = False
+            with self.ui_lock:
+                if self.closed or self.tab != 'downloads':
+                    continue
+                for n in range(ROWS):
+                    if self.getProperty('row{0}.title'.format(n)) != 'Downloading':
+                        continue
+                    control = self.getControl(FIRST_ROW + n)
+                    for i in range(control.size()):
+                        li = control.getListItem(i)
+                        entry = dl.load(li.getProperty('did'))
+                        if entry is None or entry.get('state') == 'done':
+                            finished = True
+                            continue
+                        li.setProperty('meta', dl.status(entry))
+                        li.setProperty('progress', str(min(99, max(1, dl.percent(entry)))) if dl.percent(entry) else '')
+            if finished and not self.closed:
+                self.load_tab('downloads', focus=False)
 
     def kids_live_rows(self):
         root = [f for f in cat.get_dir(cat.URLS['live']) if f['t'] == 'folder' and f['name'].lower() == 'kids']
@@ -1552,7 +2222,7 @@ class Home(xbmcgui.WindowXML):
                                meta='Channel')
                 li.setProperty('wide', '1')
                 li.setProperty('channel', channel['id'])
-                li.setProperty('hint', 'OK  Open     Hold OK  Unsubscribe')
+                li.setProperty('hint', touch_words('OK  Open     Hold OK  Unsubscribe'))
                 tiles.append(li)
             rows.append(('items', 'Your Subscriptions', tiles))
         else:
@@ -1568,6 +2238,8 @@ class Home(xbmcgui.WindowXML):
 
     def specs(self, key):
         """Rows for a tab: ('items', title, [ListItem]) or ('dir', title, url, group, only)."""
+        if key == 'downloads':
+            return self.download_rows()
         if key == 'history':
             return self.history_rows()
         if db.KIDS:
@@ -1581,23 +2253,18 @@ class Home(xbmcgui.WindowXML):
             resume = db.continue_watching()
             if resume:
                 rows.append(('items', 'Continue Watching', [entry_item(e) for e in resume]))
-            picks = db.suggestions()
-            if picks:
-                rows.append(('items', 'Recommended for You' + ai.engine_note(),
-                             [entry_item(p, meta=p['reason'] or cat.title_case(p.get('group') or ''), suggestion=True) for p in picks]))
-            recent = db.recent(30)
-            if recent:
-                rows.append(('items', 'Recently Played', [entry_item(e) for e in recent]))
-            rows += self.discovery_rows()
-            liked = db.rated(1)
-            if liked:
-                rows.append(('items', 'Liked by You', [entry_item(e) for e in liked]))
+            for title, entries in recs.rows(fetch=True):  # every visit to Home asks the service for new lists and rebuilds
+                tiles = []
+                for e in entries:
+                    li = entry_item(e, meta=e.get('meta'), suggestion=bool(e.get('suggestion')))
+                    if e.get('number'):
+                        li.setProperty('number', str(e['number']))  # posted picks are numbered on their posters
+                    tiles.append(li)
+                rows.append(('items', title, tiles))
+            saved = db.mylist()
+            if saved:
+                rows.append(('items', 'My List', [entry_item(e) for e in saved]))
             rows += self.sports_rows(0)
-            rows += self.language_rows(u['movies'], '{0} Movies', 3)
-            rows += self.language_rows(u['web_series'], '{0} Web Series', 2)
-            rows += english_movies
-            if english:
-                rows.append(('dir', 'Kids', u['kids'], 'Kids', None))
             if yt.installed():
                 if yt.has_key():
                     rows.append(('dir', 'YouTube', yt.url('special/recommendations'), 'YouTube', None))
@@ -1740,6 +2407,8 @@ class Home(xbmcgui.WindowXML):
                     empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.',
                              'movies': 'Nothing found for this genre yet.', 'shows': 'Nothing found for this genre yet.',
                              'history': 'Nothing has been played on this profile yet.',
+                             'downloads': 'Nothing downloaded yet. Press and hold a movie or an episode and choose Download '
+                                          'to keep it on this device and watch it without a connection.',
                              'youtube': yt.KEY_HELP}
                     self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
             return
@@ -1821,7 +2490,9 @@ class Home(xbmcgui.WindowXML):
         busy.create('Stream', 'Building recommendations…')
         try:
             cat.warm_index()
-            made = ai.recommend(cat.top_groups(), force=True)
+            meta.warm(40)
+            made = ai.recommend(cat.top_groups(), force=True, pool=recs.pool_for_model())
+            recs.rows(force=True)
         except Exception as e:
             made = False
             cat.log('recommend failed: {0}'.format(e))
@@ -1830,6 +2501,9 @@ class Home(xbmcgui.WindowXML):
         return made
 
     def run_setting(self, action):
+        if action in ('open_mylist', 'open_history'):
+            self.load_tab(action[5:])  # shown like a tab; Back returns to Home
+            return
         if action == 'send_log':
             if xbmcgui.Dialog().yesno('Stream', 'Send the latest activity log to the developer?\nIt includes what was opened and played on this profile.'):
                 note = xbmcgui.Dialog().input('What went wrong? (optional)')
@@ -1926,13 +2600,16 @@ class Home(xbmcgui.WindowXML):
 
     def billboard(self):
         """After a minute without a key press, walk the highlight along the recommended titles so the description
-        panel shows them off, one every few seconds, until someone picks up the remote."""
+        panel shows them off, one every few seconds, until someone picks up the remote. Not on a touch screen, where
+        it would pull the rows out from under a finger."""
+        if TOUCH:
+            return
         monitor = xbmc.Monitor()
         while not self.closed and not monitor.waitForAbort(6):
             if (self.tab != 'home' or BUSY['on'] or OPEN['grids'] or xbmc.getGlobalIdleTime() < IDLE_AFTER
                     or xbmc.Player().isPlaying() or xbmcgui.getCurrentWindowDialogId() != 9999):
                 continue
-            row = next((FIRST_ROW + n for n in range(ROWS) if self.getProperty('row{0}.title'.format(n)).startswith('Recommended for You')), None)
+            row = next((FIRST_ROW + n for n in range(ROWS) if self.getProperty('row{0}.title'.format(n)).startswith('Top Picks')), None)
             if row is None:
                 row = next((FIRST_ROW + n for n in range(ROWS) if self.getProperty('row{0}.title'.format(n)).endswith(('Movies', 'Web Series'))), None)
             if row is None:
@@ -1946,21 +2623,27 @@ class Home(xbmcgui.WindowXML):
                         continue
                     if self.getFocusId() != row:
                         self.setFocusId(row)
-                        self.hero_row = row
-                        self.setProperty('hero', str(row))
                     control.selectItem((control.getSelectedPosition() + 1) % control.size())
                 except Exception:
                     continue
 
+    def step_rows(self, step, focus):
+        """Touch: a swipe up moves to the next row, a swipe down to the one before (from the first row, the tabs)."""
+        rows = [FIRST_ROW + n for n in range(ROWS) if self.getProperty('row{0}.title'.format(n))]
+        if not rows:
+            return
+        if focus in rows:
+            at = rows.index(focus) + step
+        else:
+            at = 0 if step > 0 else -1
+        try:
+            self.setFocusId(TABS_ID if at < 0 else rows[min(at, len(rows) - 1)])
+        except Exception:
+            pass
+
     def selected_tab(self):
         li = self.getControl(TABS_ID).getSelectedItem()
         return li.getProperty('key') if li else None
-
-    @exclusive
-    def onFocus(self, control_id):
-        if FIRST_ROW <= control_id < FIRST_ROW + ROWS:
-            self.hero_row = control_id
-            self.setProperty('hero', str(control_id))
 
     def play_trailer_of(self, control_id):
         li = self.getControl(control_id).getSelectedItem()
@@ -1975,8 +2658,6 @@ class Home(xbmcgui.WindowXML):
         if control_id == CLOSE_ID:
             if self.may_leave():
                 self.close()
-        elif control_id == TRAILER_ID:
-            self.play_trailer_of(self.hero_row)
         elif control_id == SEARCH_ID:
             self.search()
         elif control_id == GEAR_ID:
@@ -2000,16 +2681,23 @@ class Home(xbmcgui.WindowXML):
             else:
                 self.load_tab(key)
         elif FIRST_ROW <= control_id < FIRST_ROW + ROWS:
-            li = self.getControl(control_id).getSelectedItem()
-            if li is None:
+            control = self.getControl(control_id)
+            li = control.getSelectedItem()
+            if li is None or first_tap(self, control, li):
                 return
             kind = li.getProperty('t')
+            if kind == 'download':
+                play_download(li)
+                return
             if kind == 'lang':
                 cat.state['live_lang'] = li.getProperty('lang')
                 cat.save_state()
                 self.load_tab('live')
             elif kind == 'setting':
                 self.run_setting(li.getProperty('action'))
+            elif is_title(li):
+                if open_title(li):
+                    self.go_home()
             elif activate(li):
                 self.go_home()
             elif kind == 'play' and li.getProperty('series') and xbmc.Player().isPlaying():
@@ -2025,6 +2713,14 @@ class Home(xbmcgui.WindowXML):
             focus = 0  # nothing has focus yet
         code = action.getId()
         self.touched = True
+        if TOUCH:
+            if code == ACTION_RIGHT_CLICK:
+                code = ACTION_CONTEXT  # a long press
+            elif code in SWIPE_UP or code in SWIPE_DOWN:
+                self.step_rows(1 if code in SWIPE_UP else -1, focus)
+                return
+            elif code in ACTION_MOUSE:
+                return  # taps arrive as clicks; nothing else to do
         if focus == 0 and code not in ACTION_BACK:
             # Nothing is highlighted (this can happen when Stream opens by itself as Kodi starts): any key press
             # puts the highlight on the first row, or on the top bar if the rows are still loading.
@@ -2033,16 +2729,11 @@ class Home(xbmcgui.WindowXML):
             except Exception:
                 pass
             return
-        if focus == TRAILER_ID and code in (ACTION_RIGHT, ACTION_DOWN):
-            self.setFocusId(self.hero_row)  # back to the tile the button belongs to
-            return
         if code in ACTION_BACK:
-            # Back climbs one level at a time: trailer button -> its row -> tabs -> Home tab -> exit.
+            # Back climbs one level at a time: row -> tabs -> Home tab -> exit.
             if stop_if_playing_behind():
                 return
-            if focus == TRAILER_ID:
-                self.setFocusId(self.hero_row)
-            elif focus not in TOP_BAR:
+            if focus not in TOP_BAR:
                 self.setFocusId(TABS_ID)
             elif self.tab != 'home':
                 self.go_home(focus=False)
@@ -2056,7 +2747,7 @@ class Home(xbmcgui.WindowXML):
                     self.close()
         elif code == ACTION_CONTEXT and FIRST_ROW <= focus < FIRST_ROW + ROWS:
             li = self.getControl(focus).getSelectedItem()
-            if li and li.getProperty('t') in ('play', 'folder'):
+            if li and li.getProperty('t') in ('play', 'folder', 'download'):
                 BUSY['on'] = True
                 try:
                     result = context_menu(li, False)
@@ -2064,7 +2755,7 @@ class Home(xbmcgui.WindowXML):
                     BUSY['on'] = False
                 if result == 'home':
                     self.go_home()
-                elif result == 'changed' and self.tab in ('home', 'mylist', 'youtube', 'history'):
+                elif result == 'changed' and self.tab in ('home', 'mylist', 'youtube', 'history', 'downloads'):
                     self.load_tab(self.tab)
         elif code == ACTION_INFO and FIRST_ROW <= focus < FIRST_ROW + ROWS:
             self.play_trailer_of(focus)
@@ -2100,7 +2791,7 @@ def run():
             audit.event('profile', kids=bool(profile.get('kids')), remembered=True)
             db.use_profile(profile)
             cat.load_state()
-            window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
+            window = Home(skin('home'), ADDON_PATH, 'Default', '1080i')
             xbmcgui.Window(10000).setProperty('script.stream.running', str(time.time()))
             audit.event('window_open')
             try:
@@ -2138,7 +2829,7 @@ def run():
         cat.load_state()
         if not profile.get('kids') and db.meta('profile') is None:
             onboarding(True)
-        window = Home('script-stream-home.xml', ADDON_PATH, 'Default', '1080i')
+        window = Home(skin('home'), ADDON_PATH, 'Default', '1080i')
         xbmcgui.Window(10000).setProperty('script.stream.running', str(time.time()))
         audit.event('window_open')
         try:

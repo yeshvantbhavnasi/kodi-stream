@@ -8,31 +8,13 @@
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>180</height><texture>top_fade.png</texture></control>
         <control type="label"><left>60</left><top>30</top><width>1100</width><height>60</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
         <control type="label"><left>1180</left><top>30</top><width>360</width><height>60</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
-        <!-- Watch trailer for the highlighted movie or show; Up from the top row reaches it -->
-        <control type="image"><left>1600</left><top>31</top><width>260</width><height>48</height><texture colordiffuse="4DFFFFFF" border="23">pill.png</texture><visible>!String.IsEmpty(Container(50).ListItem.Property(trailer)) + String.IsEmpty(Window.Property(mode))</visible></control>
-        <control type="image"><left>1600</left><top>31</top><width>260</width><height>48</height><texture colordiffuse="FFFFFFFF" border="23">pill.png</texture><visible>Control.HasFocus(150)</visible></control>
-        <control type="button" id="150">
-            <left>1600</left><top>31</top><width>260</width><height>48</height>
-            <texturefocus>-</texturefocus>
-            <texturenofocus>-</texturenofocus>
-            <label>Watch trailer</label>
-            <font>font13</font>
-            <align>center</align>
-            <aligny>center</aligny>
-            <textcolor>FFFFFFFF</textcolor>
-            <focusedcolor>FF141414</focusedcolor>
-            <onleft>150</onleft>
-            <onright>150</onright>
-            <onup>150</onup>
-            <ondown>50</ondown>
-            <visible>Control.HasFocus(150) | [!String.IsEmpty(Container(50).ListItem.Property(trailer)) + String.IsEmpty(Window.Property(mode))]</visible>
-        </control>
+        <!-- the highlighted title's facts and synopsis -->
         <control type="textbox"><left>60</left><top>92</top><width>1800</width><height>70</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR]  $INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
         <control type="panel" id="50">
             <visible>String.IsEmpty(Window.Property(mode))</visible>
             <onleft>noop</onleft>
             <onright>noop</onright>
-            <onup>150</onup>
+            <onup>noop</onup>
             <ondown>noop</ondown>
             <left>60</left><top>180</top><width>1810</width><height>900</height>
             <orientation>vertical</orientation>

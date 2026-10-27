@@ -44,6 +44,14 @@ def split_title(name):
     return title.strip(), year.group(1) if year else ''
 
 
+CINEMA_COPY = re.compile(r'\b(PreDVD|Pre-DVD|DVDScr|HDCAM|HDTS|CAM|TS)\b', re.I)
+
+
+def is_cinema_copy(name):
+    """True for a cinema recording ('Sardar 2 (2026) PreDVD'); a clean copy is preferred when both exist."""
+    return bool(CINEMA_COPY.search(name or ''))
+
+
 def lang_code(language):
     return LANG_CODES.get((language or '').lower().strip(), '')
 
@@ -90,7 +98,7 @@ def _fetch(name, show, lang=''):
     if not chosen:
         return {}
     detail = _get('{0}/{1}/{2}'.format(TMDB, kind, chosen['id']),
-                  {'api_key': key, 'append_to_response': 'videos,reviews,external_ids,credits'})
+                  {'api_key': key, 'append_to_response': 'videos,reviews,external_ids,credits,watch/providers'})
     videos = (detail.get('videos') or {}).get('results') or []
     trailers = [v for v in videos if v.get('site') == 'YouTube' and v.get('type') in ('Trailer', 'Teaser')]
     trailers.sort(key=lambda v: (v.get('type') != 'Trailer', not v.get('official', False)))
@@ -125,6 +133,8 @@ def _fetch(name, show, lang=''):
         'reviews': reviews,
         'imdb_id': detail.get('imdb_id') or (detail.get('external_ids') or {}).get('imdb_id') or '',
         'imdb_rating': '',
+        'providers': providers_of(detail),
+        'network': ', '.join(n.get('name', '') for n in (detail.get('networks') or [])[:2] if n.get('name')),
     }
     omdb = _setting('omdb_key')
     if omdb and data['imdb_id']:
@@ -137,13 +147,47 @@ def _fetch(name, show, lang=''):
     return data
 
 
+def providers_of(detail):
+    """The streaming services that carry a title in India, by TMDb's names, subscription services first."""
+    region = ((detail.get('watch/providers') or {}).get('results') or {}).get('IN') or {}
+    names = []
+    for kind in ('flatrate', 'ads', 'free'):
+        for p in region.get(kind) or []:
+            if p.get('provider_name') and p['provider_name'] not in names:
+                names.append(p['provider_name'])
+    return names[:4]
+
+
+def provider_text(data):
+    """'Netflix' or 'Aha · ZEE5': where a title streams, for the title page."""
+    names = data.get('providers') or []
+    if not names and data.get('network'):
+        names = [data['network']]
+    return ' · '.join(names[:2])
+
+
+def warm(limit=60):
+    """Look up a few indexed titles that have never been looked up, so genre, rating and streaming-service rows
+    fill in over the first day. One at a time, in the background."""
+    if not enabled():
+        return 0
+    done = 0
+    for name, show, lang in db.metadata_missing(limit):
+        try:
+            lookup(name, show, lang=lang)
+            done += 1
+        except Exception:
+            break
+    return done
+
+
 def lookup(name, show=False, fetch=True, lang=''):
     """Details for a title from the cache, fetching from TMDb when allowed. Returns {} when nothing is known."""
     cached = db.get_metadata(name)
     if cached is not None:
         data, age = cached
         # Entries saved by older versions have no cast; they are looked up again so the description panel fills in.
-        fresh = age < RETRY if not data else (age < KEEP and 'cast' in data)
+        fresh = age < RETRY if not data else (age < KEEP and 'cast' in data and 'providers' in data)
         if fresh or not fetch or not enabled():
             return data
     if not fetch or not enabled():
