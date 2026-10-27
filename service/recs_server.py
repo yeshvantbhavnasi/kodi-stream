@@ -29,6 +29,11 @@ Searches are answered on the spot and remembered, so a repeated query is instant
     POST /related {"pin", "title": "Romanchakam", "by", "items": [...]} titles like one title, from a bot: they lead
                    More like this on that title's page and its Because you watched row. GET /related lists them all;
                    /context names the titles that want one (related_wanted / related_missing).
+    POST /catalogue from a box: the titles its index holds, newest first per language and kind. GET /titles
+                   (key, or ?pin=) with lang, kind, days and limit lists them across boxes; /context carries the
+                   newest per language as "catalogue".
+    GET  /cricket  live and upcoming cricket matches from ESPN's public feed (see cricket.py), refreshed every 30
+                   minutes: {"at", "matches": [{"name", "abbr", "series", "start", "state", "status", "india", "major"}]}
     GET  /context  (pin) what a posting bot needs: the current list, whether anything changed since it was posted
                    (needs_update), and per box profile what the household told us and watched (as the box sent it),
                    the catalogue titles it offered (names to use verbatim) and the web page's good/bad verdicts.
@@ -62,6 +67,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlparse
 
 import charts
+import cricket
 
 PORT = int(os.environ.get('PORT', '8770'))
 BIND = [h.strip() for h in os.environ.get('BIND', '127.0.0.1').split(',') if h.strip()]
@@ -82,6 +88,9 @@ BUILDING = set()               # keys being rebuilt right now
 TOP10 = {}                     # the merged charts, see charts.build()
 TOP10_FILE = os.path.join(os.path.dirname(STATE), 'top10.json')
 TOP10_EVERY = 12 * 3600
+CRICKET = {}                   # live and upcoming matches, see cricket.build()
+CRICKET_FILE = os.path.join(os.path.dirname(STATE), 'cricket.json')
+CRICKET_EVERY = 30 * 60
 
 
 def log(msg):
@@ -98,6 +107,7 @@ CREATE TABLE IF NOT EXISTS feedback (profile TEXT, name TEXT, verdict TEXT, at R
 CREATE TABLE IF NOT EXISTS lists (name TEXT PRIMARY KEY, title TEXT, by TEXT, profile TEXT, at REAL, items TEXT, exclude TEXT);
 CREATE TABLE IF NOT EXISTS shown (profile TEXT PRIMARY KEY, at REAL, rows TEXT, recent TEXT);
 CREATE TABLE IF NOT EXISTS related (key TEXT PRIMARY KEY, title TEXT, by TEXT, at REAL, items TEXT);
+CREATE TABLE IF NOT EXISTS catalogue (profile TEXT PRIMARY KEY, at REAL, titles TEXT);
 '''
 JSON_COLUMNS = ('candidates', 'picks')
 
@@ -237,6 +247,51 @@ def related_all():
     return {r['key']: {'title': r['title'], 'by': r['by'], 'at': r['at'], 'items': json.loads(r['items'] or '[]')} for r in rows}
 
 
+def save_catalogue(profile, titles):
+    """The titles a box's catalogue index holds (newest first per language and kind), as the box sent them."""
+    clean = []
+    for t in list(titles or [])[:3000]:
+        if not isinstance(t, dict) or not t.get('name'):
+            continue
+        clean.append({'name': str(t['name'])[:200], 'kind': str(t.get('kind') or '')[:20], 'lang': str(t.get('lang') or '')[:30],
+                      'year': str(t.get('year') or '')[:4], 'added': str(t.get('added') or '')[:10],
+                      'rating': t.get('rating') or 0, 'genres': [str(g)[:30] for g in list(t.get('genres') or [])[:4]],
+                      'plot': str(t.get('plot') or '')[:160]})
+    with connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO catalogue (profile, at, titles) VALUES (?,?,?)', (profile, time.time(), json.dumps(clean)))
+    return len(clean)
+
+
+LANG_NAMES = {'te': 'telugu', 'hi': 'hindi', 'en': 'english', 'ta': 'tamil', 'ml': 'malayalam', 'kn': 'kannada', 'mr': 'marathi',
+              'gu': 'gujarati', 'pa': 'punjabi', 'bn': 'bengali'}
+
+
+def catalogue_titles(lang='', kind='', days=0, limit=200):
+    """Titles across every box's index, newest first, one entry per title and language. lang is a code or a name,
+    kind 'movie' or 'show', days limits to arrivals in the last N days."""
+    with connect() as conn:
+        rows = conn.execute('SELECT titles FROM catalogue').fetchall()
+    want_lang = LANG_NAMES.get((lang or '').lower(), (lang or '').lower())
+    want_kind = {'movie': 'movie', 'movies': 'movie', 'show': 'show', 'shows': 'show', 'tv': 'show'}.get((kind or '').lower(), '')
+    since = time.strftime('%Y-%m-%d', time.localtime(time.time() - days * 86400)) if days else ''
+    seen, out = set(), []
+    for r in rows:
+        for t in json.loads(r['titles'] or '[]'):
+            key = (plain(t['name']), (t.get('lang') or '').lower())
+            if key in seen:
+                continue
+            if want_lang and not (t.get('lang') or '').lower().startswith(want_lang):
+                continue
+            if want_kind and t.get('kind') != want_kind:
+                continue
+            if since and (t.get('added') or '') < since:
+                continue
+            seen.add(key)
+            out.append(t)
+    out.sort(key=lambda t: (t.get('added') or '', t.get('year') or ''), reverse=True)
+    return out[:limit]
+
+
 def save_shown(profile, rows, recent=()):
     """What a box is showing right now: every row with its titles, as the box built them, and the titles the
     household played last (so a bot knows which titles want a related list)."""
@@ -310,12 +365,24 @@ def context_for_bot():
             seen.add(plain(item['title']))
             wanted.append(item['title'])
     missing = [t for t in wanted if plain(t) not in related]
+    # The catalogue, compact: per language the newest movies and shows, so a bot picks titles that exist.
+    catalogue = {}
+    for code, name in (('te', 'Telugu'), ('hi', 'Hindi'), ('en', 'English'), ('ta', 'Tamil'), ('ml', 'Malayalam')):
+        movies = catalogue_titles(code, 'movie', 0, 60)
+        shows = catalogue_titles(code, 'show', 0, 30)
+        if movies or shows:
+            catalogue[name] = {'movies': [{'name': t['name'], 'added': t.get('added', ''), 'rating': t.get('rating') or 0, 'genres': t.get('genres') or []} for t in movies],
+                               'shows': [{'name': t['name'], 'added': t.get('added', ''), 'rating': t.get('rating') or 0, 'genres': t.get('genres') or []} for t in shows]}
     needs = current is None or time.time() - current['at'] > 20 * 3600 or latest > current['at'] or bool(missing)
     return {'generated': time.time(), 'list': current, 'needs_update': needs,
             'reason': ('no list posted yet' if current is None else 'the list is a day old' if time.time() - current['at'] > 20 * 3600
                        else 'new activity since the list was posted' if latest > current['at']
                        else 'some titles have no related list yet' if missing else 'nothing changed since the list was posted'),
-            'related_wanted': wanted[:30], 'related_missing': missing[:30],
+            'related_wanted': wanted[:30], 'related_missing': missing[:30], 'catalogue': catalogue,
+            'cricket': [{'match': m['name'], 'abbr': m['abbr'], 'series': m['series'], 'start': m['start'],
+                         'start_text': time.strftime('%a %d %b %H:%M UTC', time.gmtime(m['start'])), 'state': m['state'], 'status': m['status'],
+                         'india': m['india'], 'major': m['major']} for m in cricket.soon(CRICKET, 48, 15)],
+            'catalogue_note': 'newest first per language; GET /titles?pin=…&lang=te&kind=movie&days=30&limit=200 for more',
             'related_posted': [{'title': r['title'], 'by': r['by'], 'at': r['at'], 'count': len(r['items'])} for r in related.values()],
             'profiles': profiles}
 
@@ -457,6 +524,22 @@ def page():
         if posted.get('exclude'):
             lines.append('     Excluded everywhere: ' + '; '.join(posted['exclude']))
         lines.append('')
+    live = cricket.soon(CRICKET, 48, 20)
+    if live:
+        lines.append('=' * 78)
+        lines.append('Cricket: live and in the next two days')
+        for m in live:
+            lines.append('  {0}  {1}  {2}  {3}'.format('LIVE ' if m['state'] == 'in' else time.strftime('%a %H:%M', time.localtime(m['start'])),
+                                                     m['abbr'], m['short'], m['status']).rstrip())
+        lines.append('')
+    for code, name in (('te', 'Telugu'), ('hi', 'Hindi'), ('en', 'English')):
+        fresh = catalogue_titles(code, 'movie', 14, 30)
+        if fresh:
+            lines.append('=' * 78)
+            lines.append('New {0} movies in the catalogue (last two weeks)'.format(name))
+            for t in fresh:
+                lines.append('  {0}  added {1}{2}'.format(t['name'], t.get('added', ''), ('  ' + ', '.join(t['genres'])) if t.get('genres') else ''))
+            lines.append('')
     for profile, s in sorted(shown_for().items(), key=lambda kv: -kv[1]['at']):
         lines.append('=' * 78)
         lines.append('{0}  |  Showing now ({1} rows, built {2})'.format(profile, len(s['rows']), time.strftime('%a %d %b %H:%M', time.localtime(s['at']))))
@@ -629,6 +712,28 @@ def login_page(error='', embed=False):
                      handoff('') if embed else '')
 
 
+def refresh_cricket():
+    """Rebuild the cricket fixtures every CRICKET_EVERY seconds; the last good list is kept on disk."""
+    global CRICKET
+    try:
+        with open(CRICKET_FILE) as f:
+            CRICKET = json.load(f)
+    except (OSError, ValueError):
+        pass
+    while True:
+        if time.time() - CRICKET.get('at', 0) >= CRICKET_EVERY - 30:
+            try:
+                built = cricket.build(log)
+                if built['matches'] or not CRICKET:
+                    CRICKET = built
+                    os.makedirs(os.path.dirname(CRICKET_FILE), exist_ok=True)
+                    with open(CRICKET_FILE, 'w') as f:
+                        json.dump(CRICKET, f)
+            except Exception as e:
+                log('cricket: build failed: {0}'.format(e))
+        time.sleep(120)
+
+
 def refresh_top10():
     """Rebuild the merged charts now and then every TOP10_EVERY seconds; the last good list is kept on disk."""
     global TOP10
@@ -733,8 +838,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._redirect('/login' + ('?embed=1' if embed else ''), [self.cookie('', 0)])
         if self.path.startswith('/context'):
             return self._send(200, context_for_bot()) if self.pin_ok() else None
+        if self.path.startswith('/cricket') and self.query().get('pin'):
+            return self._send(200, CRICKET or {'at': 0, 'matches': []}) if self.pin_ok() else None
         if self.path.startswith('/rows') and self.query().get('pin'):
             return self._send(200, {'rows': shown_for(self.query().get('profile', ''))}) if self.pin_ok() else None
+        if self.path.startswith('/titles') and self.query().get('pin'):
+            if not self.pin_ok():
+                return
+            try:
+                days, limit = int(q.get('days') or 0), int(q.get('limit') or 200)
+            except ValueError:
+                days, limit = 0, 200
+            return self._send(200, {'titles': catalogue_titles(q.get('lang', ''), q.get('kind', ''), days, min(limit, 1000))})
         is_page = self.path == '/' or self.path.startswith(('/?', '/text', '/index'))
         if not self.allowed(is_page):
             return
@@ -744,6 +859,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._html(200, web_page(q.get('device', ''), carry, handoff(SESSION) if embed and SESSION else ''))
         if self.path.startswith('/top10'):
             return self._send(200, TOP10 or {'at': 0, 'sources': {}, 'titles': []})
+        if self.path.startswith('/cricket'):
+            return self._send(200, CRICKET or {'at': 0, 'matches': []})
         if self.path.startswith('/batches'):
             with LOCK:
                 return self._send(200, BATCHES)
@@ -753,6 +870,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {'lists': lists_for(q.get('profile', '')), 'related': related_all()})
         if self.path.startswith('/related'):
             return self._send(200, {'related': related_all()})
+        if self.path.startswith('/titles'):
+            try:
+                days, limit = int(q.get('days') or 0), int(q.get('limit') or 200)
+            except ValueError:
+                days, limit = 0, 200
+            return self._send(200, {'titles': catalogue_titles(q.get('lang', ''), q.get('kind', ''), days, min(limit, 1000))})
         if self.path.startswith('/rows'):
             return self._send(200, {'rows': shown_for(q.get('profile', ''))})
         if self.path.startswith('/history'):
@@ -824,6 +947,20 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {'error': 'profile needed'})
             kept = save_shown(profile, body.get('rows') or [], body.get('recent') or [])
             return self._send(200, {'ok': True, 'kept': kept})
+        if self.path.startswith('/catalogue'):
+            if not self.allowed():
+                return
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 2000000)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            profile = str(body.get('profile') or '').strip()[:200]
+            if not profile:
+                return self._send(400, {'error': 'profile needed'})
+            kept = save_catalogue(profile, body.get('titles') or [])
+            log('catalogue from {0}: {1} titles'.format(profile, kept))
+            return self._send(200, {'ok': True, 'kept': kept})
         if self.path.startswith('/related'):
             try:
                 length = int(self.headers.get('Content-Length') or 0)
@@ -885,6 +1022,7 @@ if __name__ == '__main__':
     load()
     log('serving on {0} port {1}, model {2} at {3}, {4} batches remembered'.format(', '.join(BIND), PORT, MODEL, OLLAMA, len(BATCHES)))
     threading.Thread(target=refresh_top10, daemon=True).start()
+    threading.Thread(target=refresh_cricket, daemon=True).start()
     servers = [ThreadingHTTPServer((host, PORT), Handler) for host in BIND]
     for server in servers[1:]:
         threading.Thread(target=server.serve_forever, daemon=True).start()

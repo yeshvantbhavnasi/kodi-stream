@@ -32,9 +32,17 @@ The reply has:
   engine built (Because you watched, genre rows, Highly Rated, YouTube and so on). Review these: a title that does
   not belong can be removed from every row on the TV with `exclude` (below).
 
-Base the picks on `about` and `feedback`. Take titles from `candidates` whenever one fits, spelled exactly as given,
-so they are sure to match; add a title from outside the candidates only when you are confident the catalogue carries
-it. Never pick something the history shows as played, finished, disliked or dismissed, or that feedback marks `bad`.
+- `catalogue`: what the catalogue actually holds, per language (Telugu, Hindi, English, Tamil, Malayalam): the newest
+  60 movies and 30 shows, each with its name as the catalogue spells it, the date it arrived, its rating and genres.
+  `GET /titles?pin=<PIN>&lang=te&kind=movie&days=30&limit=200` lists more (lang codes or names, kind movie or show,
+  days limits to recent arrivals).
+
+- `cricket`: matches live now or in the next two days (the TVs show these in their own row; nothing to post, but
+  on a big match day a lighter, shorter list suits the evening).
+
+Pick from `catalogue` (and `candidates`), spelled exactly as given, so every pick matches; new arrivals (`added` in
+the last two weeks) deserve a look first. Base the choice on `about` and `feedback`. Never pick something the
+history shows as played, finished, disliked or dismissed, or that feedback marks `bad`.
 
 ## Titles like one title
 

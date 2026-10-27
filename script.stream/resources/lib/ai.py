@@ -270,6 +270,41 @@ def lists(fresh=False):
     return found
 
 
+CRICKET_FOR = 900  # ask the service for the fixtures at most this often
+
+
+def cricket():
+    """Live and upcoming cricket matches from the service (GET /cricket); the last list is used when it is away."""
+    kept = db.meta('cricket') or {}
+    if time.time() - kept.get('fetched', 0) < CRICKET_FOR or not service_url():
+        return kept.get('matches', [])
+    import requests
+    try:
+        r = requests.get(service_url() + '/cricket', timeout=20, headers={'X-Stream-Key': _setting('recs_key')})
+        r.raise_for_status()
+        matches = r.json().get('matches') or []
+    except Exception as e:
+        log('cricket unavailable: {0}'.format(e))
+        return kept.get('matches', [])
+    db.set_meta('cricket', {'fetched': time.time(), 'matches': matches})
+    return matches
+
+
+def share_catalogue(titles):
+    """Tell the service what the catalogue index holds (POST /catalogue), so a posting bot picks real titles."""
+    if not service_url():
+        return False
+    import requests
+    try:
+        r = requests.post(service_url() + '/catalogue', json={'profile': profile_key(), 'titles': titles}, timeout=60,
+                          headers={'X-Stream-Key': _setting('recs_key')})
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        log('catalogue not shared: {0}'.format(e))
+        return False
+
+
 def related(name):
     """A posted 'titles like this' list for a title, from the last fetch of /lists: {'by', 'items'} or None."""
     kept = db.meta('bot_lists') or {}

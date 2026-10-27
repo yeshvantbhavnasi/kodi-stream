@@ -83,6 +83,10 @@ first language leads every list:
   least three playable titles to appear.
 - **Top 10 in Your Home**: what every profile on this device played most in the last month.
 - Genre rows in your first two languages, named after what you watch most: **Telugu Thrillers**, **Hindi Comedies** and so on.
+- **Cricket: Live and Upcoming** when the household follows cricket: matches on now or starting within a day and a
+  half (internationals and the big leagues, India first), from the recommendation service's fixtures (ESPN's public
+  feed, refreshed every half hour), each on the catalogue's live event for it or on the cricket channels. The row
+  sits near the top while a match is on or starts today.
 - **Highly Rated in …**, **Shows to Binge**, **YouTube for You**, **More videos like …**, **On Netflix** / **On Aha** /
   **On Prime Video** (where the titles originally stream, from TMDb), **Hidden Gems**, **My List**, live events and YouTube.
 
@@ -342,7 +346,10 @@ change (`POST /rows`); `GET /rows?profile=…` returns them and `/text` prints t
 from anywhere. `GET /context?pin=…` gives a posting bot what it needs: the current list, whether anything changed
 since it was posted (`needs_update`, so a daily run can stop early), and per profile what the household told the box
 and watched, the catalogue titles the box offered (to use verbatim), the web page's verdicts and the rows the box is
-showing (`showing`, to review and correct with `exclude`). A bot can also post titles like one title (`POST /related` with the title and items); they lead More
+showing (`showing`, to review and correct with `exclude`). `GET /cricket` is the fixtures list the boxes use (`service/cricket.py`), and `/context` carries the next two days
+as `cricket`. Each box also sends the service the newest titles of its index per language and kind, with year, arrival
+date, rating and genres (`POST /catalogue`); `GET /titles?lang=te&kind=movie&days=30` lists them across boxes and
+`/context` carries the newest per language as `catalogue`, so the bot picks titles that exist. A bot can also post titles like one title (`POST /related` with the title and items); they lead More
 like this on that title's page and its Because you watched row, with the bot's reasons, and `/context` names the
 titles that want one (`related_wanted`, `related_missing`). `service/BOT_INSTRUCTIONS.md` is the brief to hand a bot
 that will do the posting.

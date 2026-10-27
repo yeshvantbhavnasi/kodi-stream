@@ -384,6 +384,14 @@ def build():
         log('video rows failed: {0}'.format(e))
         videos = []
     rows += [r for r in videos if r[0].startswith('Tonight')]  # the mixed row sits right under the picks
+    try:
+        cricket = cricket_rows()
+    except Exception as e:
+        log('cricket row failed: {0}'.format(e))
+        cricket = []
+    if cricket and any(e.get('soon') for e in cricket[0][1]):
+        rows += cricket  # a match on now or today sits high; otherwise the row follows the genre rows
+        cricket = []
     rows += because_rows(scored)
     fresh = discover.new_entries(ROW_SIZE)
     if len(fresh) >= 4:
@@ -394,6 +402,7 @@ def build():
     if len(home) >= 3:
         rows.append(('Top 10 in Your Home', [dict(e, meta=e['meta']) for e in home]))
     rows += genre_rows(scored, t)
+    rows += cricket
     rows += rated_rows(scored, t)
     rows += show_row(scored, order)
     rows += [r for r in videos if not r[0].startswith('Tonight')]
@@ -444,6 +453,92 @@ def rows(force=False, fetch=False):
             threading.Thread(target=_resolve_later, daemon=True).start()
         threading.Thread(target=_share_later, args=(built,), daemon=True).start()
     return STATE['rows'] or []
+
+
+# ---------- cricket: live and upcoming matches, on the channels and events the catalogue carries ----------
+
+CRICKET_HOURS = 36
+
+
+def _when(start):
+    """'Today 7:00 PM', 'Tomorrow 9:30 AM', 'Thu 2:00 PM' in the box's own time."""
+    local = time.localtime(start)
+    today = time.localtime()
+    day = local.tm_yday - today.tm_yday + (local.tm_year - today.tm_year) * 365
+    label = 'Today' if day == 0 else 'Tomorrow' if day == 1 else time.strftime('%a', local)
+    return label + time.strftime(' %I:%M %p', local).replace(' 0', ' ')
+
+
+def cricket_rows():
+    """'Cricket: Live and Upcoming': matches that are live or start within a day and a half, each on the catalogue's
+    live event for it when there is one, otherwise on the cricket channels. Only when the household follows cricket."""
+    chosen = (db.meta('profile') or {}).get('sports', [])
+    if chosen and 'Cricket' not in chosen:
+        return []
+    now = time.time()
+    # live, or starting within a day and a half; a match past its start that ESPN still calls scheduled counts too
+    matches = [m for m in ai.cricket() if (m.get('major') or (m.get('national') and not m.get('minor')))
+               and (m.get('state') == 'in' or -6 * 3600 <= m.get('start', 0) - now <= CRICKET_HOURS * 3600)][:12]
+    matches.sort(key=lambda m: (not m.get('india'), m.get('state') != 'in', not m.get('major'), m.get('start', 0)))
+    if not matches:
+        return []
+    try:
+        root = cat.URLS['sports']
+        items = cat.showable(cat.get_dir(root))
+    except Exception as e:
+        log('sports listing unavailable: {0}'.format(e))
+        return []
+    events = [i for i in items if i['t'] == 'play' or any(w in i['name'].lower() for w in ('tour', 'series', ' cup', 'trophy', ' vs ', 'league', '20'))]
+    channels = next((i for i in items if i['t'] == 'folder' and i['name'].strip().lower() == 'cricket'), None)
+    out = []
+    for m in matches:
+        words = [w.lower() for t in m.get('teams') or [] for w in t.split() if len(w) > 3]
+        found = next((e for e in events if sum(1 for w in words if w in e['name'].lower()) >= 2), None) or channels
+        if not found:
+            continue
+        live = m.get('state') == 'in'
+        when = 'Live now' if live else ('Starting · ' + _when(m['start'])) if m['start'] <= now else _when(m['start'])
+        label = m.get('abbr') or m.get('name') or 'Cricket'
+        meta_text = ' · '.join(x for x in (when, m.get('short') or m.get('series'), m.get('status') if live else '') if x)
+        item = dict(found, name='{0}  ({1})'.format(label, m.get('short') or m.get('series') or 'Cricket')[:80],
+                    plot='{0}. {1}{2}'.format(m.get('name') or label, m.get('series') or '', ('. ' + m['summary']) if m.get('summary') else ''))
+        if m.get('logo'):
+            item['img'] = m['logo']  # the team's badge (India's when India plays) on a square card
+        out.append({'item': item, 'parent': root, 'group': 'Sports', 'meta': meta_text, 'card': True,
+                    'soon': live or m.get('start', 0) - now <= 12 * 3600})  # on now or today: the row sits high
+    return [('Cricket: Live and Upcoming', out)] if out else []
+
+
+def share_catalogue(per_group=150):
+    """Send the service the newest titles of the index per language and kind (movies and shows apart), with the
+    year, arrival date, rating and genres where known. Sent when the set changed since the last time."""
+    metadata = db.metadata_all()
+    groups = {}
+    for e in db.all_titles():
+        kind = 'show' if e.get('kind') in discover.SHOW_KINDS else 'movie' if e.get('kind') in discover.MOVIE_KINDS else ''
+        if not kind:
+            continue
+        bucket = groups.setdefault(((e.get('group') or '').lower(), kind), [])
+        if len(bucket) >= per_group:
+            continue
+        name = e['item']['name']
+        if any(_same_film(name) == _same_film(x['name']) for x in bucket[-6:]):
+            continue  # the PreDVD copy right after the clean one
+        data = metadata.get(name) or {}
+        title, year = meta.split_title(name)
+        bucket.append({'name': name, 'kind': kind, 'lang': cat.title_case(e.get('group') or ''), 'year': data.get('year') or year,
+                       'added': time.strftime('%Y-%m-%d', time.localtime(e.get('first_seen') or 0)),
+                       'rating': data.get('tmdb_rating') or 0, 'genres': (data.get('genres') or [])[:4],
+                       'plot': (data.get('overview') or e['item'].get('plot') or '')[:160]})
+    titles = [t for bucket in groups.values() for t in bucket]
+    digest = hashlib.md5(json.dumps([(t['name'], t['lang'], t['rating']) for t in titles], sort_keys=True).encode('utf-8')).hexdigest()
+    if digest == db.meta('catalogue_shared'):
+        return False
+    if ai.share_catalogue(titles):
+        db.set_meta('catalogue_shared', digest)
+        log('{0} catalogue titles shared'.format(len(titles)))
+        return True
+    return False
 
 
 def _share_later(built):

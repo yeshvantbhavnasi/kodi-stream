@@ -1981,6 +1981,7 @@ class Home(xbmcgui.WindowXML):
                 gathered = recs.refresh_videos()
                 if recs.resolve_lists() or gathered:
                     recs.mark_dirty()
+                recs.share_catalogue()
                 made = ai.recommend(cat.top_groups(), pool=recs.pool_for_model())
                 if made:
                     recs.mark_dirty()
@@ -2001,6 +2002,7 @@ class Home(xbmcgui.WindowXML):
             meta.warm(40)
             gathered = recs.refresh_videos()
             gathered = recs.resolve_lists() or gathered  # both run; either makes the rows stale
+            recs.share_catalogue()
             # Show the new rows straight away only if the viewer has not started navigating; otherwise they appear next time Home loads.
             if ai.recommend(cat.top_groups(), pool=recs.pool_for_model()) or gathered:
                 recs.rows(force=True)
@@ -2292,6 +2294,9 @@ class Home(xbmcgui.WindowXML):
                     li = entry_item(e, meta=e.get('meta'), suggestion=bool(e.get('suggestion')))
                     if e.get('number'):
                         li.setProperty('number', str(e['number']))  # posted picks are numbered on their posters
+                    if e.get('card'):
+                        li.setProperty('card', '1')  # a match: its team badge on a square card, like a channel
+                        li.setProperty('logo', '1')
                     tiles.append(li)
                 rows.append(('items', title, tiles))
             saved = db.mylist()
