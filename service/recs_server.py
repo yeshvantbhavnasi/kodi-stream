@@ -49,9 +49,12 @@ reachable from outside the home). With Serve enabled on the tailnet, `tailscale 
 https://<machine>.<tailnet>.ts.net; `tailscale funnel --bg 8770` (Funnel enabled) makes that address public, so TV
 boxes that are not on the tailnet can reach it too.
 
-Storage: one SQLite file. `batches` holds the current batch per box, profile and kind (the only thing a box ever
-asks for), and `history` keeps the last 48 batches per key so the page can show how the picks moved; a batch
-identical to the previous one is not written again.
+Storage: one SQLite file (STATE), in WAL mode so the server's threads read while one writes. `batches` holds the
+current batch per box, profile and kind (the only thing a box ever asks for), and `history` keeps the last 48 batches
+per key so the page can show how the picks moved; a batch identical to the previous one is not written again.
+`feedback`, `lists`, `related`, `shown` and `catalogue` hold what the page's buttons, the bots and the boxes posted,
+and `cache` keeps the last good Top 10 charts and cricket fixtures so a restart serves them at once. Nothing else is
+written to disk; the JSON files an earlier version kept next to the database are taken over on first start.
 """
 import hashlib
 import hmac
@@ -85,11 +88,9 @@ LOCK = threading.Lock()        # guards BATCHES and BUILDING
 MODEL_LOCK = threading.Lock()  # one question to the model at a time
 BATCHES = {}                   # key -> {'digest', 'picks', 'at', 'model', 'took'}
 BUILDING = set()               # keys being rebuilt right now
-TOP10 = {}                     # the merged charts, see charts.build()
-TOP10_FILE = os.path.join(os.path.dirname(STATE), 'top10.json')
+TOP10 = {}                     # the merged charts, see charts.build(); kept in the cache table as 'top10'
 TOP10_EVERY = 12 * 3600
-CRICKET = {}                   # live and upcoming matches, see cricket.build()
-CRICKET_FILE = os.path.join(os.path.dirname(STATE), 'cricket.json')
+CRICKET = {}                   # live and upcoming matches, see cricket.build(); kept in the cache table as 'cricket'
 CRICKET_EVERY = 30 * 60
 
 
@@ -108,21 +109,24 @@ CREATE TABLE IF NOT EXISTS lists (name TEXT PRIMARY KEY, title TEXT, by TEXT, pr
 CREATE TABLE IF NOT EXISTS shown (profile TEXT PRIMARY KEY, at REAL, rows TEXT, recent TEXT);
 CREATE TABLE IF NOT EXISTS related (key TEXT PRIMARY KEY, title TEXT, by TEXT, at REAL, items TEXT);
 CREATE TABLE IF NOT EXISTS catalogue (profile TEXT PRIMARY KEY, at REAL, titles TEXT);
+CREATE TABLE IF NOT EXISTS cache (name TEXT PRIMARY KEY, at REAL, data TEXT);
 '''
 JSON_COLUMNS = ('candidates', 'picks')
 
 
 def connect():
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
-    conn = sqlite3.connect(STATE)
+    conn = sqlite3.connect(STATE, timeout=30)  # wait for a writer in another thread rather than fail at once
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def load():
-    """Read every current batch into memory; batches saved by the JSON-file version are taken over once."""
+    """Open the database (creating the tables), read every current batch into memory, and take over the files an
+    earlier version kept: batches.json once the batches table is empty, top10.json and cricket.json into the cache."""
     global BATCHES
     with connect() as conn:
+        conn.execute('PRAGMA journal_mode=WAL')
         conn.executescript(SCHEMA)
         if 'exclude' not in [r['name'] for r in conn.execute('PRAGMA table_info(lists)').fetchall()]:
             conn.execute('ALTER TABLE lists ADD COLUMN exclude TEXT')
@@ -146,6 +150,39 @@ def load():
             log('took over {0} batches from {1}'.format(len(BATCHES), old))
         except Exception as e:
             log('could not import {0}: {1}'.format(old, e))
+    for name in ('top10', 'cricket'):
+        import_cache_file(name)
+
+
+def cache_get(name):
+    """The last good value kept under a name in the cache table ({} when there is none)."""
+    with connect() as conn:
+        row = conn.execute('SELECT data FROM cache WHERE name=?', (name,)).fetchone()
+    try:
+        return json.loads(row['data']) if row and row['data'] else {}
+    except ValueError:
+        return {}
+
+
+def cache_put(name, data):
+    with connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO cache (name, at, data) VALUES (?,?,?)', (name, time.time(), json.dumps(data)))
+
+
+def import_cache_file(name):
+    """Take over <name>.json next to the database, which earlier versions kept the feed in, unless the cache already
+    holds that feed; the file is renamed .imported either way so it is not looked at again."""
+    path = os.path.join(os.path.dirname(STATE), name + '.json')
+    if not os.path.exists(path):
+        return
+    try:
+        if not cache_get(name):
+            with open(path) as f:
+                cache_put(name, json.load(f))
+            log('took over {0} from {1}'.format(name, path))
+        os.rename(path, path + '.imported')
+    except Exception as e:
+        log('could not import {0}: {1}'.format(path, e))
 
 
 def save(key):
@@ -713,44 +750,32 @@ def login_page(error='', embed=False):
 
 
 def refresh_cricket():
-    """Rebuild the cricket fixtures every CRICKET_EVERY seconds; the last good list is kept on disk."""
+    """Rebuild the cricket fixtures every CRICKET_EVERY seconds; the last good list is kept in the database."""
     global CRICKET
-    try:
-        with open(CRICKET_FILE) as f:
-            CRICKET = json.load(f)
-    except (OSError, ValueError):
-        pass
+    CRICKET = cache_get('cricket')
     while True:
         if time.time() - CRICKET.get('at', 0) >= CRICKET_EVERY - 30:
             try:
                 built = cricket.build(log)
                 if built['matches'] or not CRICKET:
                     CRICKET = built
-                    os.makedirs(os.path.dirname(CRICKET_FILE), exist_ok=True)
-                    with open(CRICKET_FILE, 'w') as f:
-                        json.dump(CRICKET, f)
+                    cache_put('cricket', built)
             except Exception as e:
                 log('cricket: build failed: {0}'.format(e))
         time.sleep(120)
 
 
 def refresh_top10():
-    """Rebuild the merged charts now and then every TOP10_EVERY seconds; the last good list is kept on disk."""
+    """Rebuild the merged charts now and then every TOP10_EVERY seconds; the last good list is kept in the database."""
     global TOP10
-    try:
-        with open(TOP10_FILE) as f:
-            TOP10 = json.load(f)
-    except (OSError, ValueError):
-        pass
+    TOP10 = cache_get('top10')
     while True:
         if time.time() - TOP10.get('at', 0) >= TOP10_EVERY - 60:
             try:
                 built = charts.build(log)
                 if built['titles']:
                     TOP10 = built
-                    os.makedirs(os.path.dirname(TOP10_FILE), exist_ok=True)
-                    with open(TOP10_FILE, 'w') as f:
-                        json.dump(TOP10, f)
+                    cache_put('top10', built)
             except Exception as e:
                 log('top10: build failed: {0}'.format(e))
         time.sleep(600)
