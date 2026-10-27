@@ -24,8 +24,9 @@ Searches are answered on the spot and remembered, so a repeated query is instant
                    profile key as /batches shows it. Posting a name again replaces that list; DELETE /lists?name=
                    removes one. GET /lists?profile=<key> is what a box asks for: {"lists": [...]} newest first.
                    A list holds at most 20 items; the boxes show the posted titles as their Top Picks row.
-    POST /rows    from a box: every row it is showing with the titles, kept per profile; GET /rows?profile= (key, or
-                   ?pin=) returns them, and /context carries them per profile as "showing".
+    POST /rows    from a box: every row it is showing with the titles, the titles played last ("recent") and the
+                   profile's My List ("mylist"), kept per profile; GET /rows?profile= (key, or ?pin=) returns them, and
+                   /context carries them per profile as "showing" and "mylist".
     POST /related {"pin", "title": "Romanchakam", "by", "items": [...]} titles like one title, from a bot: they lead
                    More like this on that title's page and its Because you watched row. GET /related lists them all;
                    /context names the titles that want one (related_wanted / related_missing).
@@ -126,8 +127,11 @@ def load():
         conn.executescript(SCHEMA)
         if 'exclude' not in [r['name'] for r in conn.execute('PRAGMA table_info(lists)').fetchall()]:
             conn.execute('ALTER TABLE lists ADD COLUMN exclude TEXT')
-        if 'recent' not in [r['name'] for r in conn.execute('PRAGMA table_info(shown)').fetchall()]:
+        shown_columns = [r['name'] for r in conn.execute('PRAGMA table_info(shown)').fetchall()]
+        if 'recent' not in shown_columns:
             conn.execute('ALTER TABLE shown ADD COLUMN recent TEXT')
+        if 'mylist' not in shown_columns:
+            conn.execute('ALTER TABLE shown ADD COLUMN mylist TEXT')
         rows = conn.execute('SELECT * FROM batches').fetchall()
     BATCHES = {}
     for r in rows:
@@ -292,9 +296,10 @@ def catalogue_titles(lang='', kind='', days=0, limit=200):
     return out[:limit]
 
 
-def save_shown(profile, rows, recent=()):
-    """What a box is showing right now: every row with its titles, as the box built them, and the titles the
-    household played last (so a bot knows which titles want a related list)."""
+def save_shown(profile, rows, recent=(), mylist=()):
+    """What a box is showing right now: every row with its titles, as the box built them, the titles the household
+    played last (so a bot knows which titles want a related list) and the profile's My List, newest first (what
+    they saved to watch, for a bot to build around)."""
     clean = []
     for row in list(rows or [])[:40]:
         if not isinstance(row, dict) or not row.get('title'):
@@ -304,16 +309,19 @@ def save_shown(profile, rows, recent=()):
                  for i in list(row.get('items') or [])[:60] if isinstance(i, dict) and i.get('name')]
         clean.append({'title': str(row['title'])[:80], 'items': items})
     played = [str(t)[:200] for t in list(recent or [])[:12] if str(t).strip()]
+    saved = [str(t)[:200] for t in list(mylist or [])[:40] if str(t).strip()]
     with connect() as conn:
-        conn.execute('INSERT OR REPLACE INTO shown (profile, at, rows, recent) VALUES (?,?,?,?)', (profile, time.time(), json.dumps(clean), json.dumps(played)))
+        conn.execute('INSERT OR REPLACE INTO shown (profile, at, rows, recent, mylist) VALUES (?,?,?,?,?)',
+                     (profile, time.time(), json.dumps(clean), json.dumps(played), json.dumps(saved)))
     return len(clean)
 
 
 def shown_for(profile=''):
-    """{profile: {'at', 'rows'}} for every box (or one)."""
+    """{profile: {'at', 'rows', 'recent', 'mylist'}} for every box (or one)."""
     with connect() as conn:
         rows = conn.execute('SELECT * FROM shown' + (' WHERE profile=?' if profile else ''), (profile,) if profile else ()).fetchall()
-    return {r['profile']: {'at': r['at'], 'rows': json.loads(r['rows'] or '[]'), 'recent': json.loads(r['recent'] or '[]')} for r in rows}
+    return {r['profile']: {'at': r['at'], 'rows': json.loads(r['rows'] or '[]'), 'recent': json.loads(r['recent'] or '[]'),
+                           'mylist': json.loads(r['mylist'] or '[]')} for r in rows}
 
 
 def delete_list(name):
@@ -343,23 +351,26 @@ def context_for_bot():
         intro = (b.get('intro') or '').strip()
         profiles.append({'profile': profile, 'at': b.get('at', 0), 'about': intro[:12000],
                          'candidates': list(b.get('candidates') or [])[:100], 'feedback': feedback_for(profile),
+                         'mylist': shown.get(profile, {}).get('mylist', []),
                          'showing': shown.get(profile, {}).get('rows', []), 'showing_at': shown.get(profile, {}).get('at', 0)})
         latest = max(latest, b.get('at', 0))
     for profile, s in shown.items():
         if not any(p['profile'] == profile for p in profiles):
             profiles.append({'profile': profile, 'at': s['at'], 'about': '', 'candidates': [], 'feedback': feedback_for(profile),
-                             'showing': s['rows'], 'showing_at': s['at']})
+                             'mylist': s.get('mylist', []), 'showing': s['rows'], 'showing_at': s['at']})
     with connect() as conn:
         row = conn.execute('SELECT MAX(at) AS at FROM feedback').fetchone()
     latest = max(latest, (row['at'] if row and row['at'] else 0))
-    # Titles that want a 'titles like this' list: what the boxes played last and the posted top picks.
+    # Titles that want a 'titles like this' list: what the boxes played last, what is on their My Lists (newest
+    # first) and the posted top picks.
     related = related_all()
     wanted, seen = [], set()
-    for s in shown.values():
-        for title in s.get('recent') or []:
-            if plain(title) not in seen:
-                seen.add(plain(title))
-                wanted.append(title)
+    for field in ('recent', 'mylist'):
+        for s in shown.values():
+            for title in (s.get(field) or [])[:12]:
+                if plain(title) not in seen:
+                    seen.add(plain(title))
+                    wanted.append(title)
     for item in (current or {}).get('items') or []:
         if plain(item['title']) not in seen:
             seen.add(plain(item['title']))
@@ -945,7 +956,7 @@ class Handler(BaseHTTPRequestHandler):
             profile = str(body.get('profile') or '').strip()[:200]
             if not profile:
                 return self._send(400, {'error': 'profile needed'})
-            kept = save_shown(profile, body.get('rows') or [], body.get('recent') or [])
+            kept = save_shown(profile, body.get('rows') or [], body.get('recent') or [], body.get('mylist') or [])
             return self._send(200, {'ok': True, 'kept': kept})
         if self.path.startswith('/catalogue'):
             if not self.allowed():

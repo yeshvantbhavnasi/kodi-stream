@@ -263,7 +263,8 @@ Ms Apple: Learn and Play. The children's movies and shows and the kids channels 
 **The engine (`recs.py`).** Every row on Home is cut from one ranking of the whole local index (every indexed movie and
 show not yet played, rated or dismissed, in the chosen languages). Each title is scored on the box itself, in well under
 a second, from: the language order chosen at setup (first language leading), the genres chosen and the genres of what
-is watched and liked (from TMDb's genres, or words in the description for titles not yet looked up), favourite actors
+is watched, liked and saved to My List (from TMDb's genres, or words in the description for titles not yet looked up;
+a saved title counts for more than a played one, as it says what they mean to watch next), favourite actors
 and directors, TMDb's or IMDb's rating, a place in India's streaming charts, how recently it reached the catalogue,
 and what was disliked (its genres and director count against). The rows then come from that ranking: Top Picks
 (language shares applied: about half from the first language, a third from the second), genre rows for the genres
@@ -350,16 +351,18 @@ a title the catalogue does not carry is simply left out. The matched titles lead
 the poster's name in its heading and the reason under each poster, ahead of the model's picks and the local ranking;
 played and dismissed titles are left out. A list may also carry `exclude`, titles to leave out of every row on the boxes it is for. `/text` lists what
 is posted. Each box also sends the service every row it is showing, with the titles and reasons, whenever its rows
-change (`POST /rows`); `GET /rows?profile=…` returns them and `/text` prints them, so what each TV shows can be read
-from anywhere. `GET /context?pin=…` gives a posting bot what it needs: the current list, whether anything changed
+change (`POST /rows`, which also carries the titles played last and the profile's My List); `GET /rows?profile=…`
+returns them and `/text` prints them, so what each TV shows can be read from anywhere. `GET /context?pin=…` gives a posting bot what it needs: the current list, whether anything changed
 since it was posted (`needs_update`, so a daily run can stop early), and per profile what the household told the box
-and watched, the catalogue titles the box offered (to use verbatim), the web page's verdicts and the rows the box is
-showing (`showing`, to review and correct with `exclude`). `GET /cricket` is the fixtures list the boxes use (`service/cricket.py`), and `/context` carries the next two days
+and watched, its My List (`mylist`, and a "Titles on their My List" line in `about`, so the bot builds around what
+the household saved to watch and never posts those titles themselves), the catalogue titles the box offered (to use
+verbatim), the web page's verdicts and the rows the box is showing (`showing`, to review and correct with `exclude`). `GET /cricket` is the fixtures list the boxes use (`service/cricket.py`), and `/context` carries the next two days
 as `cricket`. Each box also sends the service the newest titles of its index per language and kind, with year, arrival
 date, rating and genres (`POST /catalogue`); `GET /titles?lang=te&kind=movie&days=30` lists them across boxes and
 `/context` carries the newest per language as `catalogue`, so the bot picks titles that exist. A bot can also post titles like one title (`POST /related` with the title and items); they lead More
 like this on that title's page and its Because you watched row, with the bot's reasons, and `/context` names the
-titles that want one (`related_wanted`, `related_missing`). `service/BOT_INSTRUCTIONS.md` is the brief to hand a bot
+titles that want one (`related_wanted`: the titles played last, the My List titles and the posted picks;
+`related_missing`: those with no list yet). `service/BOT_INSTRUCTIONS.md` is the brief to hand a bot
 that will do the posting.
 
 **With a local model (Ollama).** Used when the service setting is blank. The *Ollama server* setting points at an [Ollama](https://ollama.com)

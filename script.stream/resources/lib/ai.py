@@ -235,11 +235,13 @@ LISTS_FOR = 600  # ask the service for the posted lists at most this often
 
 def share_rows(rows):
     """Tell the service what this box is showing (POST /rows): every row with its titles, so the page and the posting
-    bot can see and correct them. Quiet on failure."""
+    bot can see and correct them, with the titles played last and the profile's My List (newest first), so the bot
+    builds around what the household saved to watch. Quiet on failure."""
     if not service_url():
         return False
     import requests
-    body = {'profile': profile_key(), 'rows': rows, 'recent': db.recent_titles(8)}
+    body = {'profile': profile_key(), 'rows': rows, 'recent': db.recent_titles(8),
+            'mylist': [e['item']['name'] for e in db.mylist()[:40]]}
     try:
         r = requests.post(service_url() + '/rows', json=body, timeout=30, headers={'X-Stream-Key': _setting('recs_key')})
         r.raise_for_status()
@@ -378,6 +380,8 @@ RECOMMENDER = (
     'time of day, an action (played, stopped with percent watched, finished, listed, unlisted, dismissed, searched), '
     'a title, and its language and type. Treat it like a sequence model would: recent events matter most, finishing or '
     'listing or liking a title is a strong positive signal, stopping early, dismissing or disliking is a negative one, and searches show intent. '
+    'Titles on their My List are what they mean to watch next: the clearest statement of their taste right now. Favour '
+    'titles that go with them (same mood, genre, language, cast). They already have those saved, so prefer titles like them over the titles themselves. '
     'When the household has stated languages, genres, likes or dislikes, respect them. '
     'Predict the next several titles this household will choose to play from the candidate list - not just the single most '
     'likely next one, so cover their main languages and moods and include one or two plausible stretches. '
@@ -441,6 +445,9 @@ def _profile_lines():
         lines.append('Titles they marked as liked: ' + '; '.join(liked))
     if disliked:
         lines.append('Titles they marked as disliked (avoid similar): ' + '; '.join(disliked))
+    saved = [_describe(e)[:100] for e in db.mylist()[:25]]
+    if saved:
+        lines.append('Titles on their My List, saved to watch later (newest first): ' + '; '.join(saved))
     return lines
 
 

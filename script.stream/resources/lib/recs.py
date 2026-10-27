@@ -1,9 +1,9 @@
 # The recommendation engine: rows for the home screen, scored over the whole local index on the box itself.
 #
 # Every indexed title that has not been played, rated or dismissed gets a score from what the household has told
-# Stream and what it does: the languages chosen at setup (first language leading), the genres chosen and watched,
-# favourite actors and directors, TMDb's rating, India's streaming charts, how new the title is, and what was
-# disliked. The rows are then cut from that one ranking: Top Picks (where a model, when one is set up, re-ranks the
+# Stream and what it does: the languages chosen at setup (first language leading), the genres chosen, watched and
+# saved to My List, favourite actors and directors, TMDb's rating, India's streaming charts, how new the title is,
+# and what was disliked. The rows are then cut from that one ranking: Top Picks (where a model, when one is set up, re-ranks the
 # best candidates and explains them), Because you watched, genre rows per language, New Releases, Highly Rated,
 # shows to binge, what is on each streaming service, and hidden gems. Rows are rebuilt in the background and kept
 # for an hour, so Home opens at once.
@@ -50,7 +50,8 @@ def _genre_labels(entry, data):
 
 
 def taste(metadata):
-    """Weights for genres, people and languages from the setup answers and the watch history."""
+    """Weights for genres, people and languages from the setup answers, the watch history, liked titles and the titles
+    saved to My List (what the household means to watch next counts for more than what it happened to play)."""
     profile = db.meta('profile') or {}
     genres, people, bad_genres, bad_people = {}, {}, {}, set()
     for g in profile.get('genres', []):
@@ -59,7 +60,7 @@ def taste(metadata):
         people[name] = people.get(name, 0) + 3.0
     recent = db.recent(40)
     liked, disliked = db.rated(1), db.rated(-1)
-    for weight, entries in ((1.0, recent), (2.0, liked)):
+    for weight, entries in ((1.0, recent), (2.0, liked), (1.5, db.mylist()[:40])):
         for e in entries:
             data = metadata.get(e.get('series') or e['item']['name']) or {}
             for label in _genre_labels(e, data):
