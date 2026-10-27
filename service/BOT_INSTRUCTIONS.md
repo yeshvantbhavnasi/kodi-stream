@@ -36,6 +36,23 @@ Base the picks on `about` and `feedback`. Take titles from `candidates` whenever
 so they are sure to match; add a title from outside the candidates only when you are confident the catalogue carries
 it. Never pick something the history shows as played, finished, disliked or dismissed, or that feedback marks `bad`.
 
+## Titles like one title
+
+The TVs also show "More like this" on every title's page and "Because you watched X" rows on Home. You can supply
+those too. `/context` lists `related_wanted` (titles the household played last and the current top picks) and
+`related_missing` (the ones with no list yet); `needs_update` is true while any is missing. For each missing title:
+
+```
+POST https://recs.senapati.si/related
+Content-Type: application/json
+
+{"pin": "<PIN>", "title": "Romanchakam (2026)", "by": "<your name>",
+ "items": [{"title": "Little Hearts", "year": "2025", "kind": "movie", "lang": "te", "reason": "Same breezy campus romance"}]}
+```
+
+Give 8 to 12 titles like it, best first, same field rules as a list. Use the title exactly as `related_wanted` gives it.
+Posting the same title again replaces its list. The TV shows your picks first, with your reasons, then its own.
+
 ## What the catalogue can show
 
 Only titles the catalogue carries will appear, so pick from what a South Asian streaming catalogue holds:

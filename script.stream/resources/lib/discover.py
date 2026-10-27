@@ -80,9 +80,14 @@ def genre_tiles(kinds):
 
 
 def similar_entries(name, show=False, lang='', limit=20):
-    """Titles like the one named: TMDb's picks that exist in the catalogue, then titles of the same genres in the
-    same language. Empty when too little is known."""
+    """Titles like the one named: a list a bot posted to the service for this title first (with its reasons), then
+    TMDb's picks that exist in the catalogue, then titles of the same genres in the same language. Empty when too
+    little is known."""
     kinds = SHOW_KINDS if show else MOVIE_KINDS
+    posted = ai.related(name)
+    lead = list_entries(posted.get('items') or [], limit) if posted else []  # the bot's picks, in its order
+    if len(lead) >= limit:
+        return lead
     found = []
     try:
         for pick in meta.similar(name, show, lang):
@@ -105,7 +110,8 @@ def similar_entries(name, show=False, lang='', limit=20):
             found = _dedupe(found + by_language(chosen_only(same)))
     base = meta.split_title(name)[0].lower()
     found = [e for e in found if meta.split_title(e['item']['name'])[0].lower() != base]
-    return by_language(found, limit)
+    names = {e['item']['name'] for e in lead}
+    return (lead + [e for e in by_language(found, limit) if e['item']['name'] not in names])[:limit]
 
 
 def new_entries(limit=24):

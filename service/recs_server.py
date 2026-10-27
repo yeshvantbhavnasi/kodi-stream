@@ -26,6 +26,9 @@ Searches are answered on the spot and remembered, so a repeated query is instant
                    A list holds at most 20 items; the boxes show the posted titles as their Top Picks row.
     POST /rows    from a box: every row it is showing with the titles, kept per profile; GET /rows?profile= (key, or
                    ?pin=) returns them, and /context carries them per profile as "showing".
+    POST /related {"pin", "title": "Romanchakam", "by", "items": [...]} titles like one title, from a bot: they lead
+                   More like this on that title's page and its Because you watched row. GET /related lists them all;
+                   /context names the titles that want one (related_wanted / related_missing).
     GET  /context  (pin) what a posting bot needs: the current list, whether anything changed since it was posted
                    (needs_update), and per box profile what the household told us and watched (as the box sent it),
                    the catalogue titles it offered (names to use verbatim) and the web page's good/bad verdicts.
@@ -93,7 +96,8 @@ CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, key TE
 CREATE INDEX IF NOT EXISTS history_key ON history (key, at);
 CREATE TABLE IF NOT EXISTS feedback (profile TEXT, name TEXT, verdict TEXT, at REAL, PRIMARY KEY (profile, name));
 CREATE TABLE IF NOT EXISTS lists (name TEXT PRIMARY KEY, title TEXT, by TEXT, profile TEXT, at REAL, items TEXT, exclude TEXT);
-CREATE TABLE IF NOT EXISTS shown (profile TEXT PRIMARY KEY, at REAL, rows TEXT);
+CREATE TABLE IF NOT EXISTS shown (profile TEXT PRIMARY KEY, at REAL, rows TEXT, recent TEXT);
+CREATE TABLE IF NOT EXISTS related (key TEXT PRIMARY KEY, title TEXT, by TEXT, at REAL, items TEXT);
 '''
 JSON_COLUMNS = ('candidates', 'picks')
 
@@ -112,6 +116,8 @@ def load():
         conn.executescript(SCHEMA)
         if 'exclude' not in [r['name'] for r in conn.execute('PRAGMA table_info(lists)').fetchall()]:
             conn.execute('ALTER TABLE lists ADD COLUMN exclude TEXT')
+        if 'recent' not in [r['name'] for r in conn.execute('PRAGMA table_info(shown)').fetchall()]:
+            conn.execute('ALTER TABLE shown ADD COLUMN recent TEXT')
         rows = conn.execute('SELECT * FROM batches').fetchall()
     BATCHES = {}
     for r in rows:
@@ -201,8 +207,39 @@ def save_list(name, title, by, profile, items, exclude=()):
     return len(clean)
 
 
-def save_shown(profile, rows):
-    """What a box is showing right now: every row with its titles, as the box built them."""
+def plain(text):
+    """'nayyinavelli' from 'Nayyi Navelli (2026) PreDVD': the key related lists are filed under."""
+    import re
+    text = re.sub(r'\(\d{4}\).*$', '', text or '')
+    text = re.sub(r'\b(PreDVD|Pre-DVD|DVDScr|HDCAM|HDTS|DVDRip|HDRip|WEBRip|WEB-DL|BluRay|4K|UHD)\b', '', text, flags=re.I)
+    return re.sub(r'[^a-z0-9]', '', text.lower())
+
+
+def save_related(title, by, items):
+    """Keep (or replace) the titles a bot says are like one title."""
+    clean = []
+    for item in list(items or [])[:LIST_ITEMS]:
+        if not isinstance(item, dict) or not str(item.get('title') or '').strip():
+            continue
+        clean.append({'title': str(item.get('title'))[:200].strip(), 'year': str(item.get('year') or '')[:4],
+                      'kind': str(item.get('kind') or '')[:10].lower(), 'lang': str(item.get('lang') or '')[:20].lower(),
+                      'reason': str(item.get('reason') or '')[:200].strip()})
+    with connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO related (key, title, by, at, items) VALUES (?,?,?,?,?)',
+                     (plain(title), title[:200], by, time.time(), json.dumps(clean)))
+    return len(clean)
+
+
+def related_all():
+    """{plain title: {'title', 'by', 'at', 'items'}} for every related list posted."""
+    with connect() as conn:
+        rows = conn.execute('SELECT * FROM related ORDER BY at DESC').fetchall()
+    return {r['key']: {'title': r['title'], 'by': r['by'], 'at': r['at'], 'items': json.loads(r['items'] or '[]')} for r in rows}
+
+
+def save_shown(profile, rows, recent=()):
+    """What a box is showing right now: every row with its titles, as the box built them, and the titles the
+    household played last (so a bot knows which titles want a related list)."""
     clean = []
     for row in list(rows or [])[:40]:
         if not isinstance(row, dict) or not row.get('title'):
@@ -211,8 +248,9 @@ def save_shown(profile, rows):
                   'kind': str(i.get('kind') or '')[:20], 'lang': str(i.get('lang') or '')[:30]}
                  for i in list(row.get('items') or [])[:60] if isinstance(i, dict) and i.get('name')]
         clean.append({'title': str(row['title'])[:80], 'items': items})
+    played = [str(t)[:200] for t in list(recent or [])[:12] if str(t).strip()]
     with connect() as conn:
-        conn.execute('INSERT OR REPLACE INTO shown (profile, at, rows) VALUES (?,?,?)', (profile, time.time(), json.dumps(clean)))
+        conn.execute('INSERT OR REPLACE INTO shown (profile, at, rows, recent) VALUES (?,?,?,?)', (profile, time.time(), json.dumps(clean), json.dumps(played)))
     return len(clean)
 
 
@@ -220,7 +258,7 @@ def shown_for(profile=''):
     """{profile: {'at', 'rows'}} for every box (or one)."""
     with connect() as conn:
         rows = conn.execute('SELECT * FROM shown' + (' WHERE profile=?' if profile else ''), (profile,) if profile else ()).fetchall()
-    return {r['profile']: {'at': r['at'], 'rows': json.loads(r['rows'] or '[]')} for r in rows}
+    return {r['profile']: {'at': r['at'], 'rows': json.loads(r['rows'] or '[]'), 'recent': json.loads(r['recent'] or '[]')} for r in rows}
 
 
 def delete_list(name):
@@ -259,10 +297,26 @@ def context_for_bot():
     with connect() as conn:
         row = conn.execute('SELECT MAX(at) AS at FROM feedback').fetchone()
     latest = max(latest, (row['at'] if row and row['at'] else 0))
-    needs = current is None or time.time() - current['at'] > 20 * 3600 or latest > current['at']
+    # Titles that want a 'titles like this' list: what the boxes played last and the posted top picks.
+    related = related_all()
+    wanted, seen = [], set()
+    for s in shown.values():
+        for title in s.get('recent') or []:
+            if plain(title) not in seen:
+                seen.add(plain(title))
+                wanted.append(title)
+    for item in (current or {}).get('items') or []:
+        if plain(item['title']) not in seen:
+            seen.add(plain(item['title']))
+            wanted.append(item['title'])
+    missing = [t for t in wanted if plain(t) not in related]
+    needs = current is None or time.time() - current['at'] > 20 * 3600 or latest > current['at'] or bool(missing)
     return {'generated': time.time(), 'list': current, 'needs_update': needs,
             'reason': ('no list posted yet' if current is None else 'the list is a day old' if time.time() - current['at'] > 20 * 3600
-                       else 'new activity since the list was posted' if latest > current['at'] else 'nothing changed since the list was posted'),
+                       else 'new activity since the list was posted' if latest > current['at']
+                       else 'some titles have no related list yet' if missing else 'nothing changed since the list was posted'),
+            'related_wanted': wanted[:30], 'related_missing': missing[:30],
+            'related_posted': [{'title': r['title'], 'by': r['by'], 'at': r['at'], 'count': len(r['items'])} for r in related.values()],
             'profiles': profiles}
 
 
@@ -502,11 +556,35 @@ def web_page(device, carry, script=''):
         '<a href="/?device={0}{1}"{2}>{3}</a>'.format(quote(n), amp, ' class="on"' if n == device else '', html.escape(n))
         for n in names) + '</div>')
     rows = boxes[device]
+    first_profile = next((b.get('profile') or key.split('|')[0] for key, _, b in rows), device + '/default')
+    # The list a bot posted leads every TV's Top Picks: shown first, numbered, with its reasons and the rating buttons.
+    for posted in lists_for(first_profile):
+        rated = feedback_for(first_profile)
+        out.append('<h2>{0} &middot; posted by {1}</h2>'.format(html.escape(posted['title'] or posted['name']), html.escape(posted['by'] or '?')))
+        out.append('<div class="meta">posted {0} &middot; {1} titles &middot; for {2} &middot; leads Top Picks on the TV</div>'.format(
+            time.strftime('%a %d %b, %H:%M', time.localtime(posted['at'])), len(posted['items']), html.escape(posted['profile'] or 'every box')))
+        out.append('<ol>' + ''.join('<li><b>{0}</b> <span class="meta">{1}</span>{3}<span class="why">{2}</span></li>'.format(
+            html.escape(i['title']), html.escape(' '.join(x for x in (i['year'], i['kind'], i['lang']) if x)), html.escape(i['reason']),
+            rate_buttons(first_profile, i['title'], rated.get(i['title']), device, carry)) for i in posted['items']) + '</ol>')
+        if posted.get('exclude'):
+            out.append('<p class="meta">Excluded from every row: {0}</p>'.format(html.escape('; '.join(posted['exclude']))))
+    related = related_all()
+    if related:
+        out.append('<h2>Titles like &hellip; &middot; posted</h2><ul class="rows">' + ''.join('<li><b>{0}</b> <span class="meta">by {1}</span>: {2}</li>'.format(
+            html.escape(r['title']), html.escape(r['by'] or '?'), html.escape(' · '.join(i['title'] for i in r['items']))) for r in related.values()) + '</ul>')
+    # Every row each profile on this box is showing right now, as the box built it.
+    for profile_key, shown in sorted(shown_for().items(), key=lambda kv: -kv[1]['at']):
+        if profile_key.partition('/')[0] != device:
+            continue
+        out.append('<h2>{0} &middot; Showing now</h2>'.format(html.escape((profile_key.partition('/')[2] or 'default').title())))
+        out.append('<div class="meta">{0} rows, built {1}</div>'.format(len(shown['rows']), time.strftime('%a %d %b, %H:%M', time.localtime(shown['at']))))
+        out.append('<ul class="rows">' + ''.join('<li><b>{0}</b>: {1}</li>'.format(
+            html.escape(row['title']), html.escape(' · '.join(i['name'] for i in row['items'][:40]))) for row in shown['rows']) + '</ul>')
     for key, profile, b in rows:
         kind = b.get('kind') or ('search' if '|search|' in key else 'recommend')
         if kind == 'search':
             continue
-        label = 'Recommended for You' + (' (' + kind.split('-', 1)[1].title() + ' only)' if '-' in kind else '')
+        label = 'Picks by the model' + (' (' + kind.split('-', 1)[1].title() + ' only)' if '-' in kind else '')
         out.append('<h2>{0} &middot; {1}</h2>'.format(html.escape(profile.title()), label))
         out.append('<div class="meta">built {0} &middot; {1}s &middot; {2} picks from {3} candidates</div>'.format(
             time.strftime('%a %d %b, %H:%M', time.localtime(b.get('at', 0))), b.get('took', 0),
@@ -672,7 +750,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith('/feedback'):
             return self._send(200, all_feedback())
         if self.path.startswith('/lists'):
-            return self._send(200, {'lists': lists_for(q.get('profile', ''))})
+            return self._send(200, {'lists': lists_for(q.get('profile', '')), 'related': related_all()})
+        if self.path.startswith('/related'):
+            return self._send(200, {'related': related_all()})
         if self.path.startswith('/rows'):
             return self._send(200, {'rows': shown_for(q.get('profile', ''))})
         if self.path.startswith('/history'):
@@ -742,8 +822,23 @@ class Handler(BaseHTTPRequestHandler):
             profile = str(body.get('profile') or '').strip()[:200]
             if not profile:
                 return self._send(400, {'error': 'profile needed'})
-            kept = save_shown(profile, body.get('rows') or [])
+            kept = save_shown(profile, body.get('rows') or [], body.get('recent') or [])
             return self._send(200, {'ok': True, 'kept': kept})
+        if self.path.startswith('/related'):
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 200000)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            if not self.pin_ok(body):
+                return
+            title = str(body.get('title') or '').strip()
+            items = body.get('items')
+            if not title or not isinstance(items, list):
+                return self._send(400, {'error': 'title and items needed'})
+            kept = save_related(title, str(body.get('by') or '').strip()[:60], items)
+            log('related to "{0}" by {1}: {2} titles'.format(title, body.get('by') or '?', kept))
+            return self._send(200, {'ok': True, 'title': title, 'kept': kept})
         if not self.path.startswith('/pick'):
             return self._send(404, {'error': 'not found'})
         if not self.allowed():
@@ -762,6 +857,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send(500, {'error': str(e)})
 
     def do_DELETE(self):
+        if self.path.startswith('/related'):
+            if not self.pin_ok():
+                return
+            title = self.query().get('title', '').strip()
+            if not title:
+                return self._send(400, {'error': 'title needed'})
+            with connect() as conn:
+                conn.execute('DELETE FROM related WHERE key=?', (plain(title),))
+            return self._send(200, {'ok': True})
         if not self.path.startswith('/lists'):
             return self._send(404, {'error': 'not found'})
         if not self.pin_ok():

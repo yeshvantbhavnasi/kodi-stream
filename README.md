@@ -342,7 +342,9 @@ change (`POST /rows`); `GET /rows?profile=…` returns them and `/text` prints t
 from anywhere. `GET /context?pin=…` gives a posting bot what it needs: the current list, whether anything changed
 since it was posted (`needs_update`, so a daily run can stop early), and per profile what the household told the box
 and watched, the catalogue titles the box offered (to use verbatim), the web page's verdicts and the rows the box is
-showing (`showing`, to review and correct with `exclude`). `service/BOT_INSTRUCTIONS.md` is the brief to hand a bot
+showing (`showing`, to review and correct with `exclude`). A bot can also post titles like one title (`POST /related` with the title and items); they lead More
+like this on that title's page and its Because you watched row, with the bot's reasons, and `/context` names the
+titles that want one (`related_wanted`, `related_missing`). `service/BOT_INSTRUCTIONS.md` is the brief to hand a bot
 that will do the posting.
 
 **With a local model (Ollama).** Used when the service setting is blank. The *Ollama server* setting points at an [Ollama](https://ollama.com)

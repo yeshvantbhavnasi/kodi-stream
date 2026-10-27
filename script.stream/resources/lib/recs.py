@@ -339,10 +339,14 @@ def because_rows(scored, limit=2):
         if len(rows) >= limit:
             break
         alike = discover.similar_entries(name, show, lang, ROW_SIZE)
-        alike.sort(key=lambda e: ranked.get(e['item']['name'], len(ranked)))
+        # a bot's posted picks keep their order at the front; the rest follow the local ranking
+        posted = [e for e in alike if e.get('reason')]
+        rest = sorted([e for e in alike if not e.get('reason')], key=lambda e: ranked.get(e['item']['name'], len(ranked)))
+        alike = posted + rest
         if len(alike) >= 4:
             short = meta.split_title(name)[0] or name
-            rows.append(('Because you watched ' + (short if len(short) <= 32 else short[:31].rstrip() + '…'), _with_meta(alike[:ROW_SIZE])))
+            rows.append(('Because you watched ' + (short if len(short) <= 32 else short[:31].rstrip() + '…'),
+                         _with_meta(alike[:ROW_SIZE], lambda e: e.get('reason') or _lang_label(e.get('group')))))
     return rows
 
 

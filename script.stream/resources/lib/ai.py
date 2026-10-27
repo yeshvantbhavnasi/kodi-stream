@@ -11,6 +11,7 @@ import xbmc
 import xbmcaddon
 
 import db
+import meta
 
 JEV_URL = 'https://api.typesafe.ai/v1/systemone'
 OLLAMA_MODEL = 'gemma3:4b'
@@ -238,7 +239,7 @@ def share_rows(rows):
     if not service_url():
         return False
     import requests
-    body = {'profile': profile_key(), 'rows': rows}
+    body = {'profile': profile_key(), 'rows': rows, 'recent': db.recent_titles(8)}
     try:
         r = requests.post(service_url() + '/rows', json=body, timeout=30, headers={'X-Stream-Key': _setting('recs_key')})
         r.raise_for_status()
@@ -265,8 +266,15 @@ def lists(fresh=False):
     except Exception as e:
         log('lists unavailable: {0}'.format(e))
         return kept.get('lists', [])
-    db.set_meta('bot_lists', {'fetched': time.time(), 'lists': found})
+    db.set_meta('bot_lists', {'fetched': time.time(), 'lists': found, 'related': r.json().get('related') or {}})
     return found
+
+
+def related(name):
+    """A posted 'titles like this' list for a title, from the last fetch of /lists: {'by', 'items'} or None."""
+    kept = db.meta('bot_lists') or {}
+    key = re.sub(r'[^a-z0-9]', '', meta.split_title(name)[0].lower()) if name else ''
+    return (kept.get('related') or {}).get(key) if key else None
 
 
 def _pick(goal_for_jev, system, prompt_intro, pool, count, shortlist_size=60, kind='recommend'):

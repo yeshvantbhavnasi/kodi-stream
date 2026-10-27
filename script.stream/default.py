@@ -1381,7 +1381,7 @@ class TitlePage(xbmcgui.WindowXML):
         alike = discover.similar_entries(self.name, False, self.group or '', 24)
         if self.closed:
             return
-        items = [entry_item(e, meta=cat.title_case(e.get('group') or '')) for e in alike]
+        items = [entry_item(e, meta=e.get('reason') or cat.title_case(e.get('group') or '')) for e in alike]
         with self.ui_lock:
             if self.closed:
                 return
