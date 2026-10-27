@@ -336,10 +336,14 @@ any). A list holds twenty items, the day's picks, and is meant to be posted afre
 `GET /lists?profile=<its key>` every half hour and matches the titles to its catalogue by name, year and language, so
 a title the catalogue does not carry is simply left out. The matched titles lead the **Top Picks for You** row, with
 the poster's name in its heading and the reason under each poster, ahead of the model's picks and the local ranking;
-played and dismissed titles are left out. `/text` lists what is posted. `GET /context?pin=…` gives a posting bot what
-it needs: the current list, whether anything changed since it was posted (`needs_update`, so a daily run can stop
-early), and per profile what the household told the box and watched, the catalogue titles the box offered (to use
-verbatim) and the web page's verdicts. `service/BOT_INSTRUCTIONS.md` is the brief to hand a bot that will do the posting.
+played and dismissed titles are left out. A list may also carry `exclude`, titles to leave out of every row on the boxes it is for. `/text` lists what
+is posted. Each box also sends the service every row it is showing, with the titles and reasons, whenever its rows
+change (`POST /rows`); `GET /rows?profile=…` returns them and `/text` prints them, so what each TV shows can be read
+from anywhere. `GET /context?pin=…` gives a posting bot what it needs: the current list, whether anything changed
+since it was posted (`needs_update`, so a daily run can stop early), and per profile what the household told the box
+and watched, the catalogue titles the box offered (to use verbatim), the web page's verdicts and the rows the box is
+showing (`showing`, to review and correct with `exclude`). `service/BOT_INSTRUCTIONS.md` is the brief to hand a bot
+that will do the posting.
 
 **With a local model (Ollama).** Used when the service setting is blank. The *Ollama server* setting points at an [Ollama](https://ollama.com)
 server, `http://127.0.0.1:11434` by default, and *Ollama model* names the model, `gemma3:4b` (Google's Gemma 3, 4B)

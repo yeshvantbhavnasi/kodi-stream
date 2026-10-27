@@ -24,6 +24,8 @@ Searches are answered on the spot and remembered, so a repeated query is instant
                    profile key as /batches shows it. Posting a name again replaces that list; DELETE /lists?name=
                    removes one. GET /lists?profile=<key> is what a box asks for: {"lists": [...]} newest first.
                    A list holds at most 20 items; the boxes show the posted titles as their Top Picks row.
+    POST /rows    from a box: every row it is showing with the titles, kept per profile; GET /rows?profile= (key, or
+                   ?pin=) returns them, and /context carries them per profile as "showing".
     GET  /context  (pin) what a posting bot needs: the current list, whether anything changed since it was posted
                    (needs_update), and per box profile what the household told us and watched (as the box sent it),
                    the catalogue titles it offered (names to use verbatim) and the web page's good/bad verdicts.
@@ -90,7 +92,8 @@ CREATE TABLE IF NOT EXISTS batches (key TEXT PRIMARY KEY, profile TEXT, kind TEX
 CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, key TEXT, at REAL, model TEXT, took REAL, picks TEXT);
 CREATE INDEX IF NOT EXISTS history_key ON history (key, at);
 CREATE TABLE IF NOT EXISTS feedback (profile TEXT, name TEXT, verdict TEXT, at REAL, PRIMARY KEY (profile, name));
-CREATE TABLE IF NOT EXISTS lists (name TEXT PRIMARY KEY, title TEXT, by TEXT, profile TEXT, at REAL, items TEXT);
+CREATE TABLE IF NOT EXISTS lists (name TEXT PRIMARY KEY, title TEXT, by TEXT, profile TEXT, at REAL, items TEXT, exclude TEXT);
+CREATE TABLE IF NOT EXISTS shown (profile TEXT PRIMARY KEY, at REAL, rows TEXT);
 '''
 JSON_COLUMNS = ('candidates', 'picks')
 
@@ -107,6 +110,8 @@ def load():
     global BATCHES
     with connect() as conn:
         conn.executescript(SCHEMA)
+        if 'exclude' not in [r['name'] for r in conn.execute('PRAGMA table_info(lists)').fetchall()]:
+            conn.execute('ALTER TABLE lists ADD COLUMN exclude TEXT')
         rows = conn.execute('SELECT * FROM batches').fetchall()
     BATCHES = {}
     for r in rows:
@@ -179,8 +184,10 @@ def rate(profile, name, verdict):
 LIST_ITEMS = 20  # a list is the day's picks: twenty at a time
 
 
-def save_list(name, title, by, profile, items):
-    """Keep (or replace) a posted list. Items are trimmed to title, year, kind, lang and reason."""
+def save_list(name, title, by, profile, items, exclude=()):
+    """Keep (or replace) a posted list. Items are trimmed to title, year, kind, lang and reason; exclude is a list of
+    titles the boxes must leave out of every row."""
+    excluded = [str(t)[:200].strip() for t in list(exclude or [])[:LIST_ITEMS * 2] if str(t).strip()]
     clean = []
     for item in items[:LIST_ITEMS]:
         if not isinstance(item, dict) or not str(item.get('title') or '').strip():
@@ -189,9 +196,31 @@ def save_list(name, title, by, profile, items):
                       'kind': str(item.get('kind') or '')[:10].lower(), 'lang': str(item.get('lang') or '')[:20].lower(),
                       'reason': str(item.get('reason') or '')[:200].strip()})
     with connect() as conn:
-        conn.execute('INSERT OR REPLACE INTO lists (name, title, by, profile, at, items) VALUES (?,?,?,?,?,?)',
-                     (name, title, by, profile, time.time(), json.dumps(clean)))
+        conn.execute('INSERT OR REPLACE INTO lists (name, title, by, profile, at, items, exclude) VALUES (?,?,?,?,?,?,?)',
+                     (name, title, by, profile, time.time(), json.dumps(clean), json.dumps(excluded)))
     return len(clean)
+
+
+def save_shown(profile, rows):
+    """What a box is showing right now: every row with its titles, as the box built them."""
+    clean = []
+    for row in list(rows or [])[:40]:
+        if not isinstance(row, dict) or not row.get('title'):
+            continue
+        items = [{'name': str(i.get('name') or '')[:200], 'reason': str(i.get('reason') or '')[:200],
+                  'kind': str(i.get('kind') or '')[:20], 'lang': str(i.get('lang') or '')[:30]}
+                 for i in list(row.get('items') or [])[:60] if isinstance(i, dict) and i.get('name')]
+        clean.append({'title': str(row['title'])[:80], 'items': items})
+    with connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO shown (profile, at, rows) VALUES (?,?,?)', (profile, time.time(), json.dumps(clean)))
+    return len(clean)
+
+
+def shown_for(profile=''):
+    """{profile: {'at', 'rows'}} for every box (or one)."""
+    with connect() as conn:
+        rows = conn.execute('SELECT * FROM shown' + (' WHERE profile=?' if profile else ''), (profile,) if profile else ()).fetchall()
+    return {r['profile']: {'at': r['at'], 'rows': json.loads(r['rows'] or '[]')} for r in rows}
 
 
 def delete_list(name):
@@ -204,7 +233,7 @@ def lists_for(profile=''):
     with connect() as conn:
         rows = conn.execute("SELECT * FROM lists WHERE profile='' OR profile=? ORDER BY at DESC", (profile or '',)).fetchall()
     return [{'name': r['name'], 'title': r['title'], 'by': r['by'], 'profile': r['profile'], 'at': r['at'],
-             'items': json.loads(r['items'] or '[]')} for r in rows]
+             'items': json.loads(r['items'] or '[]'), 'exclude': json.loads(r['exclude'] or '[]')} for r in rows]
 
 
 def context_for_bot():
@@ -215,12 +244,18 @@ def context_for_bot():
     current = posted[0] if posted else None
     latest = 0
     profiles = []
+    shown = shown_for()
     for key, b in sorted(batches, key=lambda kv: -kv[1].get('at', 0)):
         profile = b.get('profile') or key.split('|')[0]
         intro = (b.get('intro') or '').strip()
         profiles.append({'profile': profile, 'at': b.get('at', 0), 'about': intro[:12000],
-                         'candidates': list(b.get('candidates') or [])[:100], 'feedback': feedback_for(profile)})
+                         'candidates': list(b.get('candidates') or [])[:100], 'feedback': feedback_for(profile),
+                         'showing': shown.get(profile, {}).get('rows', []), 'showing_at': shown.get(profile, {}).get('at', 0)})
         latest = max(latest, b.get('at', 0))
+    for profile, s in shown.items():
+        if not any(p['profile'] == profile for p in profiles):
+            profiles.append({'profile': profile, 'at': s['at'], 'about': '', 'candidates': [], 'feedback': feedback_for(profile),
+                             'showing': s['rows'], 'showing_at': s['at']})
     with connect() as conn:
         row = conn.execute('SELECT MAX(at) AS at FROM feedback').fetchone()
     latest = max(latest, (row['at'] if row and row['at'] else 0))
@@ -365,6 +400,14 @@ def page():
             lines.append('{0:>3}. {1} ({2}) {3} {4}'.format(n + 1, item['title'], item['year'] or '?', item['kind'], item['lang']).rstrip())
             if item['reason']:
                 lines.append('     ' + item['reason'])
+        if posted.get('exclude'):
+            lines.append('     Excluded everywhere: ' + '; '.join(posted['exclude']))
+        lines.append('')
+    for profile, s in sorted(shown_for().items(), key=lambda kv: -kv[1]['at']):
+        lines.append('=' * 78)
+        lines.append('{0}  |  Showing now ({1} rows, built {2})'.format(profile, len(s['rows']), time.strftime('%a %d %b %H:%M', time.localtime(s['at']))))
+        for row in s['rows']:
+            lines.append('  ' + row['title'] + ': ' + '; '.join(i['name'] for i in row['items'][:40]))
         lines.append('')
     for key, b in items:
         kind = b.get('kind') or ('search' if '|search|' in key else 'recommend')
@@ -612,6 +655,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._redirect('/login' + ('?embed=1' if embed else ''), [self.cookie('', 0)])
         if self.path.startswith('/context'):
             return self._send(200, context_for_bot()) if self.pin_ok() else None
+        if self.path.startswith('/rows') and self.query().get('pin'):
+            return self._send(200, {'rows': shown_for(self.query().get('profile', ''))}) if self.pin_ok() else None
         is_page = self.path == '/' or self.path.startswith(('/?', '/text', '/index'))
         if not self.allowed(is_page):
             return
@@ -628,6 +673,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, all_feedback())
         if self.path.startswith('/lists'):
             return self._send(200, {'lists': lists_for(q.get('profile', ''))})
+        if self.path.startswith('/rows'):
+            return self._send(200, {'rows': shown_for(q.get('profile', ''))})
         if self.path.startswith('/history'):
             with connect() as conn:
                 rows = conn.execute('SELECT key, at, model, took, picks FROM history ORDER BY at DESC LIMIT 500').fetchall()
@@ -681,9 +728,22 @@ class Handler(BaseHTTPRequestHandler):
             if not name or not isinstance(items, list):
                 return self._send(400, {'error': 'name and items needed'})
             kept = save_list(name, str(body.get('title') or '').strip()[:80], str(body.get('by') or '').strip()[:60],
-                             str(body.get('profile') or '').strip()[:200], items)
+                             str(body.get('profile') or '').strip()[:200], items, body.get('exclude') or [])
             log('list "{0}" by {1}: {2} titles, from {3}'.format(name, body.get('by') or '?', kept, self.headers.get('Cf-Connecting-Ip') or self.client_address[0]))
             return self._send(200, {'ok': True, 'name': name, 'kept': kept})
+        if self.path.startswith('/rows'):
+            if not self.allowed():
+                return
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 400000)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            profile = str(body.get('profile') or '').strip()[:200]
+            if not profile:
+                return self._send(400, {'error': 'profile needed'})
+            kept = save_shown(profile, body.get('rows') or [])
+            return self._send(200, {'ok': True, 'kept': kept})
         if not self.path.startswith('/pick'):
             return self._send(404, {'error': 'not found'})
         if not self.allowed():

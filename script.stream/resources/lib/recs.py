@@ -127,12 +127,42 @@ def score(entry, data, t, now):
     return s
 
 
+def excluded_names():
+    """Catalogue names of the titles a posted list asked to leave out of every row on this box."""
+    out = set()
+    for posted in ai.lists():
+        for title in posted.get('exclude') or []:
+            entry = discover.match_title(title)
+            if entry:
+                out.add(entry['item']['name'])
+            out.add(title)
+    return out
+
+
+def _same_film(name):
+    """One key for every copy of a film: 'Nishaanchi (2025)' in Telugu, Tamil and Hindi, clean or cinema recording."""
+    title, year = meta.split_title(name)
+    return discover._plain(title) + year
+
+
+def _no_repeats(entries):
+    """A row shows a film once, whichever language or copy came first."""
+    seen, out = set(), []
+    for e in entries:
+        key = _same_film(e['item']['name'])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(e)
+    return out
+
+
 def candidates():
     """Every unplayed, unrated, undismissed indexed title in the viewer's languages, each with its details and score,
     best first. Also returns the taste that scored them and the metadata map."""
     metadata = db.metadata_all()
     t = taste(metadata)
-    skip = db.watched_names() | db.rated_names() | db.dismissed_names()
+    skip = db.watched_names() | db.rated_names() | db.dismissed_names() | excluded_names()
     now = time.time()
     pool = []
     for entry in db.all_titles():
@@ -188,7 +218,7 @@ def posted_picks():
     """Titles from the lists posted to the service, newest list first, each with its reason and who posted it:
     they lead Top Picks whenever there are any. Returns ([entries], by)."""
     out, seen, by = [], set(), ''
-    skip = db.watched_names() | db.dismissed_names()
+    skip = db.watched_names() | db.dismissed_names() | excluded_names()
     for posted in ai.lists():
         who = posted.get('by') or ''
         for e in discover.list_entries(posted.get('items') or [], ROW_SIZE):
@@ -365,6 +395,7 @@ def build():
     rows += [r for r in videos if not r[0].startswith('Tonight')]
     rows += provider_rows(scored)
     rows += gems(scored, now)
+    rows = [(title, _no_repeats(entries)) for title, entries in rows]
     for _, entries in rows:
         for e in entries:
             e.pop('data', None)
@@ -407,7 +438,19 @@ def rows(force=False, fetch=False):
         db.set_meta('rows_dirty', False)
         if STATE['lists_at'] and STATE['lists_at'] != before and not STATE.get('resolving'):
             threading.Thread(target=_resolve_later, daemon=True).start()
+        threading.Thread(target=_share_later, args=(built,), daemon=True).start()
     return STATE['rows'] or []
+
+
+def _share_later(built):
+    """Send the rows to the service when they differ from what was sent last."""
+    summary = [{'title': title, 'items': [{'name': e['item']['name'], 'reason': e.get('meta') or '', 'kind': e.get('kind') or '',
+                                           'lang': e.get('group') or ''} for e in entries]} for title, entries in built]
+    digest = hashlib.md5(json.dumps(summary, sort_keys=True).encode('utf-8')).hexdigest()
+    if digest == STATE.get('shared'):
+        return
+    if ai.share_rows(summary):
+        STATE['shared'] = digest
 
 
 def _resolve_later():

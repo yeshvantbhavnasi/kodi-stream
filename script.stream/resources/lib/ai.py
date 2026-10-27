@@ -232,6 +232,22 @@ def charts():
 LISTS_FOR = 600  # ask the service for the posted lists at most this often
 
 
+def share_rows(rows):
+    """Tell the service what this box is showing (POST /rows): every row with its titles, so the page and the posting
+    bot can see and correct them. Quiet on failure."""
+    if not service_url():
+        return False
+    import requests
+    body = {'profile': profile_key(), 'rows': rows}
+    try:
+        r = requests.post(service_url() + '/rows', json=body, timeout=30, headers={'X-Stream-Key': _setting('recs_key')})
+        r.raise_for_status()
+        return True
+    except Exception as e:
+        log('rows not shared: {0}'.format(e))
+        return False
+
+
 def lists(fresh=False):
     """Lists another bot or person posted to the service for this box (GET /lists): [{'name', 'title', 'by', 'at',
     'items': [{'title', 'year', 'kind', 'lang', 'reason'}]}], newest first. Kept ten minutes unless fresh is asked

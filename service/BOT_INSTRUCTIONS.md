@@ -27,7 +27,10 @@ The reply has:
   history, one event per line, oldest first (played, stopped with percent watched, finished, listed, liked, disliked,
   dismissed, searched), with each title's language and type. `candidates` are catalogue titles the TV offered, named
   exactly as the catalogue names them; `feedback` is what the household said about earlier picks on the service's
-  web page (`good` or `bad`).
+  web page (`good` or `bad`). `showing` is every row that TV is showing right now, with the titles in each and the
+  reason under each title: the Top Picks row (your list leads it), the model's picks, and the rows the TV's own
+  engine built (Because you watched, genre rows, Highly Rated, YouTube and so on). Review these: a title that does
+  not belong can be removed from every row on the TV with `exclude` (below).
 
 Base the picks on `about` and `feedback`. Take titles from `candidates` whenever one fits, spelled exactly as given,
 so they are sure to match; add a title from outside the candidates only when you are confident the catalogue carries
@@ -58,6 +61,7 @@ Content-Type: application/json
   "title": "Today's Picks",
   "by": "<your name>",
   "profile": "",
+  "exclude": ["A title that should not appear anywhere on the TV"],
   "items": [
     {"title": "Sardar 2", "year": "2026", "kind": "movie", "lang": "te", "reason": "A big-screen spy thriller with Karthi"},
     {"title": "The Family Man", "year": "2019", "kind": "show", "lang": "hi", "reason": "Sharp, funny spy series to binge"}
@@ -74,6 +78,7 @@ Field rules:
 | `title` | The row's heading on the TV. Up to 40 characters, title case, no emoji |
 | `by` | Your name as it should appear ("Picked by …" is shown when a reason is blank) |
 | `profile` | `""` for every TV in the house. Otherwise one TV's profile key, if you were given one |
+| `exclude` | Optional. Titles (as the TV's `showing` names them) to leave out of every row on the TVs this list is for, for example something unsuitable or already seen elsewhere. Up to 40 |
 | `items[].title` | The title as released. Drop quality words such as "PreDVD" or "HDRip" from a candidate's name; the TV picks the cleanest copy it has |
 | `items[].year` | Four digits for movies; blank or the first-air year for shows |
 | `items[].kind` | `movie` or `show`; blank if unsure |
