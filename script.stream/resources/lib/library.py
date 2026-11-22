@@ -331,9 +331,30 @@ def complete(langs=None):
     return bool(mine) and all(j['done_at'] for j in mine)
 
 
-def search(query, limit=120):
-    """Titles whose name holds every word of the query (or the query run together), best matches first:
-    [{'item', 'parent', 'group', 'meta', 'kind'}]. Chosen languages only, unless nothing there matches."""
+def _year_of(name, metadata=None):
+    """4-digit release year from the title name ('Pushpa (2024)') or from cached TMDb metadata, or ''."""
+    m = re.search(r'\b((?:19|20)\d{2})\b', name or '')
+    if m:
+        return m.group(1)
+    if metadata:
+        y = str((metadata.get(name) or {}).get('year') or '')
+        if re.match(r'^(19|20)\d{2}$', y):
+            return y
+    return ''
+
+
+def _clean_letter(name):
+    """Leading A-Z bucket for alphabetical browsing ('0-9' for numbers/symbols)."""
+    text = re.sub(r'^[\W_]+', '', (name or '').strip())
+    if not text:
+        return '0-9'
+    ch = text[0].upper()
+    return ch if 'A' <= ch <= 'Z' else '0-9'
+
+
+def search(query, kinds=None, limit=120):
+    """Titles whose name (or year) holds every word of the query (or the query run together), best matches first:
+    [{'item', 'parent', 'group', 'meta', 'kind'}]. Telugu first, Hindi secondary."""
     q = normalize(query)
     if not q:
         return []
@@ -341,14 +362,28 @@ def search(query, limit=120):
     flat = squeeze(query)
     conds = ' AND '.join(['norm LIKE ?'] * len(words))
     params = ['%' + w + '%' for w in words]
+    sql = 'SELECT * FROM library WHERE (({0}) OR squeezed LIKE ?)'.format(conds)
+    params.append('%' + flat + '%')
+    if kinds:
+        sql += ' AND kind IN ({0})'.format(','.join('?' * len(kinds)))
+        params += list(kinds)
     try:
         with _connect() as conn:
-            rows = conn.execute('SELECT * FROM library WHERE ({0}) OR squeezed LIKE ? LIMIT 2000'.format(conds),
-                                params + ['%' + flat + '%']).fetchall()
+            rows = conn.execute(sql + ' LIMIT 2000', params).fetchall()
     except Exception as e:
         cat.log('library search failed: {0}'.format(e))
         return []
     preferred = cat.top_groups()
+    out_rows = list(rows)
+    # If the query is a 4-digit year, also include shows/movies whose year came from TMDb metadata.
+    if re.match(r'^(19|20)\d{2}$', q):
+        seen_urls = {r['url'] for r in out_rows}
+        for e in by_year(q, kinds, limit=limit):
+            if e['item']['url'] not in seen_urls:
+                seen_urls.add(e['item']['url'])
+                out_rows.append({'norm': normalize(e['item']['name']), 'squeezed': squeeze(e['item']['name']),
+                                 'grp': e['group'], 'kind': e.get('kind') or '', 'item': json.dumps(e['item']),
+                                 'parent': e['parent'], 'first_seen': e.get('first_seen') or 0})
 
     def score(r):
         norm = r['norm']
@@ -364,13 +399,12 @@ def search(query, limit=120):
         else:
             s = 4
         year = re.search(r'\b((?:19|20)\d\d)\b', norm)
-        lang = (r['grp'] or '').lower()
-        return (s, preferred.index(lang) if lang in preferred else len(preferred), -int(year.group(1)) if year else 0, -r['first_seen'])
+        return (s, db.language_rank(r['grp'], preferred), -int(year.group(1)) if year else 0, -r['first_seen'])
 
-    rows = sorted(rows, key=score)
-    rows = db.only_chosen(rows, lambda r: r['grp'])
+    out_rows = sorted(out_rows, key=score)
+    out_rows = db.only_chosen(out_rows, lambda r: r['grp'])
     out, seen = [], set()
-    for r in rows:
+    for r in out_rows:
         if (r['norm'], r['grp']) in seen:
             continue
         seen.add((r['norm'], r['grp']))
@@ -379,6 +413,96 @@ def search(query, limit=120):
         if len(out) >= limit:
             break
     return out
+
+
+def all_for_kinds(kinds):
+    """Every indexed title of the given kinds across library.db and stream.db, deduplicated, chosen languages only."""
+    seen, entries = set(), []
+    if os.path.exists(PATH):
+        try:
+            with _connect() as conn:
+                if kinds:
+                    rows = conn.execute('SELECT * FROM library WHERE kind IN ({0}) ORDER BY first_seen DESC, rowid ASC'.format(
+                        ','.join('?' * len(kinds))), list(kinds)).fetchall()
+                else:
+                    rows = conn.execute('SELECT * FROM library ORDER BY first_seen DESC, rowid ASC').fetchall()
+            for r in rows:
+                key = (r['norm'], (r['grp'] or '').lower())
+                if key in seen:
+                    continue
+                seen.add(key)
+                entries.append({'item': json.loads(r['item']), 'parent': r['parent'], 'group': r['grp'],
+                                'kind': r['kind'], 'first_seen': r['first_seen']})
+        except Exception as e:
+            cat.log('library all_for_kinds failed: {0}'.format(e))
+    for e in db.all_titles():
+        if kinds and e.get('kind') not in kinds:
+            continue
+        key = (normalize(e['item']['name']), (e.get('group') or '').lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        entries.append(e)
+    return db.only_chosen(entries, lambda e: e.get('group'))
+
+
+def years_for(kinds):
+    """[(year_label, count)] for Movies or Shows in the local index, newest year first ('Older' for < 2000)."""
+    metadata = db.metadata_all()
+    counts = {}
+    older = 0
+    for e in all_for_kinds(kinds):
+        y = _year_of(e['item']['name'], metadata)
+        if not y:
+            continue
+        if int(y) < 2000:
+            older += 1
+        else:
+            counts[y] = counts.get(y, 0) + 1
+    out = sorted(counts.items(), key=lambda kv: -int(kv[0]))
+    if older:
+        out.append(('Older', older))
+    return out
+
+
+def by_year(year, kinds=None, limit=800):
+    """Indexed Movies or Shows from `year` ('2026', '2025', ... or 'Older'), Telugu first, Hindi secondary."""
+    metadata = db.metadata_all()
+    preferred = cat.top_groups()
+    found = []
+    for e in all_for_kinds(kinds):
+        y = _year_of(e['item']['name'], metadata)
+        if not y:
+            continue
+        if (year == 'Older' and int(y) < 2000) or y == str(year):
+            found.append(e)
+    found.sort(key=lambda e: (db.language_rank(e.get('group'), preferred), -(e.get('first_seen') or 0), e['item']['name'].lower()))
+    return found[:limit]
+
+
+def letters_for(kinds):
+    """[('ALL', total), ('A', n), ('B', n), ...] for alphabetical browsing of Movies or Shows."""
+    counts = {}
+    total = 0
+    for e in all_for_kinds(kinds):
+        ch = _clean_letter(e['item']['name'])
+        counts[ch] = counts.get(ch, 0) + 1
+        total += 1
+    if not total:
+        return []
+    letters = sorted([k for k in counts if k != '0-9']) + (['0-9'] if '0-9' in counts else [])
+    return [('ALL', total)] + [(ch, counts[ch]) for ch in letters]
+
+
+def by_letter(letter, kinds=None, limit=1000):
+    """Indexed Movies or Shows starting with `letter` (or all when 'ALL'), alphabetically per language, Telugu first."""
+    preferred = cat.top_groups()
+    found = []
+    for e in all_for_kinds(kinds):
+        if letter == 'ALL' or _clean_letter(e['item']['name']) == letter:
+            found.append(e)
+    found.sort(key=lambda e: (db.language_rank(e.get('group'), preferred), normalize(e['item']['name'])))
+    return found[:limit]
 
 
 def find_by_title(title, kinds=None, limit=12):

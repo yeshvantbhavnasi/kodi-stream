@@ -2237,8 +2237,10 @@ class Home(xbmcgui.WindowXML):
         self.ui_lock = threading.Lock()   # held for every change to the row controls
         self.pending = ('home', 0)
         self.settling = False
-        self.filter = None  # genre chosen on the Movies or Shows strip
-        self.strip_for = None  # which tab the strip's chips were built for
+        self.filter = None        # genre chosen on the Movies or Shows strip
+        self.year_filter = None   # release year chosen via By Year on Movies or Shows
+        self.letter_filter = None # A-Z letter chosen via A-Z on Movies or Shows
+        self.strip_for = None     # (tab, year_filter, letter_filter) the strip chips were built for
         self.armed = None  # touch: the title shown off by a first tap
         HOME['window'] = self
         self.setProperty('kids', '1' if db.KIDS else '')
@@ -2341,15 +2343,16 @@ class Home(xbmcgui.WindowXML):
         self.getControl(TABS_ID).selectItem(0)
         self.load_tab('home', focus)
 
-    def filtered_rows(self, kinds):
-        """The chosen genre as one row per language, the viewer's first language first."""
-        entries = discover.genre_entries(self.filter, kinds, 400)
+    def grouped_rows(self, heading, entries):
+        """Entries grouped into one row per language (Telugu first, Hindi/dubbed secondary), with See all › over ROW_LIMIT."""
         rows, by_lang = [], {}
         self.more_entries = {}
         for e in entries:
             by_lang.setdefault(cat.title_case(e.get('group') or 'Other'), []).append(e)
-        for lang, found in by_lang.items():
-            title = '{0} · {1}'.format(self.filter, lang)
+        order = cat.top_groups()
+        for lang in sorted(by_lang, key=lambda l: db.language_rank(l, order)):
+            found = by_lang[lang]
+            title = '{0} · {1}'.format(heading, lang)
             tiles = [entry_item(e, meta=lang) for e in found[:ROW_LIMIT]]
             if len(found) > ROW_LIMIT:
                 self.more_entries[title] = (lang, [dict(e, meta=lang) for e in found])
@@ -2361,25 +2364,43 @@ class Home(xbmcgui.WindowXML):
             rows.append(('items', title, tiles))
         return rows
 
+    def filtered_rows(self, kinds):
+        """The chosen genre as one row per language, Telugu first and Hindi secondary."""
+        entries = discover.genre_entries(self.filter, kinds, 400)
+        return self.grouped_rows(self.filter, entries)
+
     def show_filters(self, key):
-        """Fill the genre strip for Movies and Shows; hide it elsewhere. Called with the UI lock held."""
+        """Fill the filter strip (All, By Year, A-Z, Find Title, genres) for Movies and Shows; hide it elsewhere.
+        Called with the UI lock held."""
         strip = self.getControl(FILTER_ID)
-        self.setProperty('filter', self.filter or '')
+        active = '__year__' if self.year_filter else '__az__' if self.letter_filter else (self.filter or '')
+        self.setProperty('filter', active)
         if key not in ('movies', 'shows') or db.KIDS:
             strip.reset()
             self.strip_for = None
             self.setProperty('filters', '')
             return
-        if self.strip_for == key:
+        stamp = (key, self.year_filter, self.letter_filter)
+        if self.strip_for == stamp:
             return  # same tab reloading after a pick: keep the chips, and the highlight on them
+        pos = strip.getSelectedPosition() if self.strip_for and self.strip_for[0] == key else 0
         strip.reset()
         kinds = discover.MOVIE_KINDS if key == 'movies' else discover.SHOW_KINDS
-        chips = [tile('All', 'filter', genre='')]
+        year_label = 'Year: ' + self.year_filter if self.year_filter else 'By Year'
+        az_label = ('A–Z: ' + self.letter_filter if self.letter_filter != 'ALL' else 'A–Z: All') if self.letter_filter else 'A–Z'
+        chips = [
+            tile('All', 'filter', genre=''),
+            tile(year_label, 'filter', genre='__year__'),
+            tile(az_label, 'filter', genre='__az__'),
+            tile('Find Title', 'filter', genre='__find__'),
+        ]
         for genre, count in discover.genre_tiles(kinds):
             chips.append(tile(genre.replace(' & Mythology', ''), 'filter', genre=genre))
         strip.addItems(chips)
-        self.strip_for = key
-        self.setProperty('filters', '1' if len(chips) > 1 else '')
+        if 0 <= pos < len(chips):
+            strip.selectItem(pos)
+        self.strip_for = stamp
+        self.setProperty('filters', '1')
 
     def discovery_rows(self):
         """What is new, what the household plays most, and titles like the ones watched last."""
@@ -2631,15 +2652,25 @@ class Home(xbmcgui.WindowXML):
                 rows.append(('items', 'My List', [entry_item(e) for e in saved]))
             return rows
         if key == 'movies':
+            if self.year_filter:
+                return self.grouped_rows(self.year_filter, library.by_year(self.year_filter, discover.MOVIE_KINDS))
+            if self.letter_filter:
+                label = 'Movies A–Z' if self.letter_filter == 'ALL' else 'Movies · ' + self.letter_filter
+                return self.grouped_rows(label, library.by_letter(self.letter_filter, discover.MOVIE_KINDS))
             if self.filter:
                 return self.filtered_rows(discover.MOVIE_KINDS)
             movie_rows = self.order_language_rows(self.language_rows(u['movies'], '{0} Movies', ROWS - 2) + english_movies)
             return (movie_rows + [('dir', 'Kids Movies & Shows', u['kids'], 'Kids', None)])[:ROWS]
         if key == 'shows':
+            if self.year_filter:
+                return self.grouped_rows(self.year_filter, library.by_year(self.year_filter, discover.SHOW_KINDS))
+            if self.letter_filter:
+                label = 'Shows A–Z' if self.letter_filter == 'ALL' else 'Shows · ' + self.letter_filter
+                return self.grouped_rows(label, library.by_letter(self.letter_filter, discover.SHOW_KINDS))
             if self.filter:
                 return self.filtered_rows(discover.SHOW_KINDS)
             series = self.order_language_rows(self.language_rows(u['web_series'], '{0} Web Series', 14) + english_tv)
-            tv = self.language_rows(u['tv_shows'], '{0} TV Shows', max(4, ROWS - len(series)))
+            tv = self.order_language_rows(self.language_rows(u['tv_shows'], '{0} TV Shows', max(4, ROWS - len(series))))
             return (series + tv)[:ROWS]
         if key == 'sports':
             return self.sports_rows(ROWS - 1)
@@ -2683,7 +2714,7 @@ class Home(xbmcgui.WindowXML):
             return
         audit.event('tab', name=key, free_memory=audit.memory())
         if key != self.tab:
-            self.filter = None  # a genre filter belongs to the tab it was chosen on
+            self.filter = self.year_filter = self.letter_filter = None  # filters belong to the tab they were chosen on
         self.tab = key
         self.token += 1
         self.setProperty('status', 'Loading…')
@@ -3066,11 +3097,59 @@ class Home(xbmcgui.WindowXML):
         elif control_id == FILTER_ID:
             li = self.getControl(FILTER_ID).getSelectedItem()
             if li is not None:
-                self.filter = li.getProperty('genre') or None
-                audit.event('filter', tab=self.tab, genre=self.filter or 'All')
-                if self.filter:
-                    db.log_event('browsed', self.filter, None, self.tab)
-                self.load_tab(self.tab, focus=False)  # the highlight stays on the strip; Down goes to the rows
+                choice = li.getProperty('genre') or ''
+                kinds = discover.MOVIE_KINDS if self.tab == 'movies' else discover.SHOW_KINDS
+                section_name = 'Movies' if self.tab == 'movies' else 'Shows'
+                if choice == '__year__':
+                    years = library.years_for(kinds)
+                    if not years:
+                        notify('No years indexed yet — still building library')
+                        return
+                    labels = ['{0}  ({1:,})'.format(y, n) for y, n in years]
+                    picked = xbmcgui.Dialog().select('Browse {0} by Year'.format(section_name), labels)
+                    if picked < 0:
+                        return
+                    self.year_filter = years[picked][0]
+                    self.filter = self.letter_filter = None
+                    audit.event('filter_year', tab=self.tab, year=self.year_filter)
+                    self.load_tab(self.tab, focus=False)
+                elif choice == '__az__':
+                    letters = library.letters_for(kinds)
+                    if not letters:
+                        notify('No titles indexed yet — still building library')
+                        return
+                    labels = ['{0}  ({1:,})'.format('All A–Z' if ch == 'ALL' else ch, n) for ch, n in letters]
+                    picked = xbmcgui.Dialog().select('Browse {0} A–Z'.format(section_name), labels)
+                    if picked < 0:
+                        return
+                    self.letter_filter = letters[picked][0]
+                    self.filter = self.year_filter = None
+                    audit.event('filter_az', tab=self.tab, letter=self.letter_filter)
+                    self.load_tab(self.tab, focus=False)
+                elif choice == '__find__':
+                    query = xbmcgui.Dialog().input('Find {0} by title or year'.format('movie' if self.tab == 'movies' else 'show'))
+                    if not query:
+                        return
+                    started_find = time.time()
+                    db.log_event('searched', query, None, section_name)
+                    hits = library.search(query, kinds=kinds, limit=150)
+                    if not hits:
+                        local = [dict(h, meta=cat.title_case(h.get('group') or '')) for h in db.find_names(query, 60)
+                                 if not h.get('kind') or h.get('kind') in kinds]
+                        hits = db.only_chosen(local, lambda e: e.get('group')) if local else []
+                    if not hits:
+                        hits = cat.rank_results(query, cat.search(query))
+                    audit.event('find_title', tab=self.tab, query=query[:80], hits=len(hits),
+                                ms=int((time.time() - started_find) * 1000))
+                    if open_grid('{0}: “{1}”'.format(section_name, query), entries=hits):
+                        self.go_home()
+                else:
+                    self.filter = choice or None
+                    self.year_filter = self.letter_filter = None
+                    audit.event('filter', tab=self.tab, genre=self.filter or 'All')
+                    if self.filter:
+                        db.log_event('browsed', self.filter, None, self.tab)
+                    self.load_tab(self.tab, focus=False)  # the highlight stays on the strip; Down goes to the rows
         elif control_id == PROFILE_ID:
             if self.may_leave():
                 self.switch = True
