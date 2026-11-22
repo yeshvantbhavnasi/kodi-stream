@@ -23,7 +23,8 @@ SASTA = 'plugin://plugin.video.sastatv/'
 CATALOGUE = re.compile(r'^https?://sastatv\.com/secured/php/[\w/]+\.php(\?|$)', re.I)
 GENERIC_IMG = re.compile(r'sastatv\.com/images/(logo/|Sasta|no-poster)', re.I)  # placeholders, not posters
 FRESH = 30 * 60
-MAX_STALE = 12 * 3600
+MAX_STALE = 3 * 24 * 3600  # older copies are still shown at once while a fresh one is fetched behind them
+LIVE_STALE = 12 * 3600     # live channel links carry expiring signatures, so those listings are never served older
 
 S3 = 'https://sastatv.com/secured/php/fetchXclusiveS3.php?bkt='
 URLS = {
@@ -371,8 +372,8 @@ def _source_language(base):
     return _b64(params.get('lang', [''])[0]) or 'english'
 
 
-def search(query):
-    """Run the query against the sections in the viewer's languages; widen to every section only if that finds nothing."""
+def search_sources(chosen_only=False):
+    """The provider's per-section search links seen in cached listings (kids only on a kids profile)."""
     with _lock:
         sources = []
         for entry in _cache.values():
@@ -380,7 +381,33 @@ def search(query):
                 if item['t'] == 'search' and item['url'] not in sources:
                     sources.append(item['url'])
     if db.KIDS:
-        return _search_sources(query, [s for s in sources if 'cGx1cy1raWRz' in s])  # the kids section only
+        return [s for s in sources if 'cGx1cy1raWRz' in s]
+    if chosen_only:
+        return [s for s in sources if db.lang_match(_source_language(s))]
+    return sources
+
+
+def source_title(base):
+    params = parse_qs(urlparse(base).query)
+    bucket = _b64(params.get('bkt', [''])[0])
+    lang = _b64(params.get('lang', [''])[0])
+    return ' · '.join(x for x in (BUCKETS.get(bucket, bucket), lang) if x) or 'English Movies'
+
+
+def search_tile(query, base):
+    """A search-results entry that opens Sasta TV's own search of one section as a grid."""
+    title = source_title(base)
+    return {'item': {'t': 'folder', 'name': 'Search {0} on Sasta TV for \u201c{1}\u201d'.format(title, query),
+                     'url': base + quote(query, safe=''),
+                     'plot': 'Ask Sasta TV directly, in case a title is newer than the saved library.'},
+            'parent': base, 'group': title.split(' · ')[-1], 'meta': 'Sasta TV search'}
+
+
+def search(query):
+    """Run the query against the sections in the viewer's languages; widen to every section only if that finds nothing."""
+    sources = search_sources()
+    if db.KIDS:
+        return _search_sources(query, sources)  # the kids section only
     chosen = [s for s in sources if db.lang_match(_source_language(s))]
     if chosen and len(chosen) < len(sources):
         hits = _search_sources(query, chosen)

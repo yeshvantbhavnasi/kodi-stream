@@ -2159,6 +2159,7 @@ class Home(xbmcgui.WindowXML):
             self.spawn(self.download_progress)
         self.spawn(self.background)
         self.spawn(self.keeper)
+        library.start(lambda: BUSY['on'] or self.closed or xbmc.Player().isPlaying())
         self.spawn(self.billboard)
         self.spawn(watch_visibility, self)
 
@@ -2216,6 +2217,7 @@ class Home(xbmcgui.WindowXML):
     def finish(self):
         """Mark the window closed and give its background work a moment to stop before the window is dropped."""
         self.closed = True
+        library.stop()
         for thread in getattr(self, 'workers', []):
             thread.join(4)
 
@@ -2715,13 +2717,25 @@ class Home(xbmcgui.WindowXML):
             return
         db.log_event('searched', query)
         busy = xbmcgui.DialogProgressBG()
-        busy.create('Stream', 'Searching every section…')
+        busy.create('Stream', 'Searching…')
         try:
-            # Titles already in the local index appear without waiting for the provider.
+            # The local library holds every title in the viewer's languages once it is built: that answer is instant.
+            saved = [] if db.KIDS else library.search(query)
             local = [dict(hit, meta=cat.title_case(hit.get('group') or '')) for hit in db.find_names(query, 40)]
             local = db.only_chosen(local, lambda e: e.get('group')) if local else []
-            found = cat.rank_results(query, cat.search(query))
-            names = {e['item']['name'] for e in found}
+            if saved:
+                # Sasta TV's own search, section by section, stays one tile away for anything the library missed.
+                found = saved + [cat.search_tile(query, base) for base in cat.search_sources(chosen_only=True)]
+            else:
+                busy.update(20, 'Stream', 'Searching every section…')
+                found = cat.rank_results(query, cat.search(query))
+            names = set()
+            deduped = []
+            for e in found:
+                if e['item']['name'] not in names:
+                    names.add(e['item']['name'])
+                    deduped.append(e)
+            found = deduped
             entries = found + [e for e in local if e['item']['name'] not in names]
             # A descriptive request ("feel-good family comedy") goes to the AI as well as the title search.
             if len(query.split()) >= 3:
@@ -2824,6 +2838,20 @@ class Home(xbmcgui.WindowXML):
         elif action == 'clear_history' and xbmcgui.Dialog().yesno('Stream', 'Clear all watch history and resume points?'):
             db.clear_history()
             notify('Watch history cleared')
+        elif action == 'library':
+            count, done, total, now = library.status()
+            text = '{0:,} titles saved on this device.[CR]{1} of {2} sections fully read.'.format(count, done, total)
+            if now:
+                text += '[CR]Reading now: ' + now
+            if xbmcgui.Dialog().yesno('Stream', text + '[CR][CR]Rebuild the library from the first page?', nolabel='Close', yeslabel='Rebuild'):
+                library.rebuild()
+                notify('Library will be rebuilt in the background')
+
+    def library_note(self):
+        count, done, total, _ = library.status()
+        if not total:
+            return 'Building…'
+        return '{0:,} titles{1}'.format(count, '' if done == total else ' · building')
 
     def set_kids_pin(self):
         dialog = xbmcgui.Dialog()
