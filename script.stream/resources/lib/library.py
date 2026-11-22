@@ -179,12 +179,22 @@ def _plan():
                 key = _job_key(kind, 'english')
                 keys.append(key)
                 _schedule_job(conn, key, kind, 'English', cat.URLS[section])
-        # Keep Kids page 1 warm in pages so the Movies tab opens instantaneously.
+        # Keep Kids page 1 and Bigg Boss Telugu Season 10 warm in pages so Home & Movies open instantaneously.
         if conn.execute('SELECT 1 FROM pages WHERE url=?', (cat.URLS['kids'],)).fetchone() is None:
             try:
                 cat.get_dir(cat.URLS['kids'])
             except Exception:
                 pass
+        if db.lang_match('telugu'):
+            bb_url = ('http://sastatv.com/secured/php/fetchXclusiveS3.php?bkt=ZGVzaXR2c2hvd3M='
+                      '&order=recent&sdirurl=VGVsdWd1L1NUQVIlMjBNQUEvL0JpZ2clMjBCb3NzLy9TZWFzb24lMjAxMC8='
+                      '&thumb=aHR0cDovL3NtYXJ0NGsubWUvc3RhbGtlcl9wb3J0YWwvc2NyZWVuc2hvdHMvMjIzNi8yMjM1NjEuanBlZw==')
+            bb_row = conn.execute('SELECT fetched_at FROM pages WHERE url=?', (bb_url,)).fetchone()
+            if bb_row is None or time.time() - (bb_row['fetched_at'] or 0) > REFRESH_EVERY:
+                try:
+                    cat.get_dir(bb_url, fresh=True)
+                except Exception:
+                    pass
     return keys
 
 
