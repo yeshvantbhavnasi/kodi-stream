@@ -22,7 +22,8 @@ SASTA = 'plugin://plugin.video.sastatv/'
 # live on other plugin modes and are never called from here.
 CATALOGUE = re.compile(r'^https?://sastatv\.com/secured/php/[\w/]+\.php(\?|$)', re.I)
 GENERIC_IMG = re.compile(r'sastatv\.com/images/(logo/|Sasta|no-poster)', re.I)  # placeholders, not posters
-FRESH = 30 * 60
+FRESH = 3600               # refresh indexed VOD pages in the background once older than 1 hour
+LIVE_FRESH = 15 * 60       # refresh live TV / sports listings more often
 MAX_STALE = 3 * 24 * 3600  # older copies are still shown at once while a fresh one is fetched behind them
 LIVE_STALE = 12 * 3600     # live channel links carry expiring signatures, so those listings are never served older
 
@@ -206,6 +207,28 @@ def plugin_folder(url):
     return '{0}?mode=10&name=x&url={1}'.format(SASTA, quote(url, safe=''))
 
 
+def _is_live_listing(url):
+    low = (url or '').lower()
+    return any(k in low for k in ('live-root', 'live-grp', 'getvendor1live', 'echoliveevents'))
+
+
+def _library():
+    """Lazy import of library.py (which imports catalogue) for persistent page-index reads and writes."""
+    try:
+        import library
+        return library
+    except Exception:
+        return None
+
+
+def warm_memory(url, items, fetched_at=None):
+    """Put a freshly indexed listing into the in-memory cache so the next screen load sees it at once."""
+    if not url or not items:
+        return
+    with _lock:
+        _cache[url] = {'t': fetched_at or time.time(), 'items': items}
+
+
 def _fetch(url):
     if yt.is_youtube(url):
         items = yt.listing(rpc, url)
@@ -215,9 +238,14 @@ def _fetch(url):
         items = [classify(e, n) for n, e in enumerate(result.get('files') or [])]
         items = [i for i in items if i]
     if not re.search(r'search=.', url):
+        now = time.time()
         with _lock:
-            _cache[url] = {'t': time.time(), 'items': items}
+            _cache[url] = {'t': now, 'items': items}
             _save_cache()
+        if not yt.is_youtube(url) and not _is_live_listing(url):
+            lib = _library()
+            if lib is not None:
+                lib.put_page(url, items)
         index(url, items)
     return items
 
@@ -251,9 +279,8 @@ def index(url, items):
             log('index failed: {0}'.format(e))
 
 
-def warm_index(max_age=24 * 3600):
-    """Make sure the first page of every main section is in the local database, once the last pass is older than
-    max_age (a day when Stream opens; the hourly keeper passes an hour)."""
+def warm_index(max_age=3600):
+    """Make sure the first page of every main section is in the local database, refreshed every hour."""
     if time.time() - db.meta('indexed_at', 0) < max_age:
         return
     if db.KIDS:
@@ -323,13 +350,25 @@ def _refresh_later(url):
 
 
 def get_dir(url, fresh=False):
-    """Serve from cache when possible; refresh in the background once the copy is older than FRESH."""
+    """Serve from the local index (memory cache, then library.db's pages table) so page loads are instant;
+    refresh in the background once the copy is older than FRESH (1 hour for VOD, 15 min for live)."""
+    live = _is_live_listing(url)
+    stale_limit = LIVE_STALE if live else MAX_STALE
+    fresh_limit = LIVE_FRESH if live else FRESH
     with _lock:
         hit = _cache.get(url)
+    if hit is None and not fresh and not live and not yt.is_youtube(url) and not re.search(r'search=.', url):
+        lib = _library()
+        saved = lib.get_page(url) if lib is not None else None
+        if saved is not None:
+            items, fetched_at = saved
+            hit = {'t': fetched_at, 'items': items}
+            with _lock:
+                _cache[url] = hit
     age = time.time() - hit['t'] if hit else None
-    if hit is None or fresh or age > MAX_STALE:
+    if hit is None or fresh or age > stale_limit:
         return _fetch(url)
-    if age > FRESH:
+    if age > fresh_limit:
         _refresh_later(url)
     return hit['items']
 

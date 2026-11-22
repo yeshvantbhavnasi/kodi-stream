@@ -19,8 +19,8 @@ import catalogue as cat
 import db
 
 PATH = os.path.join(cat.PROFILE, 'library.db')
-REFRESH_EVERY = 6 * 3600     # re-check the newest pages of a finished section this often
-FRESH_PAGES = 8              # at most this many pages per refresh, stopping early on a page with nothing new
+REFRESH_EVERY = 3600         # check for new titles in every finished section every hour
+FRESH_PAGES = 8              # at most this many pages per hourly refresh, stopping early once a page brings nothing new
 ENGLISH_PAGES = 10           # cap full crawl of huge English sections to the newest ~1000 titles each
 PAUSE = 1.5                  # seconds between listings, so the screen's own requests are never kept waiting
 SECTIONS = (('movies', 'Movies'), ('web_series', 'Web Series'), ('tv_shows', 'TV Shows'))
@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS library (
     first_seen REAL, last_seen REAL);
 CREATE INDEX IF NOT EXISTS library_grp ON library(grp);
 CREATE TABLE IF NOT EXISTS jobs (key TEXT PRIMARY KEY, kind TEXT, grp TEXT, queue TEXT, done_at REAL, pages INTEGER);
+CREATE TABLE IF NOT EXISTS pages (url TEXT PRIMARY KEY, items TEXT, fetched_at REAL);
 '''
 
 _worker = [None]
@@ -86,6 +87,32 @@ def _store(conn, parent, kind, group, items):
     return len(set(urls) - known)
 
 
+def put_page(url, items):
+    """Persist a full directory listing in library.db so page loads answer straight from the local index."""
+    if not url or not items:
+        return
+    try:
+        init()
+        with _connect() as conn:
+            conn.execute('INSERT OR REPLACE INTO pages VALUES (?,?,?)', (url, json.dumps(items), time.time()))
+    except Exception as e:
+        cat.log('library: put_page failed: {0}'.format(e))
+
+
+def get_page(url):
+    """(items, fetched_at) from the local page index, or None when not yet indexed."""
+    if not url or not os.path.exists(PATH):
+        return None
+    try:
+        with _connect() as conn:
+            row = conn.execute('SELECT items, fetched_at FROM pages WHERE url=?', (url,)).fetchone()
+        if row:
+            return json.loads(row['items']), row['fetched_at']
+    except Exception:
+        pass
+    return None
+
+
 def _list(url):
     """One listing straight from the provider, without touching the screen's listing cache."""
     result = cat.rpc('Files.GetDirectory', {'directory': cat.plugin_folder(url), 'media': 'video',
@@ -138,12 +165,12 @@ def _plan():
 
 
 def _step(key):
-    """Read one listing of a job. Returns False once the job has nothing left to do."""
+    """Read one listing of a job. Returns (did_work, new_titles_count)."""
     with _connect() as conn:
         row = conn.execute('SELECT * FROM jobs WHERE key=?', (key,)).fetchone()
     queue = json.loads(row['queue']) if row else []
     if not queue:
-        return False
+        return False, 0
     url, mode, page = queue[0]
     kind, group = row['kind'], row['grp']
     STATUS['page'] = '{0} · {1} · page {2}'.format(group, kind, page + 1)
@@ -160,7 +187,10 @@ def _step(key):
             else:
                 titles.append(item)  # a show or web series; its seasons are read when it is opened
     nxt = next((i['url'] for i in items if i['t'] == 'next'), None)
+    now = time.time()
     with _connect() as conn:
+        if items:
+            conn.execute('INSERT OR REPLACE INTO pages VALUES (?,?,?)', (url, json.dumps(items), now))
         new = _store(conn, url, kind, group, titles) if titles else 0
         rest = queue[1:]
         full_limit = ENGLISH_PAGES if group.lower() == 'english' else 0
@@ -169,8 +199,15 @@ def _step(key):
         known = {q[0] for q in rest}
         rest += [m for m in more if m[0] not in known and (mode == 'full' or page == 0)]
         conn.execute('UPDATE jobs SET queue=?, pages=pages+1, done_at=? WHERE key=?',
-                     (json.dumps(rest), time.time() if not rest else row['done_at'], key))
-    return True
+                     (json.dumps(rest), now if not rest else row['done_at'], key))
+    if items:
+        cat.warm_memory(url, items, now)
+    if titles and (page == 0 or new > 0):
+        try:
+            db.index_titles(url, group, kind, titles)
+        except Exception:
+            pass
+    return True, new
 
 
 def _run(should_pause):
@@ -184,7 +221,7 @@ def _run(should_pause):
             if db.KIDS:
                 return
             keys = _plan()
-            worked = False
+            worked, added = False, 0
             for key in keys:
                 failures = 0
                 while not _stop.is_set():
@@ -192,9 +229,10 @@ def _run(should_pause):
                         if monitor.waitForAbort(5):
                             return
                     try:
-                        if not _step(key):
+                        did, new = _step(key)
+                        if not did:
                             break
-                        worked, failures = True, 0
+                        worked, added, failures = True, added + new, 0
                     except Exception as e:
                         failures += 1
                         cat.log('library: {0} failed: {1}'.format(key, e))
@@ -203,7 +241,15 @@ def _run(should_pause):
                     if monitor.waitForAbort(PAUSE):
                         return
             STATUS['page'] = ''
-            if monitor.waitForAbort(60 if worked else 15 * 60):
+            if added:
+                cat.log('library: {0} new titles indexed'.format(added))
+                try:
+                    import recs
+                    recs.mark_dirty()
+                    recs.share_catalogue()
+                except Exception as e:
+                    cat.log('library: post-refresh sync skipped: {0}'.format(e))
+            if monitor.waitForAbort(60 if worked else 10 * 60):
                 return
     finally:
         STATUS['running'] = False
@@ -227,11 +273,12 @@ def stop():
 
 
 def rebuild():
-    """Forget the saved titles and walk everything again from the first page."""
+    """Forget the saved titles and pages and walk everything again from the first page."""
     init()
     with _connect() as conn:
         conn.execute('DELETE FROM library')
         conn.execute('DELETE FROM jobs')
+        conn.execute('DELETE FROM pages')
 
 
 # ---------- reading ----------
