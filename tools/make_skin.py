@@ -30,6 +30,7 @@ MEDIA = os.path.join(ROOT, 'media')
 
 ROWS = 18
 FIRST = 200
+BROWSE_FIRST = 400
 TABS, CLOSE, SEARCH, GEAR, PROFILE, FILTER, BACK = 100, 110, 120, 130, 140, 160, 170
 TOUCH = {'on': False}  # set while the touch layouts are written
 SCALE = 1.25  # how much bigger tiles are in the touch layouts
@@ -225,18 +226,40 @@ def indent(text, n):
 
 def row(n):
     rid = FIRST + n
+    bid = BROWSE_FIRST + n
     down = rid + 1 if n < ROWS - 1 else 'noop'
     tiles = int(round(330 * SCALE)) if TOUCH['on'] else 330
     if n == 0:  # Up from the first row reaches the genre strip when it is shown, otherwise the tabs
         ups = '<onup condition="Control.IsVisible({flt})">{flt}</onup>\n                    <onup>{tabs}</onup>'.format(flt=FILTER, tabs=TABS)
     else:
         ups = '<onup>{0}</onup>'.format(rid - 1)
+    has_browse = '!String.IsEmpty(Window.Property(row{n}.browse))'.format(n=n)
     return '''            <control type="group" id="{gid}">
                 <height>{group}</height>
                 <visible>!String.IsEmpty(Window.Property(row{n}.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row{n}.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row{n}.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>{has_browse} + !Control.HasFocus({bid})</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>{has_browse} + Control.HasFocus({bid})</visible></control>
+                <control type="button" id="{bid}">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row{n}.browse)][/B]</label>
+                    <visible>{has_browse}</visible>
+                    {ups}
+                    <onleft>noop</onleft>
+                    <onright>{rid}</onright>
+                    <ondown>{down}</ondown>
+                </control>
                 <control type="list" id="{rid}">
                     {ups}
+                    <onleft condition="{has_browse}">{bid}</onleft>
                     <onleft>noop</onleft>
                     <ondown>{down}</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>{tiles}</height>
@@ -244,16 +267,17 @@ def row(n):
                     <scrolltime tween="quadratic">200</scrolltime>{layouts}
                 </control>
             </control>
-'''.format(gid=300 + n, n=n, rid=rid, ups=ups, down=down, layouts=scaled(layouts(n, rid)),
-           tiles=tiles, group=84 + tiles)
+'''.format(gid=300 + n, n=n, rid=rid, bid=bid, has_browse=has_browse, ups=ups, down=down,
+           layouts=scaled(layouts(n, rid)), tiles=tiles, group=84 + tiles)
 
 
 # ---------- billboard ----------
 
 def billboard(n):
     rid = FIRST + n
+    bid = BROWSE_FIRST + n
     c = 'Container({0}).ListItem'.format(rid)
-    shown = 'Control.HasFocus({r})'.format(r=rid)
+    shown = 'Control.HasFocus({r}) | Control.HasFocus({b})'.format(r=rid, b=bid)
     if n == 0:
         shown += ' | [[{0}] + String.IsEmpty(Window.Property(status))]'.format(TOP_BAR)
     has_art, no_art = '!String.IsEmpty({0}.Art(fanart))'.format(c), 'String.IsEmpty({0}.Art(fanart))'.format(c)
@@ -288,17 +312,17 @@ def filter_strip():
             <onleft>noop</onleft>
             <onright>noop</onright>
             <visible>!String.IsEmpty(Window.Property(filters))</visible>
-            <itemlayout width="178" height="40">
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>{other}</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>{chosen}</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>164</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
+            <itemlayout width="186" height="40">
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>{other}</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>{chosen}</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
             </itemlayout>
-            <focusedlayout width="178" height="40">
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus({f}) + {other}</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus({f}) + {chosen}</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="FFFFFFFF" border="17">pill.png</texture><visible>Control.HasFocus({f})</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>164</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label><visible>!Control.HasFocus({f})</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>164</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({f})</visible></control>
+            <focusedlayout width="186" height="40">
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus({f}) + {other}</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus({f}) + {chosen}</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="FFFFFFFF" border="17">pill.png</texture><visible>Control.HasFocus({f})</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label><visible>!Control.HasFocus({f})</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({f})</visible></control>
             </focusedlayout>
         </control>
 '''.format(f=f, tabs=TABS, first=FIRST, chosen=chosen, other=other)

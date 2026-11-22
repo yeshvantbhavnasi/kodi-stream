@@ -435,18 +435,28 @@ def _source_language(base):
     return _b64(params.get('lang', [''])[0]) or 'english'
 
 
-def search_sources(chosen_only=False):
-    """The provider's per-section search links seen in cached listings (kids only on a kids profile)."""
+def search_sources(chosen_only=False, kinds=None):
+    """The provider's per-section search links from cached & indexed listings, Telugu first and Hindi secondary."""
     with _lock:
         sources = []
         for entry in _cache.values():
             for item in entry['items']:
                 if item['t'] == 'search' and item['url'] not in sources:
                     sources.append(item['url'])
+    lib = _library()
+    if lib is not None:
+        for url in lib.page_search_sources():
+            if url not in sources:
+                sources.append(url)
     if db.KIDS:
         return [s for s in sources if 'cGx1cy1raWRz' in s]
+    if kinds:
+        allowed = set(kinds)
+        sources = [s for s in sources if section_of(s)[0] in allowed]
     if chosen_only:
-        return [s for s in sources if db.lang_match(_source_language(s))]
+        sources = [s for s in sources if db.lang_match(_source_language(s))]
+    order = top_groups()
+    sources.sort(key=lambda s: (db.language_rank(_source_language(s), order), source_title(s).lower()))
     return sources
 
 

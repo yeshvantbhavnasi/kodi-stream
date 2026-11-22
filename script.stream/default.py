@@ -36,6 +36,7 @@ GEAR_ID = 130
 PROFILE_ID = 140
 TOP_BAR = (TABS_ID, CLOSE_ID, SEARCH_ID, GEAR_ID, PROFILE_ID)
 FIRST_ROW = 200
+BROWSE_FIRST = 400  # header 'Browse all ›' pill buttons on each row (400..417)
 PANEL = 50
 EPISODE_LIST = 51   # the same screen shows episodes as a text list instead of poster tiles
 ACTION_LEFT, ACTION_RIGHT = 1, 2
@@ -2248,7 +2249,10 @@ class Home(xbmcgui.WindowXML):
         self.filter = None        # genre chosen on the Movies or Shows strip
         self.year_filter = None   # release year chosen via By Year on Movies or Shows
         self.letter_filter = None # A-Z letter chosen via A-Z on Movies or Shows
-        self.strip_for = None     # (tab, year_filter, letter_filter) the strip chips were built for
+        self.search_query = None  # active grouped search query on Movies, Shows, or global search view
+        self.row_browse = {}      # slot -> ('dir', title, url, group) or ('entries', title, group, entries)
+        self.more_entries = {}    # row title -> (group, full entries list)
+        self.strip_for = None     # (tab, year_filter, letter_filter, search_query) the strip chips were built for
         self.armed = None  # touch: the title shown off by a first tap
         HOME['window'] = self
         self.setProperty('kids', '1' if db.KIDS else '')
@@ -2352,7 +2356,7 @@ class Home(xbmcgui.WindowXML):
         self.load_tab('home', focus)
 
     def grouped_rows(self, heading, entries):
-        """Entries grouped into one row per language (Telugu first, Hindi/dubbed secondary), with See all › over ROW_LIMIT."""
+        """Entries grouped into one row per language (Telugu first, Hindi/dubbed secondary), with header Browse all & See all ›."""
         rows, by_lang = [], {}
         self.more_entries = {}
         for e in entries:
@@ -2361,9 +2365,11 @@ class Home(xbmcgui.WindowXML):
         for lang in sorted(by_lang, key=lambda l: db.language_rank(l, order)):
             found = by_lang[lang]
             title = '{0} · {1}'.format(heading, lang)
-            tiles = [entry_item(e, meta=lang) for e in found[:ROW_LIMIT]]
+            meta_entries = [dict(e, meta=e.get('meta') or lang) for e in found]
+            tiles = [entry_item(e, meta=e.get('meta') or lang) for e in found[:ROW_LIMIT]]
+            if len(found) > 8:
+                self.more_entries[title] = (lang, meta_entries)
             if len(found) > ROW_LIMIT:
-                self.more_entries[title] = (lang, [dict(e, meta=lang) for e in found])
                 more = list_item({'t': 'more', 'name': title, 'url': ''}, '', lang,
                                  meta='See all {0} titles'.format(len(found)), label='See all ›')
                 more.setProperty('trailer', '')
@@ -2372,38 +2378,163 @@ class Home(xbmcgui.WindowXML):
             rows.append(('items', title, tiles))
         return rows
 
+    def grouped_search_rows(self, query, kinds=None):
+        """Search results grouped into rows by section/group (Telugu first, Hindi secondary), plus matching TV channels/groups."""
+        started = time.time()
+        self.more_entries = {}
+        rows = []
+        order = cat.top_groups()
+        kind_order = {'Movies': 0, 'Web Series': 1, 'TV Shows': 2, 'English TV': 3, 'Kids': 4}
+        q = (query or '').strip()
+        if not q:
+            return rows
+
+        # 1. Matching browsable groups / TV channels (e.g. 'Star Maa', 'Zee Telugu', 'Colors', 'Web Series').
+        groups = [] if db.KIDS else library.matching_groups(q, kinds=kinds)
+        if groups:
+            gtitle = 'Groups & Channels · “{0}”'.format(q)
+            gtiles = [entry_item(g, meta=g.get('meta')) for g in groups[:ROW_LIMIT]]
+            if len(groups) > 8:
+                self.more_entries[gtitle] = ('', groups)
+            rows.append(('items', gtitle, gtiles))
+
+        # 2. Local library + stream.db hits (scoped to `kinds` when on Movies or Shows).
+        saved = [] if db.KIDS else library.search(q, kinds=kinds, limit=200)
+        local = [dict(hit, meta=cat.title_case(hit.get('group') or '')) for hit in db.find_names(q, 50)
+                 if not kinds or not hit.get('kind') or hit.get('kind') in kinds]
+        local = db.only_chosen(local, lambda e: e.get('group')) if local else []
+        entries = list(saved)
+        seen_names = {(e['item']['name'].lower(), (e.get('group') or '').lower()) for e in entries}
+        for e in local:
+            key = (e['item']['name'].lower(), (e.get('group') or '').lower())
+            if key not in seen_names:
+                seen_names.add(key)
+                entries.append(e)
+        if not entries and not groups:
+            # Fall back to live Sasta TV search when local index has nothing for this query.
+            live = cat.rank_results(q, cat.search(q))
+            if kinds:
+                allowed = set(kinds)
+                live = [e for e in live if cat.section_of(e.get('parent') or '')[0] in allowed or not cat.section_of(e.get('parent') or '')[0]]
+            for e in live:
+                key = (e['item']['name'].lower(), (e.get('group') or '').lower())
+                if key not in seen_names:
+                    seen_names.add(key)
+                    entries.append(e)
+
+        # 3. On global descriptive queries (3+ words), put AI best matches up front.
+        if kinds is None and len(q.split()) >= 3:
+            smart, ai_seen = [], set()
+            try:
+                for pick in ai.smart_search(q):
+                    name = pick['entry']['item']['name']
+                    if name not in ai_seen:
+                        ai_seen.add(name)
+                        smart.append(dict(pick['entry'], meta='Best match · ' + (pick['reason'] or 'chosen by AI')))
+            except Exception:
+                smart = []
+            if smart:
+                stitle = 'Best Matches · “{0}”'.format(q)
+                rows.append(('items', stitle, [entry_item(e, meta=e.get('meta')) for e in smart[:ROW_LIMIT]]))
+                if len(smart) > 8:
+                    self.more_entries[stitle] = ('', smart)
+
+        # 4. Bucket title hits into clean (Language, Kind) rows, Telugu first and Hindi secondary.
+        buckets = {}
+        for e in entries:
+            lang = cat.title_case(e.get('group') or 'Other')
+            kind = e.get('kind') or cat.section_of(e.get('parent') or '')[0] or ('Shows' if kinds == discover.SHOW_KINDS else 'Movies' if kinds == discover.MOVIE_KINDS else 'Titles')
+            buckets.setdefault((lang, kind), []).append(e)
+        for (lang, kind) in sorted(buckets, key=lambda lk: (db.language_rank(lk[0], order), kind_order.get(lk[1], 9), lk[1])):
+            found = buckets[(lang, kind)]
+            if kind == 'English TV':
+                label_group = 'English TV Shows'
+            elif lang.lower() in kind.lower():
+                label_group = kind
+            else:
+                label_group = '{0} {1}'.format(lang, kind)
+            title = '“{0}” · {1}'.format(q, label_group)
+            tiles = [entry_item(e, meta=e.get('meta') or label_group) for e in found[:ROW_LIMIT]]
+            if len(found) > 8:
+                self.more_entries[title] = (lang, [dict(e, meta=e.get('meta') or label_group) for e in found])
+            if len(found) > ROW_LIMIT:
+                more = list_item({'t': 'more', 'name': title, 'url': ''}, '', lang,
+                                 meta='See all {0} titles'.format(len(found)), label='See all ›')
+                more.setProperty('trailer', '')
+                more.setProperty('more_key', title)
+                tiles.append(more)
+            rows.append(('items', title, tiles))
+
+        # 5. Related titles on global search.
+        if kinds is None:
+            have = {e['item']['name'] for e in entries}
+            related = []
+            for word in [w for w in re.findall(r'\w+', q) if len(w) > 3][:4]:
+                for hit in db.only_chosen(db.find_titles(word, 30), lambda e: e.get('group')):
+                    if hit['item']['name'] not in have:
+                        have.add(hit['item']['name'])
+                        related.append(dict(hit, meta='Related · ' + cat.title_case(hit.get('group') or '')))
+            if related:
+                rtitle = 'Related · “{0}”'.format(q)
+                rows.append(('items', rtitle, [entry_item(e, meta=e.get('meta')) for e in related[:ROW_LIMIT]]))
+                if len(related) > 8:
+                    self.more_entries[rtitle] = ('', related)
+
+        # 6. Direct Sasta TV per-section search tiles (scoped to `kinds`) + YouTube on global search.
+        more_search = [cat.search_tile(q, base) for base in cat.search_sources(chosen_only=True, kinds=kinds)]
+        if kinds is None and yt.installed():
+            more_search.append(yt.search_entry(q))
+        if more_search:
+            mtitle = 'More Search · Sasta TV' + (' & YouTube' if kinds is None and yt.installed() else '')
+            rows.append(('items', mtitle, [entry_item(e, meta=e.get('meta')) for e in more_search[:ROW_LIMIT]]))
+
+        audit.event('search', tab=self.tab, query=q[:80], local_hits=len(saved), group_hits=len(groups),
+                    rows=len(rows), ms=int((time.time() - started) * 1000))
+        return rows
+
     def filtered_rows(self, kinds):
         """The chosen genre as one row per language, Telugu first and Hindi secondary."""
         entries = discover.genre_entries(self.filter, kinds, 400)
         return self.grouped_rows(self.filter, entries)
 
     def show_filters(self, key):
-        """Fill the filter strip (All, By Year, A-Z, Find Title, genres) for Movies and Shows; hide it elsewhere.
-        Called with the UI lock held."""
+        """Fill the browse/filter strip on Movies, Shows, and Search; hide it elsewhere. Called with the UI lock held."""
         strip = self.getControl(FILTER_ID)
-        active = '__year__' if self.year_filter else '__az__' if self.letter_filter else (self.filter or '')
+        active = ('__find__' if self.search_query else '__year__' if self.year_filter
+                  else '__az__' if self.letter_filter else (self.filter or ''))
         self.setProperty('filter', active)
-        if key not in ('movies', 'shows') or db.KIDS:
+        if key not in ('movies', 'shows', 'search') or db.KIDS:
             strip.reset()
             self.strip_for = None
             self.setProperty('filters', '')
             return
-        stamp = (key, self.year_filter, self.letter_filter)
+        stamp = (key, self.year_filter, self.letter_filter, self.search_query)
         if self.strip_for == stamp:
             return  # same tab reloading after a pick: keep the chips, and the highlight on them
         pos = strip.getSelectedPosition() if self.strip_for and self.strip_for[0] == key else 0
         strip.reset()
-        kinds = discover.MOVIE_KINDS if key == 'movies' else discover.SHOW_KINDS
-        year_label = 'Year: ' + self.year_filter if self.year_filter else 'By Year'
-        az_label = ('A–Z: ' + self.letter_filter if self.letter_filter != 'ALL' else 'A–Z: All') if self.letter_filter else 'A–Z'
-        chips = [
-            tile('All', 'filter', genre=''),
-            tile(year_label, 'filter', genre='__year__'),
-            tile(az_label, 'filter', genre='__az__'),
-            tile('Find Title', 'filter', genre='__find__'),
-        ]
-        for genre, count in discover.genre_tiles(kinds):
-            chips.append(tile(genre.replace(' & Mythology', ''), 'filter', genre=genre))
+        if key == 'search':
+            chips = [
+                tile('← Back Home', 'filter', genre='__home__'),
+                tile('New Search', 'filter', genre='__find__'),
+                tile('Browse Movies', 'filter', genre='__browse_movies__'),
+                tile('Browse Show Groups', 'filter', genre='__browse_shows__'),
+            ]
+        else:
+            kinds = discover.MOVIE_KINDS if key == 'movies' else discover.SHOW_KINDS
+            browse_label = 'Browse Sections' if key == 'movies' else 'Browse Groups'
+            year_label = 'Year: ' + self.year_filter if self.year_filter else 'By Year'
+            az_label = ('A–Z: ' + self.letter_filter if self.letter_filter != 'ALL' else 'A–Z: All') if self.letter_filter else 'A–Z'
+            find_label = 'Search: ' + shorten(self.search_query, 10) if self.search_query else 'Find Title'
+            chips = [
+                tile('All', 'filter', genre=''),
+                tile(browse_label, 'filter', genre='__browse__'),
+                tile(year_label, 'filter', genre='__year__'),
+                tile(az_label, 'filter', genre='__az__'),
+                tile(find_label, 'filter', genre='__find__'),
+            ]
+            for genre, count in discover.genre_tiles(kinds):
+                chips.append(tile(genre.replace(' & Mythology', ''), 'filter', genre=genre))
         strip.addItems(chips)
         if 0 <= pos < len(chips):
             strip.selectItem(pos)
@@ -2659,7 +2790,11 @@ class Home(xbmcgui.WindowXML):
             if saved:
                 rows.append(('items', 'My List', [entry_item(e) for e in saved]))
             return rows
+        if key == 'search':
+            return self.grouped_search_rows(self.search_query, None)
         if key == 'movies':
+            if self.search_query:
+                return self.grouped_search_rows(self.search_query, discover.MOVIE_KINDS)
             if self.year_filter:
                 return self.grouped_rows(self.year_filter, library.by_year(self.year_filter, discover.MOVIE_KINDS))
             if self.letter_filter:
@@ -2670,6 +2805,8 @@ class Home(xbmcgui.WindowXML):
             movie_rows = self.order_language_rows(self.language_rows(u['movies'], '{0} Movies', ROWS - 2) + english_movies)
             return (movie_rows + [('dir', 'Kids Movies & Shows', u['kids'], 'Kids', None)])[:ROWS]
         if key == 'shows':
+            if self.search_query:
+                return self.grouped_search_rows(self.search_query, discover.SHOW_KINDS)
             if self.year_filter:
                 return self.grouped_rows(self.year_filter, library.by_year(self.year_filter, discover.SHOW_KINDS))
             if self.letter_filter:
@@ -2723,6 +2860,8 @@ class Home(xbmcgui.WindowXML):
         audit.event('tab', name=key, free_memory=audit.memory())
         if key != self.tab:
             self.filter = self.year_filter = self.letter_filter = None  # filters belong to the tab they were chosen on
+            if key != 'search':
+                self.search_query = None
         self.tab = key
         self.token += 1
         self.setProperty('status', 'Loading…')
@@ -2755,20 +2894,28 @@ class Home(xbmcgui.WindowXML):
             with self.ui_lock:
                 if not current():
                     return
+                self.row_browse = {}
                 for n in range(ROWS):
                     self.setProperty('row{0}.title'.format(n), '')
                     self.setProperty('row{0}.wide'.format(n), '')
                     self.setProperty('row{0}.top10'.format(n), '')
+                    self.setProperty('row{0}.browse'.format(n), '')
                     self.getControl(FIRST_ROW + n).reset()
                 self.show_filters(key)
             for row in specs:
                 if not current():
                     return
+                browse_label = ''
+                browse_target = None
                 if row[0] == 'items':
                     title, items = row[1], row[2]
                     if title.startswith('Top 10'):
                         for rank, li in enumerate(items, 1):
                             li.setProperty('rank', str(rank))
+                    if title in getattr(self, 'more_entries', {}):
+                        group, found_all = self.more_entries[title]
+                        browse_label = 'All {0:,} ›'.format(len(found_all))
+                        browse_target = ('entries', title, group, found_all)
                 else:
                     _, title, url, group, only = row
                     try:
@@ -2790,11 +2937,16 @@ class Home(xbmcgui.WindowXML):
                         if items and all(i.getProperty('wide') for i in items):
                             more.setProperty('wide', '1')
                         items.append(more)
+                        browse_label = 'Browse all ›'
+                        browse_target = ('dir', title, url, group)
                 with self.ui_lock:
                     if not current():
                         return
                     self.getControl(FIRST_ROW + slot).addItems(items)
                     self.setProperty('row{0}.title'.format(slot), title)
+                    self.setProperty('row{0}.browse'.format(slot), browse_label)
+                    if browse_target is not None:
+                        self.row_browse[slot] = browse_target
                     # A row of videos is drawn with wide tiles (the skin can only switch layouts per row, not per tile).
                     # Wide tiles only when every tile is a video; a mixed row keeps posters, with videos letterboxed inside.
                     self.setProperty('row{0}.wide'.format(slot), '1' if items and all(i.getProperty('wide') for i in items) else '')
@@ -2813,16 +2965,18 @@ class Home(xbmcgui.WindowXML):
             with self.ui_lock:
                 if current():
                     empty = {'mylist': 'My List is empty. Hold OK on any title (or press the menu key) and choose Add to My List.',
-                             'movies': 'Nothing found for this genre yet.', 'shows': 'Nothing found for this genre yet.',
+                             'movies': 'Nothing found matching this filter yet.',
+                             'shows': 'Nothing found matching this filter yet.',
+                             'search': 'No matches found. Try a shorter title, a year, or a channel name.',
                              'history': 'Nothing has been played on this profile yet.',
                              'downloads': 'Nothing downloaded yet. Press and hold a movie or an episode and choose Download '
                                           'to keep it on this device and watch it without a connection.',
                              'youtube': yt.KEY_HELP}
                     self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
             if key not in ('mylist', 'history', 'downloads'):
-                audit.event('empty_listing', screen='tab:' + key, filter=self.filter or '')
+                audit.event('empty_listing', screen='tab:' + key, filter=self.filter or self.search_query or '')
             return
-        audit.event('tab_loaded', tab=key, rows=slot, ms=int((time.time() - started) * 1000), filter=self.filter or '')
+        audit.event('tab_loaded', tab=key, rows=slot, ms=int((time.time() - started) * 1000), filter=self.filter or self.search_query or '')
         # Ratings arrive after the rows are on screen, so browsing never waits for them.
         for n in range(slot):
             if not current():
@@ -2853,62 +3007,49 @@ class Home(xbmcgui.WindowXML):
                 if open_grid('YouTube: \u201c{0}\u201d'.format(query), url=yt.search_url(query), group='YouTube'):
                     self.go_home()
             return
-        query = xbmcgui.Dialog().input('Search movies and shows')
+        if db.KIDS:
+            query = xbmcgui.Dialog().input('Search kids movies and shows')
+            if not query:
+                return
+            db.log_event('searched', query, 'Kids')
+            hits = cat.rank_results(query, cat.search(query))
+            if open_grid('Results for “{0}”'.format(query), entries=hits, group='Kids'):
+                self.go_home()
+            return
+        if self.tab == 'shows':
+            prompt = 'Search shows, web series, or channels'
+            target_tab = 'shows'
+        elif self.tab == 'movies':
+            prompt = 'Search movies by title or year'
+            target_tab = 'movies'
+        else:
+            prompt = 'Search movies, shows, or channels'
+            target_tab = 'search'
+        query = xbmcgui.Dialog().input(prompt, defaultt=self.search_query or '')
         if not query:
             return
-        db.log_event('searched', query)
-        search_started = time.time()
-        busy = xbmcgui.DialogProgressBG()
-        busy.create('Stream', 'Searching…')
-        try:
-            # The local library holds every title in the viewer's languages once it is built: that answer is instant.
-            saved = [] if db.KIDS else library.search(query)
-            local = [dict(hit, meta=cat.title_case(hit.get('group') or '')) for hit in db.find_names(query, 40)]
-            local = db.only_chosen(local, lambda e: e.get('group')) if local else []
-            if saved:
-                # Sasta TV's own search, section by section, stays one tile away for anything the library missed.
-                found = saved + [cat.search_tile(query, base) for base in cat.search_sources(chosen_only=True)]
-            else:
-                busy.update(20, 'Stream', 'Searching every section…')
-                found = cat.rank_results(query, cat.search(query))
-            names = set()
-            deduped = []
-            for e in found:
-                if e['item']['name'] not in names:
-                    names.add(e['item']['name'])
-                    deduped.append(e)
-            found = deduped
-            entries = found + [e for e in local if e['item']['name'] not in names]
-            # A descriptive request ("feel-good family comedy") goes to the AI as well as the title search.
-            if len(query.split()) >= 3:
-                busy.update(60, 'Stream', 'Asking the AI for best matches…')
-                seen = set()
-                smart = []
-                for pick in ai.smart_search(query):
-                    name = pick['entry']['item']['name']
-                    if name not in seen:
-                        seen.add(name)
-                        smart.append(dict(pick['entry'], meta='Best match · ' + (pick['reason'] or 'chosen by AI')))
-                entries = smart + [e for e in entries if e['item']['name'] not in seen]
-            # Related titles from the local index: the query's words found in other names or descriptions.
-            have = {e['item']['name'] for e in entries}
-            related = []
-            for word in [w for w in re.findall(r'\w+', query) if len(w) > 3][:4]:
-                for hit in db.only_chosen(db.find_titles(word, 30), lambda e: e.get('group')):
-                    if hit['item']['name'] not in have:
-                        have.add(hit['item']['name'])
-                        related.append(dict(hit, meta='Related · ' + cat.title_case(hit.get('group') or '')))
-            entries += related[:30]
-            if not entries:
-                entries = [dict(p, meta='No match \u00b7 you might like this') for p in db.suggestions()]
-            # YouTube has an answer for almost anything; its search is one tile away, first when nothing matched here.
-            if yt.installed():
-                entries.insert(0 if not entries or entries[0].get('meta', '').startswith('No match') else len(entries), yt.search_entry(query))
-        finally:
-            busy.close()
-        audit.event('search', query=query[:80], local_hits=len(saved), total_hits=len(entries),
-                    ms=int((time.time() - search_started) * 1000))
-        if open_grid('Results for “{0}”'.format(query), entries=entries):
+        db.log_event('searched', query, None, target_tab)
+        self.search_query = query.strip()
+        self.filter = self.year_filter = self.letter_filter = None
+        self.load_tab(target_tab, focus=True)
+
+    def browse_picker(self, mode):
+        """Open a direct picker of Movie Sections or Show Groups & TV Channels (no far-right See all scrolling needed)."""
+        if mode == 'movies':
+            items = library.movie_sections()
+            heading = 'Browse Movie Sections'
+        else:
+            items = library.show_groups()
+            heading = 'Browse Show Groups & Channels'
+        if not items:
+            notify('No sections available yet')
+            return
+        picked = xbmcgui.Dialog().select(heading, [it['label'] for it in items])
+        if picked < 0:
+            return
+        chosen = items[picked]
+        audit.event('browse_group', mode=mode, title=chosen['title'])
+        if open_grid(chosen['title'], url=chosen['url'], group=chosen['group']):
             self.go_home()
 
     def refresh_recommendations(self):
@@ -3108,7 +3249,15 @@ class Home(xbmcgui.WindowXML):
                 choice = li.getProperty('genre') or ''
                 kinds = discover.MOVIE_KINDS if self.tab == 'movies' else discover.SHOW_KINDS
                 section_name = 'Movies' if self.tab == 'movies' else 'Shows'
-                if choice == '__year__':
+                if choice == '__home__':
+                    self.go_home()
+                elif choice == '__browse__':
+                    self.browse_picker(self.tab)
+                elif choice == '__browse_movies__':
+                    self.browse_picker('movies')
+                elif choice == '__browse_shows__':
+                    self.browse_picker('shows')
+                elif choice == '__year__':
                     years = library.years_for(kinds)
                     if not years:
                         notify('No years indexed yet — still building library')
@@ -3118,7 +3267,7 @@ class Home(xbmcgui.WindowXML):
                     if picked < 0:
                         return
                     self.year_filter = years[picked][0]
-                    self.filter = self.letter_filter = None
+                    self.filter = self.letter_filter = self.search_query = None
                     audit.event('filter_year', tab=self.tab, year=self.year_filter)
                     self.load_tab(self.tab, focus=False)
                 elif choice == '__az__':
@@ -3131,33 +3280,32 @@ class Home(xbmcgui.WindowXML):
                     if picked < 0:
                         return
                     self.letter_filter = letters[picked][0]
-                    self.filter = self.year_filter = None
+                    self.filter = self.year_filter = self.search_query = None
                     audit.event('filter_az', tab=self.tab, letter=self.letter_filter)
                     self.load_tab(self.tab, focus=False)
                 elif choice == '__find__':
-                    query = xbmcgui.Dialog().input('Find {0} by title or year'.format('movie' if self.tab == 'movies' else 'show'))
-                    if not query:
-                        return
-                    started_find = time.time()
-                    db.log_event('searched', query, None, section_name)
-                    hits = library.search(query, kinds=kinds, limit=150)
-                    if not hits:
-                        local = [dict(h, meta=cat.title_case(h.get('group') or '')) for h in db.find_names(query, 60)
-                                 if not h.get('kind') or h.get('kind') in kinds]
-                        hits = db.only_chosen(local, lambda e: e.get('group')) if local else []
-                    if not hits:
-                        hits = cat.rank_results(query, cat.search(query))
-                    audit.event('find_title', tab=self.tab, query=query[:80], hits=len(hits),
-                                ms=int((time.time() - started_find) * 1000))
-                    if open_grid('{0}: “{1}”'.format(section_name, query), entries=hits):
-                        self.go_home()
+                    self.search()
                 else:
                     self.filter = choice or None
-                    self.year_filter = self.letter_filter = None
+                    self.year_filter = self.letter_filter = self.search_query = None
                     audit.event('filter', tab=self.tab, genre=self.filter or 'All')
                     if self.filter:
                         db.log_event('browsed', self.filter, None, self.tab)
                     self.load_tab(self.tab, focus=False)  # the highlight stays on the strip; Down goes to the rows
+        elif BROWSE_FIRST <= control_id < BROWSE_FIRST + ROWS:
+            target = getattr(self, 'row_browse', {}).get(control_id - BROWSE_FIRST)
+            if target:
+                mode = target[0]
+                audit.event('browse_all', tab=self.tab, row=target[1], via='header')
+                if mode == 'dir':
+                    _, title, url, group = target
+                    if open_grid(title, url=url, group=group):
+                        self.go_home()
+                else:
+                    _, title, group, found = target
+                    if open_grid(title, entries=found, group=group):
+                        self.go_home()
+                NAV['home'] = False
         elif control_id == PROFILE_ID:
             if self.may_leave():
                 self.switch = True
@@ -3226,8 +3374,12 @@ class Home(xbmcgui.WindowXML):
                 pass
             return
         if code in ACTION_BACK:
-            # Back climbs one level at a time: row -> tabs -> Home tab -> exit.
+            # Back climbs one level at a time: row/browse -> filter/clear -> tabs -> Home tab -> exit.
             if stop_if_playing_behind():
+                return
+            if focus == FILTER_ID and self.tab in ('movies', 'shows') and (self.filter or self.year_filter or self.letter_filter or self.search_query):
+                self.filter = self.year_filter = self.letter_filter = self.search_query = None
+                self.load_tab(self.tab, focus=False)
                 return
             if focus not in TOP_BAR:
                 self.setFocusId(TABS_ID)

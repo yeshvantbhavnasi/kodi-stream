@@ -6,12 +6,14 @@
 # is saved after every page, so closing Stream or Kodi only pauses it; the next start carries on where it stopped.
 # Once a language is complete, its sections are re-read every few hours from the first page until a page brings
 # nothing new, which picks up new releases without walking the whole catalogue again.
+import base64
 import json
 import os
 import re
 import sqlite3
 import threading
 import time
+from urllib.parse import parse_qs, unquote, urlparse
 
 import xbmc
 
@@ -362,9 +364,185 @@ def _clean_letter(name):
     return ch if 'A' <= ch <= 'Z' else '0-9'
 
 
-def search(query, kinds=None, limit=120):
-    """Titles whose name (or year) holds every word of the query (or the query run together), best matches first:
-    [{'item', 'parent', 'group', 'meta', 'kind'}]. Telugu first, Hindi secondary."""
+def channel_of(parent):
+    """TV show channel / group name decoded from a Sasta TV sdirurl (e.g. 'Star Maa', 'ETV Telugu'), or ''."""
+    if not parent or 'sdirurl=' not in parent:
+        return ''
+    try:
+        raw = parse_qs(urlparse(parent).query).get('sdirurl', [''])[0]
+        path = unquote(base64.b64decode(raw).decode('utf-8')).replace('//', '/').strip('/')
+    except Exception:
+        return ''
+    parts = [p.strip() for p in path.split('/') if p.strip()]
+    if len(parts) < 2:
+        return ''
+    ch = parts[1]
+    return cat.title_case(ch)
+
+
+def section_counts():
+    """{(kind, grp_lower): count} from library.db."""
+    if not os.path.exists(PATH):
+        return {}
+    try:
+        with _connect() as conn:
+            return {(r['kind'], (r['grp'] or '').lower()): r['n']
+                    for r in conn.execute('SELECT kind, grp, COUNT(*) AS n FROM library GROUP BY kind, grp')}
+    except Exception:
+        return {}
+
+
+def _channel_counts():
+    """{(grp_lower, channel_lower): count} for indexed TV Shows."""
+    if not os.path.exists(PATH):
+        return {}
+    counts = {}
+    try:
+        with _connect() as conn:
+            for r in conn.execute("SELECT grp, parent FROM library WHERE kind='TV Shows'"):
+                ch = channel_of(r['parent'])
+                if ch:
+                    key = ((r['grp'] or '').lower(), ch.lower())
+                    counts[key] = counts.get(key, 0) + 1
+    except Exception:
+        pass
+    return counts
+
+
+def movie_sections():
+    """Browsable movie sections ordered Telugu first, Hindi secondary: [{'label', 'title', 'url', 'group', 'kind', 'count'}]."""
+    counts = section_counts()
+    order = cat.top_groups()
+    out = []
+    try:
+        folders = [f for f in cat.get_dir(cat.URLS['movies']) if f['t'] == 'folder']
+        folders = db.only_chosen(folders, lambda f: f['name'])
+    except Exception:
+        folders = []
+    items = []
+    for f in folders:
+        lang = cat.title_case(f['name'])
+        n = counts.get(('Movies', lang.lower()), 0)
+        items.append({'title': lang + ' Movies', 'url': f['url'], 'group': lang, 'kind': 'Movies', 'count': n})
+    if db.lang_match('english'):
+        n = counts.get(('Movies', 'english'), 0)
+        items.append({'title': 'English Movies', 'url': cat.URLS['english_movies'], 'group': 'English', 'kind': 'Movies', 'count': n})
+    items.sort(key=lambda x: (db.language_rank(x['group'], order), x['title'].lower()))
+    items.append({'title': 'Kids Movies & Shows', 'url': cat.URLS['kids'], 'group': 'Kids', 'kind': 'Kids', 'count': 0})
+    for it in items:
+        it['label'] = '{0}  ({1:,})'.format(it['title'], it['count']) if it['count'] else it['title']
+        out.append(it)
+    return out
+
+
+def show_groups():
+    """Browsable show sections and TV show channel groups, Telugu first and Hindi secondary:
+    [{'label', 'title', 'url', 'group', 'kind', 'channel', 'count'}]."""
+    counts = section_counts()
+    ch_counts = _channel_counts()
+    order = cat.top_groups()
+    try:
+        ws_folders = db.only_chosen([f for f in cat.get_dir(cat.URLS['web_series']) if f['t'] == 'folder'], lambda f: f['name'])
+    except Exception:
+        ws_folders = []
+    try:
+        tv_folders = db.only_chosen([f for f in cat.get_dir(cat.URLS['tv_shows']) if f['t'] == 'folder'], lambda f: f['name'])
+    except Exception:
+        tv_folders = []
+    ws_by_lang = {f['name'].lower(): f for f in ws_folders}
+    tv_by_lang = {f['name'].lower(): f for f in tv_folders}
+    langs = list(dict.fromkeys(list(ws_by_lang.keys()) + list(tv_by_lang.keys())))
+    langs.sort(key=lambda l: (db.language_rank(l, order), l))
+    out = []
+    for lang_key in langs:
+        lang = cat.title_case(lang_key)
+        if lang_key in ws_by_lang:
+            f = ws_by_lang[lang_key]
+            n = counts.get(('Web Series', lang_key), 0)
+            title = lang + ' Web Series'
+            out.append({'label': '{0}  ({1:,})'.format(title, n) if n else title, 'title': title,
+                        'url': f['url'], 'group': lang, 'kind': 'Web Series', 'channel': '', 'count': n})
+        if lang_key in tv_by_lang:
+            f = tv_by_lang[lang_key]
+            n = counts.get(('TV Shows', lang_key), 0)
+            title = lang + ' TV Shows'
+            out.append({'label': '{0} · All Channels{1}'.format(title, '  ({0:,})'.format(n) if n else ''),
+                        'title': title, 'url': f['url'], 'group': lang, 'kind': 'TV Shows', 'channel': '', 'count': n})
+            try:
+                channels = [c for c in cat.get_dir(f['url']) if c['t'] == 'folder']
+            except Exception:
+                channels = []
+            ch_rows = []
+            for ch in channels:
+                ch_name = cat.title_case(ch['name'])
+                cn = ch_counts.get((lang_key, ch_name.lower()), 0)
+                ch_rows.append((cn, ch_name, ch))
+            ch_rows.sort(key=lambda p: (-p[0], p[1].lower()))
+            for cn, ch_name, ch in ch_rows:
+                ctitle = '{0} · {1}'.format(lang, ch_name)
+                out.append({'label': '    › {0}{1}'.format(ctitle, '  ({0:,})'.format(cn) if cn else ''),
+                            'title': ctitle, 'url': ch['url'], 'group': lang, 'kind': 'TV Shows',
+                            'channel': ch_name, 'count': cn, 'img': ch.get('img') or ''})
+    if db.lang_match('english'):
+        n = counts.get(('English TV', 'english'), 0)
+        title = 'English TV Shows'
+        out.append({'label': '{0}  ({1:,})'.format(title, n) if n else title, 'title': title,
+                    'url': cat.URLS['english_tv'], 'group': 'English', 'kind': 'English TV', 'channel': '', 'count': n})
+    return out
+
+
+def matching_groups(query, kinds=None):
+    """Browsable section or TV-channel folder entries whose name matches `query` (e.g. 'star maa', 'zee', 'telugu')."""
+    q = normalize(query)
+    if not q or len(q) < 2:
+        return []
+    words = q.split()
+    flat = squeeze(query)
+    pool = []
+    if not kinds or any(k in kinds for k in ('Web Series', 'TV Shows', 'English TV')):
+        pool += show_groups()
+    if not kinds or 'Movies' in kinds:
+        pool += movie_sections()
+    out, seen = [], set()
+    for g in pool:
+        if kinds and g.get('kind') not in kinds:
+            continue
+        hay = normalize('{0} {1} {2}'.format(g.get('title', ''), g.get('channel', ''), g.get('kind', '')))
+        if not (all(w in hay for w in words) or flat in squeeze(hay)):
+            continue
+        if g['url'] in seen:
+            continue
+        seen.add(g['url'])
+        n_lbl = '{0:,} title{1}'.format(g['count'], '' if g['count'] == 1 else 's')
+        item = {'t': 'folder', 'name': g['title'], 'url': g['url'],
+                'plot': 'Browse all {0} in {1}'.format(n_lbl, g['title']) if g.get('count') else 'Browse ' + g['title']}
+        if g.get('img'):
+            item['img'] = g['img']
+        meta_note = '{0} · {1}'.format(g['kind'], n_lbl) if g.get('count') else g['kind']
+        out.append({'item': item, 'parent': g['url'], 'group': g['group'], 'kind': g['kind'],
+                    'channel': g.get('channel', ''), 'meta': meta_note})
+    return out
+
+
+def page_search_sources():
+    """All Sasta TV per-section search URLs recorded in library.db's pages table."""
+    if not os.path.exists(PATH):
+        return []
+    sources = []
+    try:
+        with _connect() as conn:
+            for (raw,) in conn.execute("SELECT items FROM pages WHERE items LIKE '%\"search\"%'"):
+                for item in json.loads(raw):
+                    if item.get('t') == 'search' and item.get('url') and item['url'] not in sources:
+                        sources.append(item['url'])
+    except Exception:
+        pass
+    return sources
+
+
+def search(query, kinds=None, limit=150):
+    """Titles whose name, year, or TV channel/group holds every word of the query, best matches first:
+    [{'item', 'parent', 'group', 'meta', 'kind', 'channel'}]. Telugu first, Hindi secondary."""
     q = normalize(query)
     if not q:
         return []
@@ -380,19 +558,34 @@ def search(query, kinds=None, limit=120):
     try:
         with _connect() as conn:
             rows = conn.execute(sql + ' LIMIT 2000', params).fetchall()
+            # Also match TV Show channel/group names (e.g. 'Star Maa', 'Zee Telugu', 'ETV', 'Colors').
+            ch_rows = []
+            if not kinds or 'TV Shows' in kinds:
+                for r in conn.execute("SELECT * FROM library WHERE kind='TV Shows'"):
+                    ch = channel_of(r['parent'])
+                    if not ch:
+                        continue
+                    ch_norm = normalize('{0} {1}'.format(r['grp'] or '', ch))
+                    if all(w in ch_norm for w in words) or flat in squeeze(ch_norm):
+                        ch_rows.append(r)
     except Exception as e:
         cat.log('library search failed: {0}'.format(e))
         return []
     preferred = cat.top_groups()
     out_rows = list(rows)
+    seen_urls = {r['url'] for r in out_rows}
+    for r in ch_rows:
+        if r['url'] not in seen_urls:
+            seen_urls.add(r['url'])
+            out_rows.append(r)
     # If the query is a 4-digit year, also include shows/movies whose year came from TMDb metadata.
     if re.match(r'^(19|20)\d{2}$', q):
-        seen_urls = {r['url'] for r in out_rows}
         for e in by_year(q, kinds, limit=limit):
             if e['item']['url'] not in seen_urls:
                 seen_urls.add(e['item']['url'])
-                out_rows.append({'norm': normalize(e['item']['name']), 'squeezed': squeeze(e['item']['name']),
-                                 'grp': e['group'], 'kind': e.get('kind') or '', 'item': json.dumps(e['item']),
+                out_rows.append({'url': e['item']['url'], 'norm': normalize(e['item']['name']),
+                                 'squeezed': squeeze(e['item']['name']), 'grp': e['group'],
+                                 'kind': e.get('kind') or '', 'item': json.dumps(e['item']),
                                  'parent': e['parent'], 'first_seen': e.get('first_seen') or 0})
 
     def score(r):
@@ -406,8 +599,10 @@ def search(query, kinds=None, limit=120):
             s = 2
         elif q in norm:
             s = 3
-        else:
+        elif all(w in norm for w in words):
             s = 4
+        else:
+            s = 5  # matched by TV channel / group name
         year = re.search(r'\b((?:19|20)\d\d)\b', norm)
         return (s, db.language_rank(r['grp'], preferred), -int(year.group(1)) if year else 0, -r['first_seen'])
 
@@ -418,8 +613,10 @@ def search(query, kinds=None, limit=120):
         if (r['norm'], r['grp']) in seen:
             continue
         seen.add((r['norm'], r['grp']))
+        ch = channel_of(r['parent']) if r['kind'] == 'TV Shows' else ''
+        meta_note = ' · '.join(p for p in (r['kind'], r['grp'], ch) if p)
         out.append({'item': json.loads(r['item']), 'parent': r['parent'], 'group': r['grp'], 'kind': r['kind'],
-                    'meta': '{0} · {1}'.format(r['kind'], r['grp'])})
+                    'channel': ch, 'meta': meta_note})
         if len(out) >= limit:
             break
     return out

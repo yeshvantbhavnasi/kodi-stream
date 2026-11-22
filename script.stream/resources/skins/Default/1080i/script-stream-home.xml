@@ -8,7 +8,7 @@
         <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor><animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation><label>$INFO[Window.Property(status)]</label><visible>Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)</visible></control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(200) | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)] + String.IsEmpty(Window.Property(status))]</visible>
+            <visible>Control.HasFocus(200) | Control.HasFocus(400) | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)] + String.IsEmpty(Window.Property(status))]</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(200).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(200).ListItem.Art(fanart))</visible></control>
@@ -23,7 +23,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(201)</visible>
+            <visible>Control.HasFocus(201) | Control.HasFocus(401)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(201).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(201).ListItem.Art(fanart))</visible></control>
@@ -38,7 +38,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(202)</visible>
+            <visible>Control.HasFocus(202) | Control.HasFocus(402)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(202).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(202).ListItem.Art(fanart))</visible></control>
@@ -53,7 +53,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(203)</visible>
+            <visible>Control.HasFocus(203) | Control.HasFocus(403)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(203).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(203).ListItem.Art(fanart))</visible></control>
@@ -68,7 +68,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(204)</visible>
+            <visible>Control.HasFocus(204) | Control.HasFocus(404)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(204).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(204).ListItem.Art(fanart))</visible></control>
@@ -83,7 +83,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(205)</visible>
+            <visible>Control.HasFocus(205) | Control.HasFocus(405)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(205).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(205).ListItem.Art(fanart))</visible></control>
@@ -98,7 +98,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(206)</visible>
+            <visible>Control.HasFocus(206) | Control.HasFocus(406)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(206).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(206).ListItem.Art(fanart))</visible></control>
@@ -113,7 +113,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(207)</visible>
+            <visible>Control.HasFocus(207) | Control.HasFocus(407)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(207).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(207).ListItem.Art(fanart))</visible></control>
@@ -128,7 +128,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(208)</visible>
+            <visible>Control.HasFocus(208) | Control.HasFocus(408)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(208).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(208).ListItem.Art(fanart))</visible></control>
@@ -143,7 +143,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(209)</visible>
+            <visible>Control.HasFocus(209) | Control.HasFocus(409)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(209).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(209).ListItem.Art(fanart))</visible></control>
@@ -158,7 +158,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(210)</visible>
+            <visible>Control.HasFocus(210) | Control.HasFocus(410)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(210).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(210).ListItem.Art(fanart))</visible></control>
@@ -173,7 +173,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(211)</visible>
+            <visible>Control.HasFocus(211) | Control.HasFocus(411)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(211).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(211).ListItem.Art(fanart))</visible></control>
@@ -188,7 +188,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(212)</visible>
+            <visible>Control.HasFocus(212) | Control.HasFocus(412)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(212).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(212).ListItem.Art(fanart))</visible></control>
@@ -203,7 +203,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(213)</visible>
+            <visible>Control.HasFocus(213) | Control.HasFocus(413)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(213).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(213).ListItem.Art(fanart))</visible></control>
@@ -218,7 +218,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(214)</visible>
+            <visible>Control.HasFocus(214) | Control.HasFocus(414)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(214).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(214).ListItem.Art(fanart))</visible></control>
@@ -233,7 +233,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(215)</visible>
+            <visible>Control.HasFocus(215) | Control.HasFocus(415)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(215).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(215).ListItem.Art(fanart))</visible></control>
@@ -248,7 +248,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(216)</visible>
+            <visible>Control.HasFocus(216) | Control.HasFocus(416)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(216).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(216).ListItem.Art(fanart))</visible></control>
@@ -263,7 +263,7 @@
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
-            <visible>Control.HasFocus(217)</visible>
+            <visible>Control.HasFocus(217) | Control.HasFocus(417)</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
             <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
             <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(217).ListItem.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Container(217).ListItem.Art(fanart))</visible></control>
@@ -286,17 +286,17 @@
             <onleft>noop</onleft>
             <onright>noop</onright>
             <visible>!String.IsEmpty(Window.Property(filters))</visible>
-            <itemlayout width="178" height="40">
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>!String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>164</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
+            <itemlayout width="186" height="40">
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>!String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
             </itemlayout>
-            <focusedlayout width="178" height="40">
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus(160) + !String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus(160) + String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>164</width><height>34</height><texture colordiffuse="FFFFFFFF" border="17">pill.png</texture><visible>Control.HasFocus(160)</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>164</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label><visible>!Control.HasFocus(160)</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>164</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus(160)</visible></control>
+            <focusedlayout width="186" height="40">
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus(160) + !String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus(160) + String.IsEqual(Window.Property(filter),ListItem.Property(genre))</visible></control>
+                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="FFFFFFFF" border="17">pill.png</texture><visible>Control.HasFocus(160)</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label><visible>!Control.HasFocus(160)</visible></control>
+                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus(160)</visible></control>
             </focusedlayout>
         </control>
         <control type="grouplist" id="9000">
@@ -310,10 +310,31 @@
             <control type="group" id="300">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row0.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row0.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row0.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row0.browse)) + !Control.HasFocus(400)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row0.browse)) + Control.HasFocus(400)</visible></control>
+                <control type="button" id="400">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row0.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row0.browse))</visible>
+                    <onup condition="Control.IsVisible(160)">160</onup>
+                    <onup>100</onup>
+                    <onleft>noop</onleft>
+                    <onright>200</onright>
+                    <ondown>201</ondown>
+                </control>
                 <control type="list" id="200">
                     <onup condition="Control.IsVisible(160)">160</onup>
                     <onup>100</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row0.browse))">400</onleft>
                     <onleft>noop</onleft>
                     <ondown>201</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -503,9 +524,29 @@
             <control type="group" id="301">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row1.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row1.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row1.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row1.browse)) + !Control.HasFocus(401)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row1.browse)) + Control.HasFocus(401)</visible></control>
+                <control type="button" id="401">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row1.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row1.browse))</visible>
+                    <onup>200</onup>
+                    <onleft>noop</onleft>
+                    <onright>201</onright>
+                    <ondown>202</ondown>
+                </control>
                 <control type="list" id="201">
                     <onup>200</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row1.browse))">401</onleft>
                     <onleft>noop</onleft>
                     <ondown>202</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -695,9 +736,29 @@
             <control type="group" id="302">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row2.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row2.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row2.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row2.browse)) + !Control.HasFocus(402)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row2.browse)) + Control.HasFocus(402)</visible></control>
+                <control type="button" id="402">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row2.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row2.browse))</visible>
+                    <onup>201</onup>
+                    <onleft>noop</onleft>
+                    <onright>202</onright>
+                    <ondown>203</ondown>
+                </control>
                 <control type="list" id="202">
                     <onup>201</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row2.browse))">402</onleft>
                     <onleft>noop</onleft>
                     <ondown>203</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -887,9 +948,29 @@
             <control type="group" id="303">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row3.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row3.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row3.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row3.browse)) + !Control.HasFocus(403)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row3.browse)) + Control.HasFocus(403)</visible></control>
+                <control type="button" id="403">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row3.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row3.browse))</visible>
+                    <onup>202</onup>
+                    <onleft>noop</onleft>
+                    <onright>203</onright>
+                    <ondown>204</ondown>
+                </control>
                 <control type="list" id="203">
                     <onup>202</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row3.browse))">403</onleft>
                     <onleft>noop</onleft>
                     <ondown>204</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -1079,9 +1160,29 @@
             <control type="group" id="304">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row4.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row4.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row4.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row4.browse)) + !Control.HasFocus(404)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row4.browse)) + Control.HasFocus(404)</visible></control>
+                <control type="button" id="404">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row4.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row4.browse))</visible>
+                    <onup>203</onup>
+                    <onleft>noop</onleft>
+                    <onright>204</onright>
+                    <ondown>205</ondown>
+                </control>
                 <control type="list" id="204">
                     <onup>203</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row4.browse))">404</onleft>
                     <onleft>noop</onleft>
                     <ondown>205</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -1271,9 +1372,29 @@
             <control type="group" id="305">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row5.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row5.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row5.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row5.browse)) + !Control.HasFocus(405)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row5.browse)) + Control.HasFocus(405)</visible></control>
+                <control type="button" id="405">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row5.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row5.browse))</visible>
+                    <onup>204</onup>
+                    <onleft>noop</onleft>
+                    <onright>205</onright>
+                    <ondown>206</ondown>
+                </control>
                 <control type="list" id="205">
                     <onup>204</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row5.browse))">405</onleft>
                     <onleft>noop</onleft>
                     <ondown>206</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -1463,9 +1584,29 @@
             <control type="group" id="306">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row6.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row6.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row6.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row6.browse)) + !Control.HasFocus(406)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row6.browse)) + Control.HasFocus(406)</visible></control>
+                <control type="button" id="406">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row6.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row6.browse))</visible>
+                    <onup>205</onup>
+                    <onleft>noop</onleft>
+                    <onright>206</onright>
+                    <ondown>207</ondown>
+                </control>
                 <control type="list" id="206">
                     <onup>205</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row6.browse))">406</onleft>
                     <onleft>noop</onleft>
                     <ondown>207</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -1655,9 +1796,29 @@
             <control type="group" id="307">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row7.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row7.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row7.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row7.browse)) + !Control.HasFocus(407)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row7.browse)) + Control.HasFocus(407)</visible></control>
+                <control type="button" id="407">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row7.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row7.browse))</visible>
+                    <onup>206</onup>
+                    <onleft>noop</onleft>
+                    <onright>207</onright>
+                    <ondown>208</ondown>
+                </control>
                 <control type="list" id="207">
                     <onup>206</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row7.browse))">407</onleft>
                     <onleft>noop</onleft>
                     <ondown>208</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -1847,9 +2008,29 @@
             <control type="group" id="308">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row8.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row8.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row8.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row8.browse)) + !Control.HasFocus(408)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row8.browse)) + Control.HasFocus(408)</visible></control>
+                <control type="button" id="408">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row8.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row8.browse))</visible>
+                    <onup>207</onup>
+                    <onleft>noop</onleft>
+                    <onright>208</onright>
+                    <ondown>209</ondown>
+                </control>
                 <control type="list" id="208">
                     <onup>207</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row8.browse))">408</onleft>
                     <onleft>noop</onleft>
                     <ondown>209</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -2039,9 +2220,29 @@
             <control type="group" id="309">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row9.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row9.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row9.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row9.browse)) + !Control.HasFocus(409)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row9.browse)) + Control.HasFocus(409)</visible></control>
+                <control type="button" id="409">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row9.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row9.browse))</visible>
+                    <onup>208</onup>
+                    <onleft>noop</onleft>
+                    <onright>209</onright>
+                    <ondown>210</ondown>
+                </control>
                 <control type="list" id="209">
                     <onup>208</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row9.browse))">409</onleft>
                     <onleft>noop</onleft>
                     <ondown>210</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -2231,9 +2432,29 @@
             <control type="group" id="310">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row10.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row10.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row10.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row10.browse)) + !Control.HasFocus(410)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row10.browse)) + Control.HasFocus(410)</visible></control>
+                <control type="button" id="410">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row10.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row10.browse))</visible>
+                    <onup>209</onup>
+                    <onleft>noop</onleft>
+                    <onright>210</onright>
+                    <ondown>211</ondown>
+                </control>
                 <control type="list" id="210">
                     <onup>209</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row10.browse))">410</onleft>
                     <onleft>noop</onleft>
                     <ondown>211</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -2423,9 +2644,29 @@
             <control type="group" id="311">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row11.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row11.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row11.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row11.browse)) + !Control.HasFocus(411)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row11.browse)) + Control.HasFocus(411)</visible></control>
+                <control type="button" id="411">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row11.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row11.browse))</visible>
+                    <onup>210</onup>
+                    <onleft>noop</onleft>
+                    <onright>211</onright>
+                    <ondown>212</ondown>
+                </control>
                 <control type="list" id="211">
                     <onup>210</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row11.browse))">411</onleft>
                     <onleft>noop</onleft>
                     <ondown>212</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -2615,9 +2856,29 @@
             <control type="group" id="312">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row12.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row12.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row12.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row12.browse)) + !Control.HasFocus(412)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row12.browse)) + Control.HasFocus(412)</visible></control>
+                <control type="button" id="412">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row12.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row12.browse))</visible>
+                    <onup>211</onup>
+                    <onleft>noop</onleft>
+                    <onright>212</onright>
+                    <ondown>213</ondown>
+                </control>
                 <control type="list" id="212">
                     <onup>211</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row12.browse))">412</onleft>
                     <onleft>noop</onleft>
                     <ondown>213</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -2807,9 +3068,29 @@
             <control type="group" id="313">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row13.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row13.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row13.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row13.browse)) + !Control.HasFocus(413)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row13.browse)) + Control.HasFocus(413)</visible></control>
+                <control type="button" id="413">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row13.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row13.browse))</visible>
+                    <onup>212</onup>
+                    <onleft>noop</onleft>
+                    <onright>213</onright>
+                    <ondown>214</ondown>
+                </control>
                 <control type="list" id="213">
                     <onup>212</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row13.browse))">413</onleft>
                     <onleft>noop</onleft>
                     <ondown>214</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -2999,9 +3280,29 @@
             <control type="group" id="314">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row14.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row14.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row14.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row14.browse)) + !Control.HasFocus(414)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row14.browse)) + Control.HasFocus(414)</visible></control>
+                <control type="button" id="414">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row14.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row14.browse))</visible>
+                    <onup>213</onup>
+                    <onleft>noop</onleft>
+                    <onright>214</onright>
+                    <ondown>215</ondown>
+                </control>
                 <control type="list" id="214">
                     <onup>213</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row14.browse))">414</onleft>
                     <onleft>noop</onleft>
                     <ondown>215</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -3191,9 +3492,29 @@
             <control type="group" id="315">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row15.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row15.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row15.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row15.browse)) + !Control.HasFocus(415)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row15.browse)) + Control.HasFocus(415)</visible></control>
+                <control type="button" id="415">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row15.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row15.browse))</visible>
+                    <onup>214</onup>
+                    <onleft>noop</onleft>
+                    <onright>215</onright>
+                    <ondown>216</ondown>
+                </control>
                 <control type="list" id="215">
                     <onup>214</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row15.browse))">415</onleft>
                     <onleft>noop</onleft>
                     <ondown>216</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -3383,9 +3704,29 @@
             <control type="group" id="316">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row16.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row16.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row16.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row16.browse)) + !Control.HasFocus(416)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row16.browse)) + Control.HasFocus(416)</visible></control>
+                <control type="button" id="416">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row16.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row16.browse))</visible>
+                    <onup>215</onup>
+                    <onleft>noop</onleft>
+                    <onright>216</onright>
+                    <ondown>217</ondown>
+                </control>
                 <control type="list" id="216">
                     <onup>215</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row16.browse))">416</onleft>
                     <onleft>noop</onleft>
                     <ondown>217</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
@@ -3575,9 +3916,29 @@
             <control type="group" id="317">
                 <height>414</height>
                 <visible>!String.IsEmpty(Window.Property(row17.title))</visible>
-                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row17.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1560</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row17.title)][/B]</label></control>
+                <!-- Header Browse all pill: press Left from tile 0 on remote, or tap directly on touch -->
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="2EFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row17.browse)) + !Control.HasFocus(417)</visible></control>
+                <control type="image"><left>1660</left><top>4</top><width>200</width><height>38</height><texture colordiffuse="FFFFFFFF" border="19">pill.png</texture><visible>!String.IsEmpty(Window.Property(row17.browse)) + Control.HasFocus(417)</visible></control>
+                <control type="button" id="417">
+                    <left>1660</left><top>4</top><width>200</width><height>38</height>
+                    <texturefocus>-</texturefocus>
+                    <texturenofocus>-</texturenofocus>
+                    <font>font10</font>
+                    <align>center</align>
+                    <aligny>center</aligny>
+                    <textcolor>FFD6D6D6</textcolor>
+                    <focusedcolor>FF141414</focusedcolor>
+                    <label>[B]$INFO[Window.Property(row17.browse)][/B]</label>
+                    <visible>!String.IsEmpty(Window.Property(row17.browse))</visible>
+                    <onup>216</onup>
+                    <onleft>noop</onleft>
+                    <onright>217</onright>
+                    <ondown>noop</ondown>
+                </control>
                 <control type="list" id="217">
                     <onup>216</onup>
+                    <onleft condition="!String.IsEmpty(Window.Property(row17.browse))">417</onleft>
                     <onleft>noop</onleft>
                     <ondown>noop</ondown>
                     <left>50</left><top>48</top><width>1870</width><height>330</height>
