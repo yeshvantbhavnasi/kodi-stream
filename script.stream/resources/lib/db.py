@@ -301,11 +301,27 @@ def _note(row):
     return ''
 
 
+_QUALITY = re.compile(r'\b(PreDVD|Pre-DVD|DVDScr|HDCAM|HDTS|CAM|TS|DVDRip|HDRip|WEBRip|WEB-DL|BluRay|4K|UHD)\b', re.I)
+
+
+def _film_mark(name):
+    """Normalized movie title key so different language or quality copies fold into one Continue Watching tile."""
+    base = re.sub(r'\(\d{4}\).*$', '', name or '')
+    base = _QUALITY.sub('', base)
+    return re.sub(r'[^a-z0-9]', '', base.lower())
+
+
 def _fold(rows, limit):
-    """Newest first, one row per show: an episode stands for its whole show, so only the latest one is kept."""
+    """Newest first, one tile per show or movie (keeps the most recently played copy across languages/qualities)."""
     seen, out = set(), []
     for r in rows:
-        mark = ('show', r['series'], r['grp']) if r['series'] else ('key', r['key'])
+        if r['series']:
+            mark = ('show', r['series'], r['grp'])
+        elif (r['key'] or '').startswith(('yt:', 'live:')):
+            mark = ('key', r['key'])
+        else:
+            film = _film_mark(r['name'])
+            mark = ('film', film) if film else ('key', r['key'])
         if mark in seen:
             continue
         seen.add(mark)

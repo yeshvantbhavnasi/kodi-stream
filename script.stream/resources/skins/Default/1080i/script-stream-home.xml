@@ -18,8 +18,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(200).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(200).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(200).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(200).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(200).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(200).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -33,8 +33,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(201).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(201).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(201).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(201).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(201).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(201).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -48,8 +48,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(202).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(202).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(202).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(202).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(202).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(202).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -63,8 +63,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(203).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(203).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(203).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(203).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(203).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(203).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -78,8 +78,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(204).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(204).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(204).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(204).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(204).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(204).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -93,8 +93,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(205).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(205).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(205).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(205).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(205).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(205).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -108,8 +108,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(206).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(206).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(206).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(206).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(206).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(206).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -123,8 +123,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(207).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(207).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(207).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(207).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(207).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(207).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -138,8 +138,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(208).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(208).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(208).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(208).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(208).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(208).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -153,8 +153,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(209).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(209).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(209).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(209).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(209).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(209).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -168,8 +168,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(210).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(210).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(210).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(210).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(210).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(210).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -183,8 +183,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(211).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(211).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(211).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(211).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(211).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(211).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -198,8 +198,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(212).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(212).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(212).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(212).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(212).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(212).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -213,8 +213,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(213).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(213).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(213).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(213).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(213).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(213).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -228,8 +228,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(214).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(214).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(214).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(214).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(214).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(214).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -243,8 +243,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(215).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(215).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(215).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(215).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(215).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(215).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -258,8 +258,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(216).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(216).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(216).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(216).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(216).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(216).ListItem.Property(plot)]</label></control>
         </control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
@@ -273,8 +273,8 @@
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Container(217).ListItem.Art(thumb)]</texture><visible>String.IsEmpty(Container(217).ListItem.Art(fanart)) | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(217).ListItem.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(217).ListItem.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(217).ListItem.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[Container(217).ListItem.Property(plot)]</label></control>
         </control>
         <!-- Genre strip under the top bar on Movies and Shows: OK on a chip filters the rows, All clears it -->
         <control type="list" id="160">

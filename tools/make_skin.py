@@ -269,8 +269,8 @@ def billboard(n):
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[{c}.Art(thumb)]</texture><visible>{no_art} | !String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[{c}.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[{c}.Property(meta)]</label></control>
-            <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[{c}.Property(plot)]</label></control>
+            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[{c}.Property(plot)]</label></control>
         </control>
 '''.format(slide=SLIDE, shown=shown, c=c, has_art=has_art, no_art=no_art)
 
