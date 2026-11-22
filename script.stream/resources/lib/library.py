@@ -332,13 +332,17 @@ def complete(langs=None):
 
 
 def _year_of(name, metadata=None):
-    """4-digit release year from the title name ('Pushpa (2024)') or from cached TMDb metadata, or ''."""
-    m = re.search(r'\b((?:19|20)\d{2})\b', name or '')
-    if m:
+    """4-digit release year from '(YYYY)' in the title name, a trailing/standalone year <= next year, or TMDb metadata."""
+    max_year = time.localtime().tm_year + 1
+    m = re.search(r'\(((?:19|20)\d{2})\)', name or '')
+    if m and int(m.group(1)) <= max_year:
         return m.group(1)
+    for y in reversed(re.findall(r'\b((?:19|20)\d{2})\b', name or '')):
+        if 1920 <= int(y) <= max_year:
+            return y
     if metadata:
         y = str((metadata.get(name) or {}).get('year') or '')
-        if re.match(r'^(19|20)\d{2}$', y):
+        if re.match(r'^(19|20)\d{2}$', y) and 1920 <= int(y) <= max_year:
             return y
     return ''
 
