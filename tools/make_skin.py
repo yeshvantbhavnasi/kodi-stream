@@ -312,6 +312,7 @@ def top_bar():
     else:
         bar = dict(tabs_w=1150, tab_w=127, search_l=1490, search_w=240, search_i=1506, search_label='Search', search_t=28, search_h=48, search_it=36, profile_l=1746,
                    gear_l=1800, close_l=1856, icon=44, icon_t=30)
+    downs = '<ondown condition="Control.IsVisible({flt})">{flt}</ondown>\n            <ondown>{first}</ondown>'.format(flt=FILTER, first=FIRST)
     return '''        <!-- top bar: a dark fade keeps it readable over the billboard -->
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>150</height><texture>top_fade.png</texture></control>
         <control type="image"><left>56</left><top>22</top><width>236</width><height>58</height><aspectratio>keep</aspectratio><texture>logo.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
@@ -319,7 +320,7 @@ def top_bar():
         <control type="list" id="{tabs}">
             <left>330</left><top>24</top><width>{tabs_w}</width><height>56</height>
             <orientation>horizontal</orientation>
-            <ondown>{flt}</ondown>
+            {downs}
             <onright>{search}</onright>
             <onleft>noop</onleft>
             <onup>noop</onup>
@@ -356,7 +357,7 @@ def top_bar():
             <focusedcolor>FF141414</focusedcolor>
             <onleft>{tabs}</onleft>
             <onright>{profile}</onright>
-            <ondown>{flt}</ondown>
+            {downs}
             <onup>noop</onup>
         </control>
         <control type="button" id="{profile}">
@@ -367,7 +368,7 @@ def top_bar():
             <onleft>{search}</onleft>
             <onright>{gear}</onright>
             <onup>noop</onup>
-            <ondown>{flt}</ondown>
+            {downs}
         </control>
         <control type="button" id="{gear}">
             <left>{gear_l}</left><top>{icon_t}</top><width>{icon}</width><height>{icon}</height>
@@ -377,7 +378,7 @@ def top_bar():
             <onleft>{profile}</onleft>
             <onright>{close}</onright>
             <onup>noop</onup>
-            <ondown>{flt}</ondown>
+            {downs}
         </control>
         <control type="button" id="{close}">
             <left>{close_l}</left><top>{icon_t}</top><width>{icon}</width><height>{icon}</height>
@@ -387,9 +388,9 @@ def top_bar():
             <onleft>{gear}</onleft>
             <onright>noop</onright>
             <onup>noop</onup>
-            <ondown>{flt}</ondown>
+            {downs}
         </control>
-'''.format(tabs=TABS, flt=FILTER, search=SEARCH, profile=PROFILE, gear=GEAR, close=CLOSE, **bar)
+'''.format(tabs=TABS, downs=downs, search=SEARCH, profile=PROFILE, gear=GEAR, close=CLOSE, **bar)
 
 
 def home_xml():

@@ -164,7 +164,7 @@ def is_live(item):
 
 
 def classify(entry, index):
-    """t is one of: folder, play, next, search, filter, head."""
+    """t is one of: folder, play, next, prev, search, filter, head."""
     url = entry.get('file') or ''
     name = clean(entry.get('title') or entry.get('label'))
     art = entry.get('art') or {}
@@ -182,11 +182,15 @@ def classify(entry, index):
     if CATALOGUE.match(url):
         if not is_folder_url(url) or url.endswith('query='):
             return None
+        upper = name.upper()
+        paged = bool(re.search(r'[?&](page|p|pg|offset|start|marker|token|next)=', url, re.I))
         if url.endswith('search='):
             item['t'] = 'search'
-        elif 'NEXT PAGE' in name.upper():
+        elif 'NEXT PAGE' in upper or (paged and re.search(r'^\W*next\b', name, re.I)):
             item['t'] = 'next'
-        elif re.search(r'[?&](filter|xmode)=year', url):
+        elif 'PREVIOUS PAGE' in upper or 'PREV PAGE' in upper or (paged and re.search(r'^\W*prev(?:ious)?\b', name, re.I)):
+            item['t'] = 'prev'
+        elif re.search(r'[?&](filter|xmode)=year', url, re.I):
             item['t'] = 'filter'
             item['name'] = trim_decor(name)
         else:
@@ -222,8 +226,12 @@ def section_of(url):
     params = parse_qs(urlparse(url).query)
     bucket = _b64(params.get('bkt', [''])[0])
     if bucket in BUCKETS:
-        return BUCKETS[bucket], _b64(params.get('lang', [''])[0]) or ('English' if bucket.startswith('plus') else '')
-    if 'fetchXclusivePlus.php' in url and params.get('host') == ['movies']:
+        lang = _b64(params.get('lang', [''])[0]) or ('English' if bucket.startswith('plus') else '')
+        if not lang and params.get('sdirurl'):
+            path = _b64(params['sdirurl'][0]).replace('//', '/').strip('/')
+            lang = path.split('/')[0] if path else ''
+        return BUCKETS[bucket], lang
+    if 'fetchxclusiveplus.php' in url.lower() and params.get('host') == ['movies']:
         return 'Movies', 'English'
     return None, None
 
@@ -231,9 +239,10 @@ def section_of(url):
 def index(url, items):
     """Record titles from a listing in the local database so recommendations and search can use them."""
     kind, lang = section_of(url)
-    if not kind or 'sdirurl=' in url:
+    if not kind or 'sdirurl=' in url or re.search(r'[?&](filter|xmode)=', url, re.I):
         return
-    titles = [i for i in items if (i['t'] == 'play' and not is_live(i)) or (i['t'] == 'folder' and i.get('img'))]
+    titles = [i for i in items if (i['t'] == 'play' and not is_live(i))
+              or (i['t'] == 'folder' and i.get('img') and not is_category(i['url']))]
     if titles:
         try:
             db.index_titles(url, lang, kind, titles)
@@ -335,9 +344,18 @@ def folder_depth(url):
 
 
 def is_category(url):
-    """True for a folder that lists shows rather than being one: on the TV Shows section the level under a language
-    is channels and categories (STAR MAA, Awards and Other Shows); their sub-folders are the shows."""
+    """True for a folder that lists titles or shows rather than being a single show:
+    any folder under Movies (year filters, collections), any S3 listing folder without sdirurl=
+    (languages, year filters, See all), and on TV Shows the channel/category level under a language
+    (STAR MAA, Awards and Other Shows); their sub-folders are the shows."""
+    if not url:
+        return False
     kind, _ = section_of(url)
+    if kind == 'Movies':
+        return True
+    low = url.lower()
+    if kind in ('Web Series', 'TV Shows', 'English TV', 'Kids') and 'fetchxclusives3.php' in low and 'sdirurl=' not in low:
+        return True
     return kind == 'TV Shows' and 0 < folder_depth(url) <= 2
 
 

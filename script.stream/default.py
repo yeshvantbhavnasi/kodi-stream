@@ -205,13 +205,14 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     elif video and item['t'] == 'play':
         li.setProperty('wide', '1')  # YouTube thumbnails are 16:9, so videos get a wide tile instead of a poster
     li.setProperty('t', item['t'])
+    category_folder = item['t'] == 'folder' and (label == 'See all ›' or cat.is_category(item.get('url', '')))
     hint = ('OK  Resume' if progress else 'OK  Play') if item['t'] == 'play' else 'OK  Open'
     if video and item['t'] == 'play':
         hint += '     Hold OK  Subscribe to channel, My List'
-    elif (titled or item['t'] == 'folder') and not series and cat.section_of(parent or '')[0]:
+    elif (titled or (item['t'] == 'folder' and not category_folder)) and not series and cat.section_of(parent or '')[0]:
         hint += '     Hold OK  My List, Like'   # a movie or show from the catalogue
         li.setProperty('trailer', 'find')  # has a trailer (hold OK or Info); TMDb's own pick replaces this once looked up
-    else:
+    elif not category_folder and item['t'] in ('play', 'folder'):
         hint += '     Hold OK  More options'
     li.setProperty('hint', touch_words(hint))
     li.setProperty('url', item.get('url', ''))
@@ -223,6 +224,13 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
         li.setProperty('season', item['season'])  # saved episodes remember their season, for the S/E tag and Up Next
     li.setProperty('saved', '1' if saved else '')
     li.setProperty('suggestion', '1' if suggestion else '')
+    return li
+
+
+def see_all_tile(title, url, group, note='Browse all · pages, years, search'):
+    """The 'See all ›' tile at the end of a browseable row."""
+    li = list_item({'t': 'folder', 'name': title, 'url': url}, url, group, meta=note, label='See all ›')
+    li.setProperty('trailer', '')
     return li
 
 
@@ -473,16 +481,31 @@ def next_episode(li):
     if not series or not parent:
         return None
     try:
-        items = [i for i in cat.showable(cat.get_dir(parent)) if i['t'] == 'play']
+        raw = cat.get_dir(parent)
     except Exception:
         return None
-    items = sorted(items, key=lambda i: cat.natural_key(i['name']))
+    nxt_page = next((i['url'] for i in raw if i['t'] == 'next'), None)
+    items = [i for i in cat.showable(raw) if i['t'] == 'play']
+    if not nxt_page:
+        items = sorted(items, key=lambda i: cat.natural_key(i['name']))
     keys = [db.play_key(i) for i in items]
     key = db.play_key(item_of(li))
-    if key not in keys or keys.index(key) + 1 >= len(items):
+    if key not in keys:
         return None
-    following = items[keys.index(key) + 1]
-    out = list_item(following, parent, li.getProperty('group') or None, series=series)
+    idx = keys.index(key) + 1
+    if idx < len(items):
+        following, target_parent = items[idx], parent
+    elif nxt_page and nxt_page != parent:
+        try:
+            more = [i for i in cat.showable(cat.get_dir(nxt_page)) if i['t'] == 'play']
+        except Exception:
+            return None
+        if not more:
+            return None
+        following, target_parent = more[0], nxt_page
+    else:
+        return None
+    out = list_item(following, target_parent, li.getProperty('group') or None, series=series)
     if li.getProperty('season'):
         out.setProperty('season', li.getProperty('season'))
     return out
@@ -644,13 +667,13 @@ def apply_details(li, data):
         li.setProperty('trailer', data['trailer'])
 
 
-def enrich(control, still_wanted, limit, lock):
-    """Look up ratings for the first tiles of a row or grid, one at a time, while that screen is still showing.
-    The lookup itself runs unlocked; reading and changing a tile happens under the screen's lock."""
+def enrich(control, still_wanted, limit, lock, start=0):
+    """Look up ratings for up to `limit` tiles of a row or grid starting at `start`, one at a time, while that screen
+    is still showing. The lookup itself runs unlocked; reading and changing a tile happens under the screen's lock."""
     if not meta.enabled():
         return
     try:
-        for n in range(limit):
+        for n in range(start, start + limit):
             with lock:
                 if not still_wanted() or n >= control.size():
                     return
@@ -758,15 +781,17 @@ def details(li):
             return
 
 
-def activate(li, trail=()):
+def activate(li, trail=(), category=False):
     """Click handling shared by the home rows and the grid. Returns True when the viewer asked for Home."""
     kind = li.getProperty('t')
     if kind == 'folder':
         name = li.getProperty('name') or li.getLabel()
         url = li.getProperty('url')
-        # Opening a show starts a trail (show, season) so its episodes can be remembered under the show's name.
-        inside_show = bool(trail) or 'sdirurl=' in url
-        return open_grid(name, url=url, group=li.getProperty('group') or None, trail=tuple(trail) + (name,) if inside_show else (),
+        # Category/channel/year folders list titles or shows rather than being a show, so they never start a show trail.
+        is_cat = category or li.getLabel() == 'See all ›' or cat.is_category(url)
+        inside_show = False if is_cat else (bool(trail) or 'sdirurl=' in url)
+        return open_grid(name, url=url, group=li.getProperty('group') or None,
+                         trail=tuple(trail) + (name,) if inside_show else (),
                          plot=li.getProperty('plot') if inside_show else '')
     if kind == 'play':
         start(li)
@@ -781,6 +806,19 @@ def context_menu(li, in_grid):
     if kind not in ('play', 'folder') or li.getLabel() == 'See all ›':
         return 'home' if in_grid and xbmcgui.Dialog().contextmenu(['Go to Home']) == 0 else None
     item, parent, group = item_of(li), li.getProperty('parent'), li.getProperty('group') or None
+    if kind == 'folder' and cat.is_category(item.get('url', '')):
+        options = [('open', 'Open')]
+        if not in_grid and li.getProperty('row_url'):
+            options.append(('browse_row', 'See all in ' + (li.getProperty('row_title') or 'this section')))
+        if in_grid:
+            options.append(('home', 'Go to Home'))
+        choice = xbmcgui.Dialog().contextmenu([label for _, label in options])
+        if choice < 0:
+            return None
+        picked = options[choice][0]
+        if picked == 'browse_row':
+            return 'home' if open_grid(li.getProperty('row_title') or group or 'Browse', url=li.getProperty('row_url'), group=group) else None
+        return 'home' if picked == 'home' or activate(li) else None
     section = cat.section_of(parent)[0]
     channel = li.getProperty('channel')
     if channel:
@@ -823,14 +861,18 @@ def context_menu(li, in_grid):
         saved = dl.find(key)
         options.insert(1, ('download', 'Downloaded ✓' if saved and saved.get('state') == 'done'
                            else 'Downloading…' if saved and saved.get('state') in dl.ACTIVE else 'Download'))
+    if not in_grid and li.getProperty('row_url'):
+        options.append(('browse_row', 'See all in ' + (li.getProperty('row_title') or 'this section')))
     if in_grid:
         options.append(('home', 'Go to Home'))
     choice = xbmcgui.Dialog().contextmenu([label for _, label in options])
     if choice < 0:
         return None
     action = options[choice][0]
+    if action == 'browse_row':
+        return 'home' if open_grid(li.getProperty('row_title') or group or 'Browse', url=li.getProperty('row_url'), group=group) else None
     if action == 'open':
-        return 'home' if activate(li) else None
+        return 'home' if (open_title(li) if kind == 'folder' and is_title(li) else activate(li)) else None
     if action == 'restart':
         start(li, restart=True)
         return None
@@ -1258,7 +1300,9 @@ def first_tap(window, control, li):
 
 PLAY_B, TRAILER_B, LIST_B, LIKE_B, DISLIKE_B = 301, 302, 303, 304, 305
 SEASONS_ID, EPISODES_ID, ALIKE_ID = 310, 320, 330
-SEASON_LIKE = re.compile(r'season|series|part|vol|chapter|\d', re.I)
+SEASON_LIKE = re.compile(
+    r'\b(season|series|part|vol|volume|chapter|specials|episodes|'
+    r'january|february|march|april|may|june|july|august|september|october|november|december)\b|\d', re.I)
 
 
 def open_title(li, trail=()):
@@ -1277,7 +1321,7 @@ def open_title(li, trail=()):
     fallback = win.fallback
     del win
     if fallback:
-        return activate(li, trail)  # not a show after all (a channel or category): open it as a listing
+        return activate(li, (), category=True)  # not a show after all (a channel or category): open it as a listing
     return NAV['home']
 
 
@@ -1293,16 +1337,22 @@ class TitlePage(xbmcgui.WindowXML):
         self.show = li.getProperty('t') == 'folder'
         self.url, self.parent, self.group = li.getProperty('url'), li.getProperty('parent'), li.getProperty('group') or None
         self.data = {}
-        self.seasons = []        # [(label, url)] for a show
-        self.season = None       # the label of the season whose episodes are on screen
-        self.episode_items = []  # the ListItems of that season, in order
-        self.fallback = False    # set when the folder turns out to list shows rather than seasons
+        self.seasons = []            # [(label, url)] for a show
+        self.season = None           # the label of the season whose episodes are on screen
+        self.episode_items = []      # the ListItems of that season, in order
+        self.next_episodes_url = None
+        self.episode_urls = set()
+        self.seen_episode_keys = set()
+        self.known_episodes = {}
+        self.loading_more = False
+        self.fallback = False        # set when the folder turns out to list shows rather than seasons
         self.ready = self.closed = False
         self.loading = 0
         self.workers = []
         self.ui_lock = threading.Lock()
 
     def spawn(self, target, *args):
+        self.workers = [t for t in self.workers if t.is_alive()]
         thread = threading.Thread(target=target, args=args, daemon=True)
         self.workers.append(thread)
         thread.start()
@@ -1395,13 +1445,32 @@ class TitlePage(xbmcgui.WindowXML):
 
     def load_seasons(self):
         try:
-            folders = [f for f in cat.showable(cat.get_dir(self.url)) if f['t'] == 'folder']
+            raw = cat.get_dir(self.url)
         except Exception as e:
             self.setProperty('status', 'Could not load: {0}'.format(e))
             return
         if self.closed:
             return
-        if folders and sum(1 for f in folders if SEASON_LIKE.search(f['name'])) < (len(folders) + 1) // 2:
+        shown = cat.showable(raw)
+        folders = [f for f in shown if f['t'] == 'folder']
+        plays = [i for i in shown if i['t'] == 'play']
+        # Follow pagination at the season level if a show has many year/season folders.
+        seen_urls = {self.url}
+        nxt = next((i['url'] for i in raw if i['t'] == 'next'), None)
+        if folders and not plays:
+            for _ in range(3):
+                if not nxt or nxt in seen_urls or self.closed:
+                    break
+                seen_urls.add(nxt)
+                try:
+                    more = cat.get_dir(nxt)
+                except Exception:
+                    break
+                folders += [f for f in cat.showable(more) if f['t'] == 'folder' and f['url'] not in {x['url'] for x in folders}]
+                nxt = next((i['url'] for i in more if i['t'] == 'next'), None)
+        if self.closed:
+            return
+        if folders and not plays and sum(1 for f in folders if SEASON_LIKE.search(f['name'])) < (len(folders) + 1) // 2:
             # Sub-folders with names like shows, not seasons: this is a channel or category, so show it as a listing.
             self.fallback = True
             self.close()
@@ -1410,8 +1479,13 @@ class TitlePage(xbmcgui.WindowXML):
             # A show without season folders: its episodes sit directly under it.
             self.seasons = [('Episodes', self.url)]
         else:
-            folders.sort(key=lambda f: episodes.season_number(f['name']))
+            nums = [episodes.season_number(f['name']) for f in folders]
+            year_folders = bool(nums) and all(1900 <= n <= 2100 for n in nums) and not any(
+                re.search(r'\b(season|series|part|vol|chapter)\b', f['name'], re.I) for f in folders)
+            folders.sort(key=lambda f: episodes.season_number(f['name']), reverse=year_folders)
             self.seasons = [(cat.title_case(f['name']), f['url']) for f in folders]
+            if plays:
+                self.seasons.insert(0, ('Episodes', self.url))
         last = (db.meta('last:' + self.name) or {}).get('season')
         chosen = next((n for n, (label, _) in enumerate(self.seasons) if label.lower() == (last or '').lower()), 0)
         with self.ui_lock:
@@ -1430,27 +1504,87 @@ class TitlePage(xbmcgui.WindowXML):
         self.setProperty('season', label)
         self.loading += 1
         token = self.loading
+        self.next_episodes_url = None
+        self.episode_urls = set()
+        self.seen_episode_keys = set()
+        self.known_episodes = {}
+        self.loading_more = False
         self.setProperty('status', 'Loading {0}…'.format(label))
+        self.load_episodes_page(url, label, token, first_page=True)
+
+    def load_episodes_page(self, url, label, token, first_page=False):
+        """Load one page of episodes (or nested sub-folders) for the active season."""
+        if not url or url in self.episode_urls:
+            return
+        self.episode_urls.add(url)
+        if not first_page:
+            self.setProperty('status', 'Loading more episodes…')
         try:
-            found = [i for i in cat.showable(cat.get_dir(url)) if i['t'] == 'play']
+            raw = cat.get_dir(url)
         except Exception as e:
-            self.setProperty('status', 'Could not load: {0}'.format(e))
+            if first_page:
+                self.setProperty('status', 'Could not load: {0}'.format(e))
+            else:
+                self.episode_urls.discard(url)
+                self.next_episodes_url = url  # allow retrying on the next scroll
+                self.setProperty('status', '')
             return
         if self.closed or token != self.loading:
             return
-        found.sort(key=lambda i: cat.natural_key(i['name']))
-        known = {}
-        try:
-            known = episodes.names(self.name, label, self.group or '', self.data) if found else {}
-        except Exception as e:
-            cat.log('episode names failed: {0}'.format(e))
+        nxt = next((i['url'] for i in raw if i['t'] == 'next'), None)
+        self.next_episodes_url = nxt if nxt and nxt not in self.episode_urls else None
+        shown = cat.showable(raw)
+        found = [i for i in shown if i['t'] == 'play']
+        if first_page and not found:
+            # Nested folders inside a season (for example Show -> 2026 -> October): open them as a grid under this show.
+            subfolders = [i for i in shown if i['t'] == 'folder']
+            if subfolders:
+                items = []
+                for n, sub in enumerate(subfolders):
+                    li = list_item(sub, url, self.group or self.name, meta='Open folder', label=cat.title_case(sub['name']))
+                    li.setProperty('t', 'subfolder')
+                    li.setProperty('number', str(n + 1))
+                    li.setProperty('season', label)
+                    li.setProperty('plot', sub.get('plot') or self.getProperty('plot'))
+                    if not li.getArt('thumb') and self.getProperty('fanart'):
+                        li.setArt({'thumb': self.getProperty('fanart')})
+                    items.append(li)
+                with self.ui_lock:
+                    if self.closed or token != self.loading:
+                        return
+                    row = self.getControl(EPISODES_ID)
+                    row.reset()
+                    row.addItems(items)
+                    row.selectItem(0)
+                    self.episode_items = items
+                self.setProperty('status', '')
+                self.setProperty('play_label', 'Open')
+                return
+        # Deduplicate across pages and only natural-sort single-page seasons (multi-page keeps provider order).
+        deduped = []
+        for i in found:
+            key = db.play_key(i)
+            if key not in self.seen_episode_keys:
+                self.seen_episode_keys.add(key)
+                deduped.append(i)
+        found = deduped
+        if first_page and not self.next_episodes_url:
+            found.sort(key=lambda i: cat.natural_key(i['name']))
+        if first_page and found:
+            try:
+                self.known_episodes = episodes.names(self.name, label, self.group or '', self.data)
+            except Exception as e:
+                cat.log('episode names failed: {0}'.format(e))
+                self.known_episodes = {}
         if self.closed or token != self.loading:
             return
+        known = self.known_episodes
         marks = db.progress_for([db.play_key(i) for i in found])
-        last = db.last_played([db.play_key(i) for i in found])
+        last = db.last_played([db.play_key(i) for i in found]) if first_page else None
+        base_index = 0 if first_page else len(self.episode_items)
         items, upnext = [], None
         for n, i in enumerate(found):
-            number = episodes.episode_number(i['name']) or n + 1
+            number = episodes.episode_number(i['name']) or (base_index + n + 1)
             info = known.get(number) or {}
             position, duration, done = marks.get(db.play_key(i), (0, 0, False))
             percent = int(100 * position / duration) if (duration and position > 30 and not done) else 0
@@ -1468,24 +1602,46 @@ class TitlePage(xbmcgui.WindowXML):
                 li.setArt({'thumb': info['still']})
             elif not li.getArt('thumb') and self.getProperty('fanart'):
                 li.setArt({'thumb': self.getProperty('fanart')})
-            if last and db.play_key(i) == last[0]:
+            if first_page and last and db.play_key(i) == last[0]:
                 upnext = n if not last[1] else min(n + 1, len(found) - 1)
             items.append(li)
-        if upnext is None:
+        if first_page and upnext is None:
             upnext = next((n for n, i in enumerate(found) if not marks.get(db.play_key(i), (0, 0, False))[2]), 0)
         with self.ui_lock:
             if self.closed or token != self.loading:
                 return
             row = self.getControl(EPISODES_ID)
-            row.reset()
-            row.addItems(items)
-            if items:
-                row.selectItem(upnext)
-            self.episode_items = items
-        self.setProperty('status', '' if items else 'No episodes found')
-        if items:
+            if first_page:
+                row.reset()
+                row.addItems(items)
+                if items:
+                    row.selectItem(upnext)
+                self.episode_items = items
+            elif items:
+                position = row.getSelectedPosition()
+                row.addItems(items)
+                if position >= 0:
+                    row.selectItem(position)
+                self.episode_items += items
+        if not self.episode_items:
+            self.setProperty('status', 'No episodes found')
+        elif self.next_episodes_url:
+            self.setProperty('status', '{0}+ episodes · scroll right for more'.format(len(self.episode_items)))
+        else:
+            self.setProperty('status', '')
+        if first_page and items:
             self.setProperty('play_label', '{0} {1}'.format('Resume' if items[upnext].getProperty('progress') else 'Play',
                                                            'E{0}'.format(items[upnext].getProperty('number'))))
+
+    def load_more_episodes(self, token):
+        if self.loading_more or not self.next_episodes_url or self.closed or token != self.loading:
+            return
+        self.loading_more = True
+        url, self.next_episodes_url = self.next_episodes_url, None
+        try:
+            self.load_episodes_page(url, self.season, token, first_page=False)
+        finally:
+            self.loading_more = False
 
     def refresh(self):
         """After playback: progress marks, the Play button and the episode row are brought up to date."""
@@ -1497,6 +1653,15 @@ class TitlePage(xbmcgui.WindowXML):
             self.show_season(index)
 
     # ---- actions ----
+
+    def open_episode_item(self, li):
+        if li.getProperty('t') == 'subfolder':
+            sub_name = li.getProperty('name') or li.getLabel()
+            trail = (self.name, self.season, sub_name) if self.season and self.season != 'Episodes' else (self.name, sub_name)
+            if open_grid(sub_name, url=li.getProperty('url'), group=self.group, trail=trail, plot=self.getProperty('plot')):
+                self.close()
+            return
+        self.play(li)
 
     def play(self, li):
         start(li)
@@ -1515,7 +1680,7 @@ class TitlePage(xbmcgui.WindowXML):
             if not self.episode_items:
                 return
             row = self.getControl(EPISODES_ID)
-            self.play(self.episode_items[max(0, row.getSelectedPosition())])
+            self.open_episode_item(self.episode_items[max(0, row.getSelectedPosition())])
         else:
             self.play(self.li)
 
@@ -1554,7 +1719,7 @@ class TitlePage(xbmcgui.WindowXML):
             row = self.getControl(EPISODES_ID)
             index = row.getSelectedPosition()
             if 0 <= index < len(self.episode_items):
-                self.play(self.episode_items[index])
+                self.open_episode_item(self.episode_items[index])
         elif control_id == ALIKE_ID:
             li = self.getControl(ALIKE_ID).getSelectedItem()
             if li is not None and is_title(li):
@@ -1597,6 +1762,10 @@ class TitlePage(xbmcgui.WindowXML):
                 watch_trailer(self.li)
             finally:
                 BUSY['on'] = False
+        elif focus == EPISODES_ID and self.next_episodes_url and not self.loading_more:
+            row = self.getControl(EPISODES_ID)
+            if row.getSelectedPosition() >= len(self.episode_items) - 6:
+                self.spawn(self.load_more_episodes, self.loading)
 
 
 def follow_until_done(window):
@@ -1630,6 +1799,8 @@ class Grid(xbmcgui.WindowXML):
         self.title, self.url, self.entries, self.group, self.trail = title, url, entries, group, tuple(trail)
         self.plot = plot  # the show's own description, shown for its seasons and for episodes without one
         self.next_url = None
+        self.seen_urls = set()
+        self.seen_keys = set()
         self.loading = False
         self.ready = False
         self.closed = False
@@ -1638,6 +1809,7 @@ class Grid(xbmcgui.WindowXML):
         self.armed = None  # touch: the title shown off by a first tap; a second tap on it plays
 
     def spawn(self, target, *args):
+        self.workers = [t for t in self.workers if t.is_alive()]
         thread = threading.Thread(target=target, args=args, daemon=True)
         self.workers.append(thread)
         thread.start()
@@ -1647,11 +1819,11 @@ class Grid(xbmcgui.WindowXML):
         last screenful comes into view rather than when the highlight nears the end."""
         monitor = xbmc.Monitor()
         while not self.closed and not monitor.waitForAbort(1):
-            if not self.next_url or self.loading or self.view != PANEL:
+            if not self.next_url or self.loading or self.view not in (PANEL, EPISODE_LIST):
                 continue
             try:
-                pages = int(xbmc.getInfoLabel('Container({0}).NumPages'.format(PANEL)) or 0)
-                page = int(xbmc.getInfoLabel('Container({0}).CurrentPage'.format(PANEL)) or 0)
+                pages = int(xbmc.getInfoLabel('Container({0}).NumPages'.format(self.view)) or 0)
+                page = int(xbmc.getInfoLabel('Container({0}).CurrentPage'.format(self.view)) or 0)
             except ValueError:
                 continue
             if pages and page >= pages - 1:
@@ -1685,6 +1857,7 @@ class Grid(xbmcgui.WindowXML):
             self.setFocusId(self.view)
             if self.entries:
                 self.panel.selectItem(1)
+                self.spawn(enrich, self.panel, lambda: not self.closed, 24, self.ui_lock, 1)
             return
         self.setProperty('status', 'Loading…')
         self.spawn(self.load, self.url)
@@ -1741,33 +1914,50 @@ class Grid(xbmcgui.WindowXML):
             self.load_page(url)
         except Exception:
             audit.error('grid.load')
+            self.loading = False
 
     def load_page(self, url):
+        if not url or url in self.seen_urls:
+            return
         self.loading = True
+        self.seen_urls.add(url)
+        first_page = self.panel.size() == 0
+        if not first_page:
+            self.setProperty('status', 'Loading more…')
         try:
             items = cat.get_dir(url)
         except Exception as e:
             audit.event('load_failed', screen=self.title, reason=str(e))
             if self.closed:
                 return
-            self.setProperty('status', 'Could not load: {0}'.format(e))
-            if self.panel.size() == 0:
-                self.panel.addItems([self.home_tile()])
-                self.setFocusId(self.view)
+            self.seen_urls.discard(url)
+            if first_page:
+                self.setProperty('status', 'Could not load: {0}'.format(e))
+                if self.panel.size() == 0:
+                    self.panel.addItems([self.home_tile()])
+                    self.setFocusId(self.view)
+            else:
+                self.next_url = url  # allow retrying on the next move
+                self.setProperty('status', '')
             self.loading = False
             return
         if self.closed:
             return
         nxt = [i for i in items if i['t'] == 'next']
-        self.next_url = nxt[0]['url'] if nxt else None
-        first_page = self.panel.size() == 0
+        self.next_url = nxt[0]['url'] if nxt and nxt[0]['url'] not in self.seen_urls else None
         shown = []
         if first_page:
             shown.append(self.home_tile())
             for extra in [i for i in items if i['t'] in ('search', 'filter')]:
                 label = 'Search in ' + self.title if extra['t'] == 'search' else cat.title_case(extra['name'])
                 shown.append(list_item(dict(extra, name=label, plot=''), url, self.group))
-        titles, upnext = self.title_items(url, cat.showable(items))
+        raw_titles = []
+        for i in cat.showable(items):
+            key = (i['t'], i.get('url') or i['name'])
+            if key not in self.seen_keys:
+                self.seen_keys.add(key)
+                raw_titles.append(i)
+        titles, upnext = self.title_items(url, raw_titles)
         if first_page and self.episodes:
             # Episodes read better as a list of names than as a wall of identical posters.
             self.setProperty('mode', 'list')
@@ -1778,13 +1968,15 @@ class Grid(xbmcgui.WindowXML):
         with self.ui_lock:
             if self.closed:
                 return
+            before_size = self.panel.size()
             if first_page and titles and all(t.getProperty('wide') for t in titles):
                 self.setProperty('wide', '1')  # a listing of nothing but videos is drawn with wide tiles
             position = self.panel.getSelectedPosition()
             self.panel.addItems(shown)
             if not first_page and position >= 0:
                 self.panel.selectItem(position)
-        self.setProperty('status', '' if titles or not first_page else 'Nothing here')
+        has_entries = bool(titles) or len(shown) > 1
+        self.setProperty('status', '' if has_entries or not first_page else 'Nothing here')
         if first_page:
             self.setFocusId(self.view)
             if titles:
@@ -1792,9 +1984,12 @@ class Grid(xbmcgui.WindowXML):
                 self.select_when_ready(first_title + (upnext or 0))
                 if upnext:
                     self.setProperty('status', 'Up next: ' + titles[upnext].getProperty('name'))
+            elif len(shown) > 1:
+                # A filter-only page (such as Filter by Year): land on the first choice rather than Home.
+                self.select_when_ready(1)
         self.loading = False
-        if first_page:
-            enrich(self.panel, lambda: not self.closed and not self.loading, 24, self.ui_lock)
+        if titles:
+            enrich(self.panel, lambda: not self.closed and not self.loading, 24, self.ui_lock, start=before_size)
 
     def select_when_ready(self, index):
         """Highlight an entry. A list that has only just been shown ignores the request for a frame or two, so retry."""
@@ -2038,10 +2233,20 @@ class Home(xbmcgui.WindowXML):
         """The chosen genre as one row per language, the viewer's first language first."""
         entries = discover.genre_entries(self.filter, kinds, 400)
         rows, by_lang = [], {}
+        self.more_entries = {}
         for e in entries:
             by_lang.setdefault(cat.title_case(e.get('group') or 'Other'), []).append(e)
         for lang, found in by_lang.items():
-            rows.append(('items', '{0} · {1}'.format(self.filter, lang), [entry_item(e, meta=lang) for e in found[:ROW_LIMIT]]))
+            title = '{0} · {1}'.format(self.filter, lang)
+            tiles = [entry_item(e, meta=lang) for e in found[:ROW_LIMIT]]
+            if len(found) > ROW_LIMIT:
+                self.more_entries[title] = (lang, [dict(e, meta=lang) for e in found])
+                more = list_item({'t': 'more', 'name': title, 'url': ''}, '', lang,
+                                 meta='See all {0} titles'.format(len(found)), label='See all ›')
+                more.setProperty('trailer', '')
+                more.setProperty('more_key', title)
+                tiles.append(more)
+            rows.append(('items', title, tiles))
         return rows
 
     def show_filters(self, key):
@@ -2087,6 +2292,20 @@ class Home(xbmcgui.WindowXML):
         except Exception as e:
             cat.log('discovery rows failed: {0}'.format(e))
         return rows
+
+    def order_language_rows(self, rows):
+        """Order ('dir', title, url, group, only) rows by the viewer's language preference, keeping ties in place."""
+        order = cat.top_groups()
+        if not order:
+            return rows
+
+        def rank(row):
+            group = (row[3] or '').lower()
+            for n, lang in enumerate(order):
+                if db.lang_match(group, [lang]):
+                    return n
+            return len(order)
+        return [r for _, r in sorted(enumerate(rows), key=lambda p: (rank(p[1]), p[0]))]
 
     def language_rows(self, root, title, limit):
         """One row per sub-folder of root, limited to the chosen languages when any of them exist there."""
@@ -2316,12 +2535,13 @@ class Home(xbmcgui.WindowXML):
         if key == 'movies':
             if self.filter:
                 return self.filtered_rows(discover.MOVIE_KINDS)
-            return self.language_rows(u['movies'], '{0} Movies', ROWS - 1) + english_movies
+            return self.order_language_rows(self.language_rows(u['movies'], '{0} Movies', ROWS - 1) + english_movies)[:ROWS]
         if key == 'shows':
             if self.filter:
                 return self.filtered_rows(discover.SHOW_KINDS)
-            return (self.language_rows(u['web_series'], '{0} Web Series', 9) + english_tv
-                    + self.language_rows(u['tv_shows'], '{0} TV Shows', 4))
+            series = self.order_language_rows(self.language_rows(u['web_series'], '{0} Web Series', 14) + english_tv)
+            tv = self.language_rows(u['tv_shows'], '{0} TV Shows', max(4, ROWS - len(series)))
+            return (series + tv)[:ROWS]
         if key == 'sports':
             return self.sports_rows(ROWS - 1)
         if key == 'kids':
@@ -2412,16 +2632,24 @@ class Home(xbmcgui.WindowXML):
                 else:
                     _, title, url, group, only = row
                     try:
-                        found = cat.get_dir(url)
+                        raw = cat.get_dir(url)
                     except Exception as e:
                         cat.log('row failed: {0}'.format(e))
                         continue
-                    found = [i for i in found if i['t'] == only] if only else cat.showable(found)
+                    has_more = any(i['t'] in ('next', 'filter', 'search') for i in raw)
+                    found = [i for i in raw if i['t'] == only] if only else cat.showable(raw)
                     if not found:
                         continue
                     items = [list_item(i, url, group) for i in found[:ROW_LIMIT]]
-                    if len(found) > ROW_LIMIT or any(i['t'] == 'folder' for i in found):
-                        items.append(list_item({'t': 'folder', 'name': title, 'url': url}, url, group, label='See all ›'))
+                    show_see_all = len(found) > ROW_LIMIT or has_more or any(i['t'] == 'folder' for i in found)
+                    if show_see_all:
+                        for li in items:
+                            li.setProperty('row_title', title)
+                            li.setProperty('row_url', url)
+                        more = see_all_tile(title, url, group)
+                        if items and all(i.getProperty('wide') for i in items):
+                            more.setProperty('wide', '1')
+                        items.append(more)
                 with self.ui_lock:
                     if not current():
                         return
@@ -2733,6 +2961,12 @@ class Home(xbmcgui.WindowXML):
                 cat.state['live_lang'] = li.getProperty('lang')
                 cat.save_state()
                 self.load_tab('live')
+            elif kind == 'more':
+                more_key = li.getProperty('more_key')
+                if more_key in getattr(self, 'more_entries', {}):
+                    group, found = self.more_entries[more_key]
+                    if open_grid(more_key, entries=found, group=group):
+                        self.go_home()
             elif kind == 'setting':
                 self.run_setting(li.getProperty('action'))
             elif is_title(li):

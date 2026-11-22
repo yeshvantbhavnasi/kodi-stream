@@ -5014,7 +5014,8 @@
         <control type="list" id="100">
             <left>330</left><top>24</top><width>1300</width><height>56</height>
             <orientation>horizontal</orientation>
-            <ondown>160</ondown>
+            <ondown condition="Control.IsVisible(160)">160</ondown>
+            <ondown>200</ondown>
             <onright>120</onright>
             <onleft>noop</onleft>
             <onup>noop</onup>
@@ -5051,7 +5052,8 @@
             <focusedcolor>FF141414</focusedcolor>
             <onleft>100</onleft>
             <onright>140</onright>
-            <ondown>160</ondown>
+            <ondown condition="Control.IsVisible(160)">160</ondown>
+            <ondown>200</ondown>
             <onup>noop</onup>
         </control>
         <control type="button" id="140">
@@ -5062,7 +5064,8 @@
             <onleft>120</onleft>
             <onright>130</onright>
             <onup>noop</onup>
-            <ondown>160</ondown>
+            <ondown condition="Control.IsVisible(160)">160</ondown>
+            <ondown>200</ondown>
         </control>
         <control type="button" id="130">
             <left>1776</left><top>22</top><width>60</width><height>60</height>
@@ -5072,7 +5075,8 @@
             <onleft>140</onleft>
             <onright>110</onright>
             <onup>noop</onup>
-            <ondown>160</ondown>
+            <ondown condition="Control.IsVisible(160)">160</ondown>
+            <ondown>200</ondown>
         </control>
         <control type="button" id="110">
             <left>1846</left><top>22</top><width>60</width><height>60</height>
@@ -5082,7 +5086,8 @@
             <onleft>130</onleft>
             <onright>noop</onright>
             <onup>noop</onup>
-            <ondown>160</ondown>
+            <ondown condition="Control.IsVisible(160)">160</ondown>
+            <ondown>200</ondown>
         </control>
     </controls>
 </window>
