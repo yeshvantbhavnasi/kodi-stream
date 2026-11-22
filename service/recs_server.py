@@ -118,7 +118,7 @@ JSON_COLUMNS = ('candidates', 'picks')
 
 def connect():
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
-    conn = sqlite3.connect(STATE)
+    conn = sqlite3.connect(STATE, timeout=30)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -127,6 +127,8 @@ def load():
     """Read every current batch into memory; batches saved by the JSON-file version are taken over once."""
     global BATCHES
     with connect() as conn:
+        conn.execute('PRAGMA journal_mode=WAL')
+        conn.execute('PRAGMA synchronous=NORMAL')
         conn.executescript(SCHEMA)
         if 'exclude' not in [r['name'] for r in conn.execute('PRAGMA table_info(lists)').fetchall()]:
             conn.execute('ALTER TABLE lists ADD COLUMN exclude TEXT')

@@ -70,8 +70,9 @@ def _save(path, data):
         log('could not save {0}: {1}'.format(path, e))
 
 
-MAX_CACHED = 60          # listings kept on disk
-_cache.update({k: v for k, v in _load(_cache_path, {}).items() if time.time() - v.get('t', 0) < 12 * 3600})
+MAX_CACHED = 400         # listings kept on disk for instant startup (YouTube, Live TV, Kids, Sports, VOD)
+_cache.update({k: v for k, v in _load(_cache_path, {}).items()
+               if time.time() - v.get('t', 0) < (LIVE_STALE if any(w in k.lower() for w in ('live-root', 'live-grp', 'getvendor1live', 'echoliveevents')) else MAX_STALE)})
 _last_save = [0.0]
 
 

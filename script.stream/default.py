@@ -76,7 +76,7 @@ TOUCH = touch_mode()
 
 
 def skin(name):
-    return 'script-stream-{0}{1}.xml'.format(name, '-touch' if TOUCH and name in ('home', 'grid') else '')
+    return 'script-stream-{0}{1}.xml'.format(name, '-touch' if TOUCH and name in ('home', 'grid', 'title') else '')
 
 
 def touch_words(hint):
@@ -341,8 +341,15 @@ def follow(key, name, group, kind, live):
         if monitor.waitForAbort(1):
             return
     if not PLAY['ended']:
-        # The stream ran out on its own: the title ended, or the stream broke part-way (tracked by how far it got).
-        PLAY['ended'] = 'natural' if duration <= 0 or position >= duration * 0.85 else 'broken'
+        # Leaving fullscreenvideo as playback stops is a normal user Stop; only flag 'broken' if playback died
+        # unexpectedly while fullscreenvideo was still active (or never reached 30s of a long video).
+        still_full = xbmc.getCondVisibility('Window.IsActive(fullscreenvideo)')
+        if duration <= 0 or position >= duration * 0.85:
+            PLAY['ended'] = 'natural'
+        elif still_full or (duration > 180 and position < 30):
+            PLAY['ended'] = 'broken'
+        else:
+            PLAY['ended'] = 'stopped'
     audit.event('play_ended', title=name, position=int(position), duration=int(duration), ended=PLAY['ended'])
     home = HOME['window']
     if home is not None and not home.closed and home.tab == 'home' and not live:
@@ -1799,6 +1806,7 @@ class TitlePage(xbmcgui.WindowXML):
         elif control_id == LANGS_ID:
             index = self.getControl(LANGS_ID).getSelectedPosition()
             if 0 <= index < len(self.versions) and index != self.version_index:
+                audit.event('lang_switch', title=self.name[:80], to_lang=self.versions[index].get('group') or '')
                 self.spawn(self.use_version, index)
             else:
                 self.setFocusId(SEASONS_ID if self.show else ALIKE_ID)

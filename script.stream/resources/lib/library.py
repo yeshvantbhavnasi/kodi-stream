@@ -177,6 +177,12 @@ def _plan():
                 key = _job_key(kind, 'english')
                 keys.append(key)
                 _schedule_job(conn, key, kind, 'English', cat.URLS[section])
+        # Keep Kids page 1 warm in pages so the Movies tab opens instantaneously.
+        if conn.execute('SELECT 1 FROM pages WHERE url=?', (cat.URLS['kids'],)).fetchone() is None:
+            try:
+                cat.get_dir(cat.URLS['kids'])
+            except Exception:
+                pass
     return keys
 
 
