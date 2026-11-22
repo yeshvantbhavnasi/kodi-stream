@@ -376,10 +376,31 @@ def rated_rows(scored, t):
     return rows
 
 
+BIGG_BOSS_TELUGU = {
+    'item': {
+        't': 'folder',
+        'name': 'Bigg Boss',
+        'url': ('http://sastatv.com/secured/php/fetchXclusiveS3.php?bkt=ZGVzaXR2c2hvd3M='
+                '&order=recent&sdirurl=VGVsdWd1L1NUQVIlMjBNQUEvL0JpZ2clMjBCb3NzLw=='
+                '&thumb=aHR0cDovL3NtYXJ0NGsubWUvc3RhbGtlcl9wb3J0YWwvc2NyZWVuc2hvdHMvMjIzNi8yMjM1NjEuanBlZw=='),
+        'img': 'http://smart4k.me/stalker_portal/screenshots/2236/223561.jpeg',
+    },
+    'parent': ('http://sastatv.com/secured/php/fetchXclusiveS3.php?bkt=ZGVzaXR2c2hvd3M='
+               '&order=recent&sdirurl=VGVsdWd1L1NUQVIlMjBNQUEv&lang=VGVsdWd1&thumb='),
+    'group': 'Telugu',
+    'kind': 'TV Shows',
+    'meta': 'Telugu · Season 10',
+}
+
+
 def show_row(scored, order):
-    found = [e for s, e, d in scored if e.get('kind') in discover.SHOW_KINDS]
-    if len(found) >= MIN_ROW:
-        return [('Shows to Binge', _with_meta(_balanced([p for p in scored if p[1].get('kind') in discover.SHOW_KINDS], order, ROW_SIZE)))]
+    picked = _with_meta(_balanced([p for p in scored if p[1].get('kind') in discover.SHOW_KINDS], order, ROW_SIZE))
+    if not db.KIDS and db.lang_match('telugu'):
+        bb = dict(BIGG_BOSS_TELUGU, item=dict(BIGG_BOSS_TELUGU['item']))
+        picked = [bb] + [e for e in picked if _same_film((e.get('item') or {}).get('name') or '') != _same_film('Bigg Boss')]
+        picked = picked[:ROW_SIZE]
+    if len(picked) >= MIN_ROW:
+        return [('Shows to Binge', picked)]
     return []
 
 

@@ -54,11 +54,6 @@ ACTION_RIGHT_CLICK = 101
 SWIPE_UP = range(531, 541)
 SWIPE_DOWN = range(541, 551)
 IDLE_AFTER = 60  # seconds without a key press before the home screen starts showing off recommended titles
-BIGG_BOSS_S10_URL = (
-    'http://sastatv.com/secured/php/fetchXclusiveS3.php?bkt=ZGVzaXR2c2hvd3M='
-    '&order=recent&sdirurl=VGVsdWd1L1NUQVIlMjBNQUEvL0JpZ2clMjBCb3NzLy9TZWFzb24lMjAxMC8='
-    '&thumb=aHR0cDovL3NtYXJ0NGsubWUvc3RhbGtlcl9wb3J0YWwvc2NyZWVuc2hvdHMvMjIzNi8yMjM1NjEuanBlZw=='
-)
 NEXT_IN = 10  # seconds the next episode waits before it starts by itself
 NEXT_AT = 60  # seconds before an episode ends (its end titles, mostly) that the Next episode button appears
 START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
@@ -2798,43 +2793,6 @@ class Home(xbmcgui.WindowXML):
                                                               plot=yt.KEY_HELP)]))
         return rows
 
-    def bigg_boss_row(self):
-        """Featured Home row: Bigg Boss Telugu Season 10 episodes, newest first, 1-click playback."""
-        if db.KIDS or not db.lang_match('telugu'):
-            return None
-        try:
-            raw = cat.get_dir(BIGG_BOSS_S10_URL)
-        except Exception as e:
-            cat.log('bigg boss row failed: {0}'.format(e))
-            return None
-        found = [i for i in cat.showable(raw) if i['t'] == 'play']
-        if not found:
-            return None
-        found.sort(key=lambda i: cat.natural_key(i['name']), reverse=True)
-        marks = db.progress_for([db.play_key(i) for i in found])
-        title = 'Bigg Boss Telugu · Season 10'
-        tiles = []
-        for idx, i in enumerate(found[:ROW_LIMIT]):
-            num = episodes.episode_number(i['name']) or (len(found) - idx)
-            clean_name = re.sub(r'\bBbtel\s+', '', i['name'], flags=re.I)
-            position, duration, done = marks.get(db.play_key(i), (0, 0, False))
-            percent = int(100 * position / duration) if (duration and position > 30 and not done) else 0
-            status = '✓ Watched' if done else ('Resume from ' + clock(position) if position > 30 else 'Star Maa · Telugu')
-            note = 'Bigg Boss Telugu · Season 10 · ' + status
-            li = list_item(i, BIGG_BOSS_S10_URL, 'Telugu', meta=note, label=clean_name,
-                           series='Bigg Boss', progress=max(1, percent) if percent or (position > 30 and not done) else 0)
-            li.setProperty('season', 'Season 10')
-            li.setProperty('number', str(num))
-            tiles.append(li)
-        self.more_entries[title] = ('dir_show', BIGG_BOSS_S10_URL, 'Telugu', ('Bigg Boss', 'Season 10'), len(found))
-        if len(found) > ROW_LIMIT:
-            more = list_item({'t': 'more', 'name': title, 'url': ''}, BIGG_BOSS_S10_URL, 'Telugu',
-                             meta='All {0} episodes · newest first'.format(len(found)), label='See all ›')
-            more.setProperty('trailer', '')
-            more.setProperty('more_key', title)
-            tiles.append(more)
-        return ('items', title, tiles)
-
     def specs(self, key):
         """Rows for a tab: ('items', title, [ListItem]) or ('dir', title, url, group, only)."""
         if key == 'downloads':
@@ -2849,13 +2807,9 @@ class Home(xbmcgui.WindowXML):
         english_tv = [('dir', 'English TV Shows', u['english_tv'], 'English', None)] if english else []
         if key == 'home':
             rows = []
-            self.more_entries = {}
             resume = db.continue_watching(fold=True)
             if resume:
                 rows.append(('items', 'Continue Watching', [watched_item(e) for e in resume]))
-            bb = self.bigg_boss_row()
-            if bb:
-                rows.append(bb)
             for title, entries in recs.rows(fetch=True):  # every visit to Home asks the service for new lists and rebuilds
                 tiles = []
                 for e in entries:
@@ -2994,15 +2948,9 @@ class Home(xbmcgui.WindowXML):
                         for rank, li in enumerate(items, 1):
                             li.setProperty('rank', str(rank))
                     if title in getattr(self, 'more_entries', {}):
-                        entry_spec = self.more_entries[title]
-                        if entry_spec[0] == 'dir_show':
-                            _, murl, mgroup, mtrail, mcount = entry_spec
-                            browse_label = 'All {0:,} ›'.format(mcount)
-                            browse_target = ('dir_show', title, murl, mgroup, mtrail)
-                        else:
-                            group, found_all = entry_spec
-                            browse_label = 'All {0:,} ›'.format(len(found_all))
-                            browse_target = ('entries', title, group, found_all)
+                        group, found_all = self.more_entries[title]
+                        browse_label = 'All {0:,} ›'.format(len(found_all))
+                        browse_target = ('entries', title, group, found_all)
                 else:
                     _, title, url, group, only = row
                     try:
@@ -3388,10 +3336,6 @@ class Home(xbmcgui.WindowXML):
                     _, title, url, group = target
                     if open_grid(title, url=url, group=group):
                         self.go_home()
-                elif mode == 'dir_show':
-                    _, title, url, group, trail = target
-                    if open_grid(title, url=url, group=group, trail=trail):
-                        self.go_home()
                 else:
                     _, title, group, found = target
                     if open_grid(title, entries=found, group=group):
@@ -3425,15 +3369,9 @@ class Home(xbmcgui.WindowXML):
             elif kind == 'more':
                 more_key = li.getProperty('more_key')
                 if more_key in getattr(self, 'more_entries', {}):
-                    entry_spec = self.more_entries[more_key]
-                    if entry_spec[0] == 'dir_show':
-                        _, murl, mgroup, mtrail, _ = entry_spec
-                        if open_grid(more_key, url=murl, group=mgroup, trail=mtrail):
-                            self.go_home()
-                    else:
-                        group, found = entry_spec
-                        if open_grid(more_key, entries=found, group=group):
-                            self.go_home()
+                    group, found = self.more_entries[more_key]
+                    if open_grid(more_key, entries=found, group=group):
+                        self.go_home()
             elif kind == 'setting':
                 self.run_setting(li.getProperty('action'))
             elif is_title(li):
