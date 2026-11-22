@@ -1574,7 +1574,10 @@ class TitlePage(xbmcgui.WindowXML):
             nums = [episodes.season_number(f['name']) for f in folders]
             year_folders = bool(nums) and all(1900 <= n <= 2100 for n in nums) and not any(
                 re.search(r'\b(season|series|part|vol|chapter)\b', f['name'], re.I) for f in folders)
-            folders.sort(key=lambda f: episodes.season_number(f['name']), reverse=year_folders)
+            # Ongoing multi-season shows whose early seasons were retired (e.g. Season 8, 9, 10) lead with the newest season.
+            positive = [n for n in nums if 0 < n < 1900]
+            ongoing_high = bool(positive) and min(positive) > 1 and len(folders) > 1
+            folders.sort(key=lambda f: episodes.season_number(f['name']), reverse=(year_folders or ongoing_high))
             self.seasons = [(cat.title_case(f['name']), f['url']) for f in folders]
             if plays:
                 self.seasons.insert(0, ('Episodes', self.url))
@@ -1587,9 +1590,9 @@ class TitlePage(xbmcgui.WindowXML):
             chips.reset()
             chips.addItems([xbmcgui.ListItem(label=label) for label, _ in self.seasons])
             chips.selectItem(chosen)
-        self.show_season(chosen)
+        self.show_season(chosen, auto_fallback=True)
 
-    def show_season(self, index):
+    def show_season(self, index, auto_fallback=False):
         """Put one season's episodes on screen, named from TMDb or Wikipedia when they know the show."""
         label, url = self.seasons[index]
         version = self.version_token
@@ -1604,6 +1607,28 @@ class TitlePage(xbmcgui.WindowXML):
         self.loading_more = False
         self.setProperty('status', 'Loading {0}…'.format(label))
         self.load_episodes_page(url, label, token, version=version, first_page=True)
+        # If the initial season is empty on the provider (e.g. an archived season), automatically jump to a non-empty one.
+        if (auto_fallback and not self.episode_items and len(self.seasons) > 1
+                and not self.closed and token == self.loading and version == self.version_token):
+            for alt in range(len(self.seasons)):
+                if alt == index:
+                    continue
+                alt_label, alt_url = self.seasons[alt]
+                self.season = alt_label
+                self.setProperty('season', alt_label)
+                self.next_episodes_url = None
+                self.episode_urls = set()
+                self.seen_episode_keys = set()
+                self.known_episodes = {}
+                self.setProperty('status', 'Loading {0}…'.format(alt_label))
+                self.load_episodes_page(alt_url, alt_label, token, version=version, first_page=True)
+                if self.closed or token != self.loading or version != self.version_token:
+                    return
+                if self.episode_items:
+                    with self.ui_lock:
+                        if not self.closed and token == self.loading and version == self.version_token:
+                            self.getControl(SEASONS_ID).selectItem(alt)
+                    return
 
     def load_episodes_page(self, url, label, token, version=None, first_page=False):
         """Load one page of episodes (or nested sub-folders) for the active season."""
@@ -1655,7 +1680,7 @@ class TitlePage(xbmcgui.WindowXML):
                 self.setProperty('status', '')
                 self.setProperty('play_label', 'Open')
                 return
-        # Deduplicate across pages and only natural-sort single-page seasons (multi-page keeps provider order).
+        # Deduplicate across pages; flip to reverse (newest first) when a season has more than 10 episodes.
         deduped = []
         for i in found:
             key = db.play_key(i)
@@ -1663,8 +1688,10 @@ class TitlePage(xbmcgui.WindowXML):
                 self.seen_episode_keys.add(key)
                 deduped.append(i)
         found = deduped
+        reversed_order = False
         if first_page and not self.next_episodes_url:
-            found.sort(key=lambda i: cat.natural_key(i['name']))
+            reversed_order = len(found) > 10
+            found.sort(key=lambda i: cat.natural_key(i['name']), reverse=reversed_order)
         if first_page and found:
             try:
                 self.known_episodes = episodes.names(self.name, label, self.group or '', self.data)
@@ -1698,7 +1725,10 @@ class TitlePage(xbmcgui.WindowXML):
             elif not li.getArt('thumb') and self.getProperty('fanart'):
                 li.setArt({'thumb': self.getProperty('fanart')})
             if first_page and last and db.play_key(i) == last[0]:
-                upnext = n if not last[1] else min(n + 1, len(found) - 1)
+                if not last[1]:
+                    upnext = n
+                else:
+                    upnext = max(0, n - 1) if reversed_order else min(n + 1, len(found) - 1)
             items.append(li)
         if first_page and upnext is None:
             upnext = next((n for n, i in enumerate(found) if not marks.get(db.play_key(i), (0, 0, False))[2]), 0)
@@ -1977,15 +2007,20 @@ class Grid(xbmcgui.WindowXML):
         series = self.trail[0] if self.trail else None
         episodes = bool(series) and bool(titles) and all(i['t'] == 'play' for i in titles)
         self.episodes = episodes
+        reversed_order = False
         if episodes and not self.next_url:
-            titles = sorted(titles, key=lambda i: cat.natural_key(i['name']))
+            reversed_order = len(titles) > 10
+            titles = sorted(titles, key=lambda i: cat.natural_key(i['name']), reverse=reversed_order)
         marks = db.progress_for([db.play_key(i) for i in titles]) if episodes else {}
         out, upnext = [], None
         # Catch up from where the viewer left off: the last episode played if it is unfinished, otherwise the one after it.
         last_played = db.last_played([db.play_key(i) for i in titles]) if episodes else None
         for n, i in enumerate(titles):
             if last_played and db.play_key(i) == last_played[0]:
-                upnext = n if not last_played[1] else min(n + 1, len(titles) - 1)
+                if not last_played[1]:
+                    upnext = n
+                else:
+                    upnext = max(0, n - 1) if reversed_order else min(n + 1, len(titles) - 1)
         for n, i in enumerate(titles):
             position, duration, done = marks.get(db.play_key(i), (0, 0, False))
             note = None

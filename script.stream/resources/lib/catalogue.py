@@ -558,7 +558,7 @@ def play_url(parent, item):
     ref = None
     if re.match(r'^https?://sastatv\.com/vendor1play\.php', url, re.I):
         mode = 110
-    elif 'nriflix.com/' in url.lower():
+    elif 'nriflix.com/' in url.lower() or re.search(r'\.(mp4|mkv|m4v|avi|mov|ts)(\?|$)', url, re.I):
         mode, ref = 256, 'xclusiveS3'
     elif re.search(r'\.m3u8(\?|$)', url, re.I):
         mode, ref = 255, 'xclusiveStream'
