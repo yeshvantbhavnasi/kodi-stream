@@ -250,7 +250,7 @@ def related_all():
 def save_catalogue(profile, titles):
     """The titles a box's catalogue index holds (newest first per language and kind), as the box sent them."""
     clean = []
-    for t in list(titles or [])[:3000]:
+    for t in list(titles or [])[:5000]:
         if not isinstance(t, dict) or not t.get('name'):
             continue
         clean.append({'name': str(t['name'])[:200], 'kind': str(t.get('kind') or '')[:20], 'lang': str(t.get('lang') or '')[:30],
@@ -266,18 +266,20 @@ LANG_NAMES = {'te': 'telugu', 'hi': 'hindi', 'en': 'english', 'ta': 'tamil', 'ml
               'gu': 'gujarati', 'pa': 'punjabi', 'bn': 'bengali'}
 
 
-def catalogue_titles(lang='', kind='', days=0, limit=200):
+def catalogue_titles(lang='', kind='', days=0, limit=200, query=''):
     """Titles across every box's index, newest first, one entry per title and language. lang is a code or a name,
-    kind 'movie' or 'show', days limits to arrivals in the last N days."""
+    kind 'movie' or 'show', days limits to arrivals in the last N days, query filters by title substring."""
     with connect() as conn:
         rows = conn.execute('SELECT titles FROM catalogue').fetchall()
     want_lang = LANG_NAMES.get((lang or '').lower(), (lang or '').lower())
     want_kind = {'movie': 'movie', 'movies': 'movie', 'show': 'show', 'shows': 'show', 'tv': 'show'}.get((kind or '').lower(), '')
+    want_q = plain(query) if query else ''
     since = time.strftime('%Y-%m-%d', time.localtime(time.time() - days * 86400)) if days else ''
     seen, out = set(), []
     for r in rows:
         for t in json.loads(r['titles'] or '[]'):
-            key = (plain(t['name']), (t.get('lang') or '').lower())
+            p = plain(t['name'])
+            key = (p, (t.get('lang') or '').lower())
             if key in seen:
                 continue
             if want_lang and not (t.get('lang') or '').lower().startswith(want_lang):
@@ -285,6 +287,8 @@ def catalogue_titles(lang='', kind='', days=0, limit=200):
             if want_kind and t.get('kind') != want_kind:
                 continue
             if since and (t.get('added') or '') < since:
+                continue
+            if want_q and want_q not in p and (query or '').lower() not in (t['name'] or '').lower():
                 continue
             seen.add(key)
             out.append(t)
@@ -849,7 +853,7 @@ class Handler(BaseHTTPRequestHandler):
                 days, limit = int(q.get('days') or 0), int(q.get('limit') or 200)
             except ValueError:
                 days, limit = 0, 200
-            return self._send(200, {'titles': catalogue_titles(q.get('lang', ''), q.get('kind', ''), days, min(limit, 1000))})
+            return self._send(200, {'titles': catalogue_titles(q.get('lang', ''), q.get('kind', ''), days, min(limit, 5000), q.get('q', ''))})
         is_page = self.path == '/' or self.path.startswith(('/?', '/text', '/index'))
         if not self.allowed(is_page):
             return
@@ -875,7 +879,7 @@ class Handler(BaseHTTPRequestHandler):
                 days, limit = int(q.get('days') or 0), int(q.get('limit') or 200)
             except ValueError:
                 days, limit = 0, 200
-            return self._send(200, {'titles': catalogue_titles(q.get('lang', ''), q.get('kind', ''), days, min(limit, 1000))})
+            return self._send(200, {'titles': catalogue_titles(q.get('lang', ''), q.get('kind', ''), days, min(limit, 5000), q.get('q', ''))})
         if self.path.startswith('/rows'):
             return self._send(200, {'rows': shown_for(q.get('profile', ''))})
         if self.path.startswith('/history'):
@@ -952,7 +956,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             try:
                 length = int(self.headers.get('Content-Length') or 0)
-                body = json.loads(self.rfile.read(min(length, 2000000)) or b'{}')
+                body = json.loads(self.rfile.read(min(length, 4000000)) or b'{}')
             except ValueError:
                 return self._send(400, {'error': 'bad json'})
             profile = str(body.get('profile') or '').strip()[:200]
@@ -1020,10 +1024,18 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     load()
-    log('serving on {0} port {1}, model {2} at {3}, {4} batches remembered'.format(', '.join(BIND), PORT, MODEL, OLLAMA, len(BATCHES)))
+    servers, bound = [], []
+    for host in BIND:
+        try:
+            servers.append(ThreadingHTTPServer((host, PORT), Handler))
+            bound.append(host)
+        except OSError as e:
+            log('could not bind {0}:{1}: {2}'.format(host, PORT, e))
+    if not servers:
+        raise SystemExit('no bind address available from BIND={0}'.format(BIND))
+    log('serving on {0} port {1}, model {2} at {3}, {4} batches remembered'.format(', '.join(bound), PORT, MODEL, OLLAMA, len(BATCHES)))
     threading.Thread(target=refresh_top10, daemon=True).start()
     threading.Thread(target=refresh_cricket, daemon=True).start()
-    servers = [ThreadingHTTPServer((host, PORT), Handler) for host in BIND]
     for server in servers[1:]:
         threading.Thread(target=server.serve_forever, daemon=True).start()
     servers[0].serve_forever()

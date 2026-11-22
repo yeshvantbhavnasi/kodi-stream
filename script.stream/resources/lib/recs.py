@@ -17,9 +17,10 @@ import ai
 import catalogue as cat
 import db
 import discover
+import library
 import meta
 
-ROW_SIZE = 40          # tiles per row
+ROW_SIZE = 24          # tiles per row on Home
 KEEP_ROWS = 3600       # rebuild the rows after this long, or sooner when something was played or rated
 MIN_ROW = 6            # a row needs at least this many titles to be worth showing
 LANG_WEIGHT = (3.0, 2.2, 1.6, 1.0)
@@ -141,20 +142,90 @@ def excluded_names():
 
 def _same_film(name):
     """One key for every copy of a film: 'Nishaanchi (2025)' in Telugu, Tamil and Hindi, clean or cinema recording."""
-    title, year = meta.split_title(name)
-    return discover._plain(title) + year
+    return discover.same_film(name)
 
 
-def _no_repeats(entries):
-    """A row shows a film once, whichever language or copy came first."""
-    seen, out = set(), []
-    for e in entries:
-        key = _same_film(e['item']['name'])
-        if key in seen:
+# A row whose title names a language already holds that language. Mixed rows prefer Telugu instead.
+_LANG_ROW = ('telugu', 'hindi', 'tamil', 'malayalam', 'kannada', 'marathi', 'gujarati', 'punjabi',
+             'bengali', 'bangla', 'urdu', 'english', 'dubbed')
+
+
+def _mixed_row(title):
+    """True for a row that is not already about one language, and not a live sports row."""
+    low = (title or '').lower()
+    return not low.startswith('cricket') and not any(word in low for word in _LANG_ROW)
+
+
+def _film_index():
+    """{film key: [catalogue entries]} for choosing a Telugu copy when one exists."""
+    index = {}
+    for entry in db.all_titles():
+        key = _same_film(entry['item']['name'])
+        if key:
+            index.setdefault(key, []).append(entry)
+    return index
+
+
+def _show_entry(entry):
+    return entry.get('kind') in discover.SHOW_KINDS or (entry.get('item') or {}).get('t') == 'folder'
+
+
+def _telugu_copies(entries, index):
+    """Swap in the Telugu catalogue copy of a film when one exists. Anything without a Telugu copy stays as it is."""
+    out = []
+    for entry in entries:
+        item = entry.get('item') or {}
+        if cat.is_live(item) or 'youtube' in item.get('url', '') or db.lang_match(entry.get('group') or '', ['telugu']):
+            out.append(entry)
             continue
-        seen.add(key)
-        out.append(e)
+        versions = [v for v in index.get(_same_film(item.get('name') or ''), [])
+                    if _show_entry(v) == _show_entry(entry) and db.lang_match(v.get('group') or '', ['telugu'])]
+        if not versions:
+            out.append(entry)
+            continue
+        versions.sort(key=lambda v: meta.is_cinema_copy(v['item']['name']))
+        chosen = versions[0]
+        swapped = dict(entry, item=chosen['item'], parent=chosen['parent'], group=chosen.get('group'),
+                       kind=chosen.get('kind') or entry.get('kind'))
+        old = cat.title_case(entry.get('group') or '')
+        if swapped.get('meta') and old and swapped['meta'].lower() == old.lower():
+            swapped['meta'] = cat.title_case(chosen.get('group') or '')
+        out.append(swapped)
     return out
+
+
+def _no_repeats(entries, prefer_telugu=True):
+    """A row shows a film once. Telugu wins when that copy is in the row; otherwise the first copy stays.
+    A clean copy beats a cinema recording of the same film."""
+    best, order = {}, []
+    for entry in entries:
+        key = _same_film(entry['item']['name']) or ('\0' + (entry['item'].get('url') or entry['item']['name']))
+        if key not in best:
+            order.append(key)
+            best[key] = entry
+            continue
+        if _better_copy(entry, best[key], prefer_telugu):
+            kept, dropped = entry, best[key]
+        else:
+            kept, dropped = best[key], entry
+        merged = dict(kept)
+        if dropped.get('suggestion'):
+            merged['suggestion'] = True
+        for field in ('reason', 'number', 'rank'):
+            if not merged.get(field) and dropped.get(field):
+                merged[field] = dropped[field]
+        best[key] = merged
+    return [best[key] for key in order]
+
+
+def _better_copy(new, old, prefer_telugu):
+    """Telugu replaces another language when that copy is wanted. With no Telugu copy, the one already kept stays,
+    except a clean copy replaces a cinema recording of the same language."""
+    new_group, old_group = new.get('group') or '', old.get('group') or ''
+    if prefer_telugu and db.lang_match(new_group, ['telugu']) and not db.lang_match(old_group, ['telugu']):
+        return True
+    same = new_group.strip().lower() == old_group.strip().lower()
+    return same and meta.is_cinema_copy(old['item']['name']) and not meta.is_cinema_copy(new['item']['name'])
 
 
 def candidates():
@@ -365,50 +436,52 @@ def list_rows(limit=3):
 
 
 def build():
-    """All the recommendation rows, best first: [(title, [entries])]. Entries carry 'meta' and may carry
-    'suggestion' (top picks) and 'rank'."""
+    """Curated recommendation rows for Home, best first: [(title, [entries])]. Kept lean (7-8 distinct sections)
+    so Home stays scannable and uncluttered; full genre, provider, sports and YouTube browsing live on their tabs."""
     started = time.time()
     scored, t, metadata = candidates()
     for s, e, d in scored:
         e['data'] = {'tmdb_rating': d.get('tmdb_rating'), 'votes': d.get('votes'), 'imdb_rating': d.get('imdb_rating')}
     order = t['languages']
-    now = time.time()
     rows = []
     picks = top_picks(scored, order)
+    lead_keys = {_same_film(e['item']['name']) for e in picks[:12]}
     if picks:
         _, by = posted_picks()
         rows.append(('Top Picks for You' + ('  \u00b7  ' + by if by else ai.engine_note()), picks))
-    try:
-        videos = video_rows(picks)
-    except Exception as e:
-        log('video rows failed: {0}'.format(e))
-        videos = []
-    rows += [r for r in videos if r[0].startswith('Tonight')]  # the mixed row sits right under the picks
     try:
         cricket = cricket_rows()
     except Exception as e:
         log('cricket row failed: {0}'.format(e))
         cricket = []
     if cricket and any(e.get('soon') for e in cricket[0][1]):
-        rows += cricket  # a match on now or today sits high; otherwise the row follows the genre rows
-        cricket = []
-    rows += because_rows(scored)
-    fresh = discover.new_entries(ROW_SIZE)
+        rows += cricket  # live or starting today only; otherwise cricket sits on the Sports tab
+    fresh = discover.new_entries(ROW_SIZE * 2)
     if len(fresh) >= 4:
-        rows.append(('New Releases', _with_meta(fresh)))
-    for lang, kind, chart in discover.india_top_rows()[:3]:  # the first language's movies and shows, then the next language
-        rows.append(('Top 10 {0} {1}'.format(lang, kind), [dict(e, meta=e['meta']) for e in chart]))
-    home = discover.top_entries()
-    if len(home) >= 3:
-        rows.append(('Top 10 in Your Home', [dict(e, meta=e['meta']) for e in home]))
-    rows += genre_rows(scored, t)
-    rows += cricket
-    rows += rated_rows(scored, t)
+        # Show fresh arrivals that aren't already leading Top Picks first so the viewer sees new posters right away.
+        fresh_first = [e for e in fresh if _same_film(e['item']['name']) not in lead_keys]
+        fresh_rest = [e for e in fresh if _same_film(e['item']['name']) in lead_keys]
+        rows.append(('New Releases', _with_meta((fresh_first + fresh_rest)[:ROW_SIZE])))
+    trending = discover.india_top_combined(10)
+    if trending:
+        rows.append(('Top 10 Trending', [dict(e, meta=e['meta']) for e in trending]))
+    else:
+        home = discover.top_entries()
+        if len(home) >= 3:
+            rows.append(('Top 10 in Your Home', [dict(e, meta=e['meta']) for e in home]))
+    rows += because_rows(scored, limit=1)
     rows += show_row(scored, order)
-    rows += [r for r in videos if not r[0].startswith('Tonight')]
-    rows += provider_rows(scored)
-    rows += gems(scored, now)
-    rows = [(title, _no_repeats(entries)) for title, entries in rows]
+    taste_rows = genre_rows(scored, t, limit=1) or rated_rows(scored, t)
+    rows += taste_rows
+    try:
+        rows += video_rows()
+    except Exception as e:
+        log('video rows failed: {0}'.format(e))
+    index = _film_index()
+    # Mixed rows (Top Picks, Because you watched, New Releases, and the rest) show the Telugu copy of a film
+    # when the catalogue has one, and the copy already chosen when it does not. A row named for a language stays in it.
+    rows = [(title, _no_repeats(_telugu_copies(entries, index) if _mixed_row(title) else entries, _mixed_row(title)))
+            for title, entries in rows]
     for _, entries in rows:
         for e in entries:
             e.pop('data', None)
@@ -418,9 +491,10 @@ def build():
 
 
 def pool_for_model(limit=120):
-    """The best candidates for the model to re-rank, language shares applied."""
+    """The best candidates for the model to re-rank, language shares applied. A film the catalogue also has in
+    Telugu is offered as that copy; with no Telugu copy the candidate already chosen is kept."""
     scored, t, _ = candidates()
-    return _balanced(scored, t['languages'], limit)
+    return _no_repeats(_telugu_copies(_balanced(scored, t['languages'], limit), _film_index()))
 
 
 # ---------- keeping the rows ready ----------
@@ -510,11 +584,23 @@ def cricket_rows():
 
 
 def share_catalogue(per_group=150):
-    """Send the service the newest titles of the index per language and kind (movies and shows apart), with the
-    year, arrival date, rating and genres where known. Sent when the set changed since the last time."""
+    """Send the service the newest titles of the index per language and kind (movies and shows apart), combining
+    stream.db and the local library so TV shows and deeper pages are included. Sent when the set changed."""
     metadata = db.metadata_all()
     groups = {}
-    for e in db.all_titles():
+    seen_urls = set()
+    all_entries = list(db.all_titles())
+    if not db.KIDS:
+        try:
+            all_entries += library.all_recent(per_group)
+        except Exception as e:
+            log('library merge for catalogue skipped: {0}'.format(e))
+    for e in all_entries:
+        url = (e.get('item') or {}).get('url') or ''
+        if url and url in seen_urls:
+            continue
+        if url:
+            seen_urls.add(url)
         kind = 'show' if e.get('kind') in discover.SHOW_KINDS else 'movie' if e.get('kind') in discover.MOVIE_KINDS else ''
         if not kind:
             continue
@@ -572,7 +658,8 @@ def mark_dirty():
 
 import youtube as yt  # noqa: E402
 
-VIDEO_ROW = 40
+VIDEO_ROW = 24
+VIDEOS_KEEP = 3600
 SOURCE_WEIGHT = {'subs': 2.5, 'related': 2.0, 'search': 1.2, 'trailers': 1.0, 'pinned': 1.5}
 
 
@@ -581,15 +668,18 @@ def _video_item(item):
     return dict(item, id=vid) if vid else None
 
 
-def refresh_videos():
-    """Gather videos worth recommending: new uploads from followed and pinned channels, videos related to the ones
-    played last, and YouTube's results for the movies and shows played last. Network work; run in the background."""
+def refresh_videos(max_age=VIDEOS_KEEP):
+    """Gather videos worth recommending: new uploads from followed channels, videos related to the ones played
+    last, and YouTube's results for the movies and shows played last. Throttled to once per max_age seconds."""
     if not yt.installed():
         return 0
+    if max_age and time.time() - (db.meta('videos_at') or 0) < max_age:
+        return 0
     gathered = 0
-    pinned = [{'id': cid, 'name': name} for name, cid in yt.PINNED]
-    sources = [('pinned', lambda: yt.subscriptions(pinned, 40, rpc=cat.rpc))]
+    sources = []
     if db.KIDS:
+        pinned = [{'id': cid, 'name': name} for name, cid in yt.PINNED]
+        sources.append(('pinned', lambda: yt.subscriptions(pinned, 40, rpc=cat.rpc)))
         for title, query in yt.TODDLER_ROWS:
             sources.append(('search', lambda q=query: yt.search(q, 20)))
     else:
@@ -612,6 +702,7 @@ def refresh_videos():
             continue
         db.index_videos(source, items)
         gathered += len(items)
+    db.set_meta('videos_at', time.time())
     log('{0} videos gathered'.format(gathered))
     return gathered
 
@@ -656,15 +747,13 @@ def video_candidates():
     return scored
 
 
-def video_rows(picks):
-    """'YouTube for You', 'Because you watched <video>' (wide rows), and 'Tonight', a row that mixes the top picks
-    with the best videos."""
+def video_rows(picks=None):
+    """One crisp 'YouTube for You' wide-tile row for Home; full YouTube browsing lives on the YouTube tab."""
     if not yt.installed():
         return []
     scored = video_candidates()
     if len(scored) < MIN_ROW:
         return []
-    rows = []
     seen = set()
     top = []
     for s, e in scored:
@@ -673,18 +762,4 @@ def video_rows(picks):
             top.append(e)
         if len(top) >= VIDEO_ROW:
             break
-    rows.append(('YouTube for You', top))
-    for video, name in db.recent_videos(1):
-        alike = [e for s, e in scored if 'related' in e.get('source', '') and e['item']['id'] != video][:VIDEO_ROW]
-        if len(alike) >= MIN_ROW:
-            short = yt.clean(name)
-            rows.append(('More videos like ' + (short if len(short) <= 30 else short[:29].rstrip() + '…'), alike))
-            break
-    if picks:
-        mixed, videos = [], [e for s, e in scored[:12]]
-        for n, e in enumerate(picks[:24]):
-            mixed.append(e)
-            if n % 2 == 1 and videos:
-                mixed.append(videos.pop(0))
-        rows.append(('Tonight: Movies, Shows and Videos', mixed))
-    return rows
+    return [('YouTube for You', top)] if len(top) >= MIN_ROW else []

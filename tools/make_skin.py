@@ -28,7 +28,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'script.st
 XML = os.path.join(ROOT, '1080i')
 MEDIA = os.path.join(ROOT, 'media')
 
-ROWS = 24
+ROWS = 18
 FIRST = 200
 TABS, CLOSE, SEARCH, GEAR, PROFILE, FILTER, BACK = 100, 110, 120, 130, 140, 160, 170
 TOUCH = {'on': False}  # set while the touch layouts are written
@@ -234,18 +234,18 @@ def row(n):
     return '''            <control type="group" id="{gid}">
                 <height>{group}</height>
                 <visible>!String.IsEmpty(Window.Property(row{n}.title))</visible>
-                <control type="label"><left>60</left><top>8</top><width>1700</width><height>44</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row{n}.title)][/B]</label></control>
+                <control type="label"><left>60</left><top>6</top><width>1700</width><height>40</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(row{n}.title)][/B]</label></control>
                 <control type="list" id="{rid}">
                     {ups}
                     <onleft>noop</onleft>
                     <ondown>{down}</ondown>
-                    <left>50</left><top>56</top><width>1870</width><height>{tiles}</height>
+                    <left>50</left><top>48</top><width>1870</width><height>{tiles}</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>{layouts}
                 </control>
             </control>
 '''.format(gid=300 + n, n=n, rid=rid, ups=ups, down=down, layouts=scaled(layouts(n, rid)),
-           tiles=tiles, group=110 + tiles)
+           tiles=tiles, group=84 + tiles)
 
 
 # ---------- billboard ----------
@@ -266,11 +266,11 @@ def billboard(n):
             <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="60FFFFFF">$INFO[{c}.Art(thumb)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + {no_art}</visible></control>
             <control type="image"><left>640</left><top>0</top><width>700</width><height>720</height><texture>fade_left.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>640</left><top>300</top><width>1280</width><height>420</height><texture>fade_bottom.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
-            <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[{c}.Art(thumb)]</texture><visible>{no_art} | !String.IsEmpty(Window.Property(kids))</visible></control>
-            <control type="label"><left>60</left><top>146</top><width>1100</width><height>70</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[{c}.Label][/B]</label></control>
-            <control type="label"><left>60</left><top>226</top><width>1100</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[{c}.Property(meta)]</label></control>
+            <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[{c}.Art(thumb)]</texture><visible>{no_art} | !String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[{c}.Label][/B]</label></control>
+            <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[{c}.Property(meta)]</label></control>
             <!-- a two-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>268</top><width>880</width><height>72</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[{c}.Property(plot)]</label></control>
+            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>74</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[{c}.Property(plot)]</label></control>
         </control>
 '''.format(slide=SLIDE, shown=shown, c=c, has_art=has_art, no_art=no_art)
 
@@ -305,12 +305,12 @@ def filter_strip():
 
 
 def top_bar():
-    # Touch layouts make room for ten tabs (Downloads is added) and 60px icons a finger can hit: search becomes an icon.
+    # Touch layouts make room for seven roomy tabs and 60px icons a finger can hit: search becomes an icon.
     if TOUCH['on']:
-        bar = dict(tabs_w=1300, tab_w=130, search_l=1636, search_w=60, search_i=1650, search_label='', search_t=22, search_h=60, search_it=36, profile_l=1706,
+        bar = dict(tabs_w=1290, tab_w=180, pill_w=168, search_l=1636, search_w=60, search_i=1650, search_label='', search_t=22, search_h=60, search_it=36, profile_l=1706,
                    gear_l=1776, close_l=1846, icon=60, icon_t=22)
     else:
-        bar = dict(tabs_w=1150, tab_w=127, search_l=1490, search_w=240, search_i=1506, search_label='Search', search_t=28, search_h=48, search_it=36, profile_l=1746,
+        bar = dict(tabs_w=1140, tab_w=160, pill_w=148, search_l=1490, search_w=240, search_i=1506, search_label='Search', search_t=28, search_h=48, search_it=36, profile_l=1746,
                    gear_l=1800, close_l=1856, icon=44, icon_t=30)
     downs = '<ondown condition="Control.IsVisible({flt})">{flt}</ondown>\n            <ondown>{first}</ondown>'.format(flt=FILTER, first=FIRST)
     return '''        <!-- top bar: a dark fade keeps it readable over the billboard -->
@@ -324,14 +324,14 @@ def top_bar():
             <onright>{search}</onright>
             <onleft>noop</onleft>
             <onup>noop</onup>
-            <!-- nine tabs share 1150px, so each is 127 wide; the highlighted tab sits in a white pill, the open tab is bold white -->
+            <!-- seven tabs with generous breathing room; the highlighted tab sits in a white pill, the open tab is bold white -->
             <itemlayout width="{tab_w}" height="56" condition="String.IsEmpty(Window.Property(kids))">
-                <control type="label"><left>0</left><top>0</top><width>124</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FFB3B3B3</textcolor><label>$INFO[ListItem.Label]</label></control>
+                <control type="label"><left>0</left><top>0</top><width>{pill_w}</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FFB3B3B3</textcolor><label>$INFO[ListItem.Label]</label></control>
             </itemlayout>
             <focusedlayout width="{tab_w}" height="56" condition="String.IsEmpty(Window.Property(kids))">
-                <control type="image"><left>0</left><top>6</top><width>124</width><height>44</height><texture colordiffuse="FFFFFFFF" border="22">pill.png</texture><visible>Control.HasFocus({tabs})</visible><animation effect="zoom" start="90" end="100" time="120" center="auto">Visible</animation></control>
-                <control type="label"><left>0</left><top>0</top><width>124</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({tabs})</visible></control>
-                <control type="label"><left>0</left><top>0</top><width>124</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>!Control.HasFocus({tabs})</visible></control>
+                <control type="image"><left>0</left><top>6</top><width>{pill_w}</width><height>44</height><texture colordiffuse="FFFFFFFF" border="22">pill.png</texture><visible>Control.HasFocus({tabs})</visible><animation effect="zoom" start="90" end="100" time="120" center="auto">Visible</animation></control>
+                <control type="label"><left>0</left><top>0</top><width>{pill_w}</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({tabs})</visible></control>
+                <control type="label"><left>0</left><top>0</top><width>{pill_w}</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>!Control.HasFocus({tabs})</visible></control>
             </focusedlayout>
             <itemlayout width="230" height="56" condition="!String.IsEmpty(Window.Property(kids))">
                 <control type="label"><left>0</left><top>0</top><width>290</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>
@@ -404,16 +404,14 @@ def home_xml():
            '        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor>{0}<label>$INFO[Window.Property(status)]</label><visible>{1}</visible></control>'.format(SLIDE, TOP_BAR)]
     out += [billboard(n).rstrip('\n') for n in range(ROWS)]
     out.append(filter_strip().rstrip('\n'))
-    # 510 tall: one row plus the next row's title. Kodi keeps the highlighted row fully inside this box, so when moving
-    # down the empty space under the previous row's posters peeks in, not the posters themselves.
-    # Touch layouts run the rows to the bottom of the screen instead, so the top of the next row's posters shows
-    # and a tap on them moves there.
-    top, height = (480, 600) if TOUCH['on'] else (500, 510)
+    # Rows start at 400 and run to the bottom of the 1080p frame so the active row sits prominently and the next
+    # row's heading and poster tops peek in below, making the home screen scannable without wasted vertical gap.
+    top, height = (430, 650) if TOUCH['on'] else (400, 680)
     out.append('''        <control type="grouplist" id="9000">
             <left>0</left><top>{top}</top><width>1920</width><height>{height}</height>
             {slide}
             <orientation>vertical</orientation>
-            <itemgap>6</itemgap>
+            <itemgap>0</itemgap>
             <scrolltime tween="quadratic">250</scrolltime>
             <onup>{tabs}</onup>
             <onleft>noop</onleft>'''.format(slide=SLIDE, tabs=TABS, top=top, height=height))
@@ -558,7 +556,7 @@ def grid_xml():
 # ---------- title page ----------
 
 PLAY_B, TRAILER_B, LIST_B, LIKE_B, DISLIKE_B = 301, 302, 303, 304, 305
-SEASONS, EPISODES, ALIKE = 310, 320, 330
+SEASONS, EPISODES, ALIKE, LANGS = 310, 320, 330, 340
 
 
 def pill_button(cid, left, width, label, nav):
@@ -600,7 +598,8 @@ def episode_tile(focused):
 
 def title_xml():
     """A title's own page: backdrop, facts, synopsis and cast, a row of pill buttons (Play, Trailer, My List, Like,
-    Dislike), then a show's seasons and episodes, or a movie's More like this row."""
+    Dislike), language chips when the film is listed in more than one language, then a show's seasons and episodes
+    or a movie's More like this row."""
     is_show, not_show = '!String.IsEmpty(Window.Property(show))', 'String.IsEmpty(Window.Property(show))'
     buttons = [
         (PLAY_B, 60, 260, '$INFO[Window.Property(play_label)]'),
@@ -614,8 +613,9 @@ def title_xml():
         prev = buttons[n - 1][0] if n else cid
         nxt = buttons[n + 1][0] if n < len(buttons) - 1 else cid
         nav = ('<onleft>{p}</onleft><onright>{x}</onright><onup>{b}</onup>'
+               '<ondown condition="!String.IsEmpty(Window.Property(langs))">{langs}</ondown>'
                '<ondown condition="{s}">{seasons}</ondown><ondown>{alike}</ondown>').format(
-            p=prev, x=nxt, b=BACK if TOUCH['on'] else cid, s=is_show, seasons=SEASONS, alike=ALIKE)
+            p=prev, x=nxt, b=BACK if TOUCH['on'] else cid, s=is_show, seasons=SEASONS, alike=ALIKE, langs=LANGS)
         rows.append(pill_button(cid, left, width, label, nav))
     back = ''
     if TOUCH['on']:
@@ -630,6 +630,7 @@ def title_xml():
         </control>
 '''.format(b=BACK, p=PLAY_B)
     chosen, other = 'String.IsEqual(Window.Property(season),ListItem.Label)', '!String.IsEqual(Window.Property(season),ListItem.Label)'
+    lang_on, lang_off = 'String.IsEqual(Window.Property(language),ListItem.Label)', '!String.IsEqual(Window.Property(language),ListItem.Label)'
     return '''<?xml version="1.0" encoding="UTF-8"?>
 <!-- Generated by tools/make_skin.py; edit that file, not this one. -->
 <window>
@@ -648,13 +649,38 @@ def title_xml():
         <control type="label"><left>60</left><top>366</top><width>1180</width><height>32</height><font>font10</font><textcolor>FFB3B3B3</textcolor><label>$INFO[Window.Property(cast)]</label></control>
         <control type="label"><left>60</left><top>396</top><width>1180</width><height>30</height><font>font10</font><textcolor>FF8C8C8C</textcolor><label>$INFO[Window.Property(status)]</label></control>
 {buttons}
+        <!-- language chips, only when this film is listed in more than one language; Down from Play lands here -->
+        <control type="list" id="{langs}">
+            <left>50</left><top>496</top><width>1820</width><height>52</height>
+            <orientation>horizontal</orientation>
+            <scrolltime tween="quadratic">150</scrolltime>
+            <onleft>noop</onleft><onright>noop</onright><onup>{play}</onup>
+            <ondown condition="{is_show}">{seasons}</ondown><ondown>{alike}</ondown>
+            <visible>!String.IsEmpty(Window.Property(langs))</visible>
+            <itemlayout width="230" height="52">
+                <control type="image"><left>0</left><top>4</top><width>216</width><height>44</height><texture colordiffuse="33FFFFFF" border="22">pill.png</texture></control>
+                <control type="label"><left>0</left><top>4</top><width>216</width><height>44</height><font>font12</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>{lang_on}</visible></control>
+                <control type="label"><left>0</left><top>4</top><width>216</width><height>44</height><font>font12</font><align>center</align><aligny>center</aligny><textcolor>FFB3B3B3</textcolor><label>$INFO[ListItem.Label]</label><visible>{lang_off}</visible></control>
+            </itemlayout>
+            <focusedlayout width="230" height="52">
+                <control type="image"><left>0</left><top>4</top><width>216</width><height>44</height><texture colordiffuse="FFFFFFFF" border="22">pill.png</texture><visible>Control.HasFocus({langs})</visible></control>
+                <control type="image"><left>0</left><top>4</top><width>216</width><height>44</height><texture colordiffuse="33FFFFFF" border="22">pill.png</texture><visible>!Control.HasFocus({langs})</visible></control>
+                <control type="label"><left>0</left><top>4</top><width>216</width><height>44</height><font>font12</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({langs})</visible></control>
+                <control type="label"><left>0</left><top>4</top><width>216</width><height>44</height><font>font12</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>!Control.HasFocus({langs})</visible></control>
+            </focusedlayout>
+        </control>
+        <!-- seasons, episodes and similar titles drop down while the language chips are showing -->
+        <control type="group">
+            <animation effect="slide" end="0,56" time="0" condition="!String.IsEmpty(Window.Property(langs))">Conditional</animation>
         <!-- a show: its seasons as chips and the chosen season's episodes; a movie: titles like it -->
         <control type="label"><left>60</left><top>516</top><width>600</width><height>44</height><font>font30_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(section)][/B]</label></control>
         <control type="list" id="{seasons}">
             <left>420</left><top>516</top><width>1440</width><height>48</height>
             <orientation>horizontal</orientation>
             <scrolltime tween="quadratic">150</scrolltime>
-            <onleft>noop</onleft><onright>noop</onright><onup>{play}</onup><ondown>{episodes}</ondown>
+            <onleft>noop</onleft><onright>noop</onright>
+            <onup condition="!String.IsEmpty(Window.Property(langs))">{langs}</onup><onup>{play}</onup>
+            <ondown>{episodes}</ondown>
             <visible>{is_show}</visible>
             <itemlayout width="190" height="48">
                 <control type="image"><left>0</left><top>0</top><width>180</width><height>44</height><texture colordiffuse="33FFFFFF" border="22">pill.png</texture></control>
@@ -692,7 +718,9 @@ def title_xml():
             <left>50</left><top>576</top><width>1870</width><height>330</height>
             <orientation>horizontal</orientation>
             <scrolltime tween="quadratic">200</scrolltime>
-            <onleft>noop</onleft><onright>noop</onright><onup>{play}</onup><ondown>noop</ondown>
+            <onleft>noop</onleft><onright>noop</onright>
+            <onup condition="!String.IsEmpty(Window.Property(langs))">{langs}</onup><onup>{play}</onup>
+            <ondown>noop</ondown>
             <visible>{not_show}</visible>
             <itemlayout width="216" height="330">
                 <control type="group"><left>10</left><top>14</top>
@@ -707,10 +735,11 @@ def title_xml():
             </focusedlayout>
         </control>
         <control type="textbox"><left>60</left><top>920</top><width>1800</width><height>100</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[B][COLOR FFFFFFFF]$INFO[Container({alike}).ListItem.Label][/COLOR][/B]  [COLOR FF46D369]$INFO[Container({alike}).ListItem.Property(meta)][/COLOR][CR]$INFO[Container({alike}).ListItem.Property(plot)]</label><visible>{not_show} + Control.HasFocus({alike})</visible></control>
+        </control>
     </controls>
 </window>
-'''.format(play=PLAY_B, seasons=SEASONS, episodes=EPISODES, alike=ALIKE, is_show=is_show, not_show=not_show, back=back,
-           buttons=''.join(rows).rstrip('\n'), chosen=chosen, other=other,
+'''.format(play=PLAY_B, seasons=SEASONS, episodes=EPISODES, alike=ALIKE, langs=LANGS, is_show=is_show, not_show=not_show, back=back,
+           buttons=''.join(rows).rstrip('\n'), chosen=chosen, other=other, lang_on=lang_on, lang_off=lang_off,
            zoom=zoom(EPISODES), zoom_alike=zoom(ALIKE),
            episode_item=indent(scaled(episode_tile(False)), 20), episode_focus=indent(scaled(episode_tile(True)), 20),
            poster_item=indent(scaled(poster_tile(ALIKE, False)), 20), poster_focus=indent(scaled(poster_tile(ALIKE, True)), 20))

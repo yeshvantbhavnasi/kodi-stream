@@ -6,6 +6,7 @@ import time
 import ai
 import catalogue as cat
 import db
+import library
 import meta
 
 MOVIE_KINDS = ('Movies',)
@@ -127,6 +128,36 @@ def _plain(text):
     return re.sub(r'[^a-z0-9]', '', (text or '').lower())
 
 
+def same_film(name):
+    """One key for every copy of a film: the name without punctuation, year or quality words, plus the year."""
+    title, year = meta.split_title(name or '')
+    return _plain(title) + (year or '')
+
+
+def _choose_copy(entries):
+    """The Telugu copy when one of these is Telugu, otherwise the first, which is the copy already in hand."""
+    if not entries:
+        return None
+    telugu = [e for e in entries if db.lang_match(e.get('group') or '', ['telugu'])]
+    if not telugu:
+        return entries[0]
+    telugu.sort(key=lambda e: meta.is_cinema_copy(e['item']['name']))
+    return telugu[0]
+
+
+def _find_indexed(title, kinds=None, limit=12):
+    """Search both the fast titles index and the complete local library."""
+    hits = list(db.find_by_title(title, kinds, limit=limit))
+    try:
+        extra = library.find_by_title(title, kinds, limit=limit)
+    except Exception:
+        extra = []
+    if extra:
+        seen = {(e['item'].get('url') or e['item']['name']) for e in hits}
+        hits += [e for e in extra if (e['item'].get('url') or e['item']['name']) not in seen]
+    return hits
+
+
 def _chart_match(title):
     """The catalogue entry for a chart title: same name (ignoring punctuation, year and quality words) in the
     title's language, the right year first for a movie; or None when the catalogue does not have it."""
@@ -135,7 +166,7 @@ def _chart_match(title):
     names = [title['title']] + ([title['title'].split(':')[0]] if ':' in title['title'] else [])
     for name in names:
         want = _plain(name)
-        found = [e for e in db.find_by_title(name, kinds, limit=12)
+        found = [e for e in _find_indexed(name, kinds, limit=12)
                  if _plain(meta.split_title(e['item']['name'])[0]) == want and db.lang_match(e.get('group') or '', [lang])]
         if found:
             found.sort(key=lambda e: meta.split_title(e['item']['name'])[1] != title.get('year'))
@@ -153,21 +184,24 @@ def match_title(title, year='', kind='', lang=''):
     title, named_year = meta.split_title(title or '')  # 'Nayyi Navelli (2026) PreDVD' -> 'Nayyi Navelli', '2026'
     year = str(year or named_year or '')
     names = [title] + ([title.split(':')[0]] if ':' in title else [])
-    # The language asked for first; failing that the household's languages (a Hindi show often sits in the dubbed
-    # sections), then any language.
-    languages = [group] if group else []
-    languages += [l for l in db.chosen_languages() if l not in languages] + ['']
+    # Telugu first when that copy exists. Otherwise the language asked for, then the household's languages
+    # (a Hindi show often sits in the dubbed sections), then any language.
+    languages = ['telugu']
+    if group and group != 'telugu':
+        languages.append(group)
+    languages += [l for l in db.chosen_languages() if l not in languages]
+    languages.append('')
     for name in names:
         want = _plain(name)
         if not want:
             continue
         # 'Court: State vs A Nobody' is listed as 'Court State Vs. A Nobody': fetch by the first words, compare without punctuation
         words = re.findall(r'[A-Za-z0-9]+', name)
-        hits = db.find_by_title(name, kinds, limit=12)
+        hits = _find_indexed(name, kinds, limit=12)
         if words:
-            hits += db.find_by_title(' '.join(words[:2]), kinds, limit=40)
+            hits += _find_indexed(' '.join(words[:2]), kinds, limit=40)
             if len(words[0]) > 3:
-                hits += db.find_by_title(words[0], kinds, limit=60)  # 'Search- The Naina Murder Case'
+                hits += _find_indexed(words[0], kinds, limit=60)  # 'Search- The Naina Murder Case'
         same = [e for e in hits if _plain(meta.split_title(e['item']['name'])[0]) == want]
         for language in languages:
             found = [e for e in same if not language or db.lang_match(e.get('group') or '', [language])]
@@ -196,7 +230,7 @@ def find_outside(title, year='', kind='', lang=''):
     # 'Stree 2: Sarkate Ka Aatank' is listed as plain 'Stree 2': the part before a colon is searched for and accepted too
     variants = [title] + ([title.split(':')[0].strip()] if ':' in title else [])
     wanted = {_plain(v) for v in variants if _plain(v)}
-    entry = None
+    matches = []
     try:
         for query in reversed(variants):  # the short form first: the catalogue's search likes short queries
             hits = cat.rank_results(query, cat.search(query))
@@ -209,20 +243,68 @@ def find_outside(title, year='', kind='', lang=''):
                 if _plain(meta.split_title(name)[0]) not in wanted:
                     continue
                 language = section_lang or found.get('group') or ''
-                if group and not db.lang_match(language, [group]):
+                # Keep Telugu alongside the language that was asked for, so a Telugu copy can be chosen below.
+                if group and not db.lang_match(language, [group]) and not db.lang_match(language, ['telugu']):
                     continue
                 found_year = meta.split_title(name)[1]
                 if year and found_year and found_year != year:
                     continue
-                entry = {'item': found['item'], 'parent': found['parent'], 'group': language}
-                db.index_titles(found['parent'], language, section_kind, [found['item']])
-                break
-            if entry:
+                matches.append({'item': found['item'], 'parent': found['parent'], 'group': language, 'kind': section_kind})
+            if matches:
                 break
     except Exception as e:
         cat.log('catalogue search for "{0}" failed: {1}'.format(title, e))
+    chosen = _choose_copy(matches)
+    entry = None
+    if chosen:
+        db.index_titles(chosen['parent'], chosen['group'], chosen['kind'], [chosen['item']])
+        entry = {'item': chosen['item'], 'parent': chosen['parent'], 'group': chosen['group']}
     db.set_meta(key, {'at': time.time(), 'entry': entry})
     return entry
+
+
+def language_versions(name, show=False, current=None):
+    """One catalogue copy of this film per language. Telugu leads when that copy exists; otherwise the viewer's
+    languages, then the rest. A clean copy is kept ahead of a cinema recording of the same language. `current` is
+    the copy already open, included even when the index has not seen it."""
+    title, year = meta.split_title(name or '')
+    plain = _plain(title)
+    key = plain + (year or '')
+    kinds = SHOW_KINDS if show else MOVIE_KINDS
+    hits = []
+    if plain:
+        hits = list(_find_indexed(title, kinds, limit=40))
+        words = re.findall(r'[A-Za-z0-9]+', title)
+        if words and len(words[0]) > 3 and _plain(words[0]) != plain:
+            hits += _find_indexed(words[0], kinds, limit=40)
+    seen = {}
+
+    def keep(entry):
+        item = entry.get('item') or {}
+        if not item.get('name'):
+            return
+        if key and same_film(item['name']) != key:
+            return
+        group = (entry.get('group') or '').strip().lower()
+        prev = seen.get(group)
+        if prev is None or (meta.is_cinema_copy(prev['item']['name']) and not meta.is_cinema_copy(item['name'])):
+            seen[group] = entry
+
+    for entry in hits:
+        keep(entry)
+    if current:
+        keep(current)
+    versions = list(seen.values())
+
+    def order(entry):
+        group = entry.get('group') or ''
+        telugu = 0 if db.lang_match(group, ['telugu']) else 1
+        rank = next((n for n, lang in enumerate(db.chosen_languages()) if db.lang_match(group, [lang])), 50)
+        cinema = 1 if meta.is_cinema_copy(entry['item']['name']) else 0
+        return (telugu, rank, cinema, group.lower())
+
+    versions.sort(key=order)
+    return versions
 
 
 def list_entries(items, limit=40):
@@ -270,6 +352,36 @@ def india_top_rows(limit=10, least=3):
                      for n, e in enumerate(found, 1)]
             rows.append((name, label, tiles))
     return rows
+
+
+def india_top_combined(limit=10, least=3):
+    """One combined Top 10 Trending row across the viewer's languages, ranked by chart score with the viewer's
+    preferred languages leading on ties. Only titles the catalogue can play are kept."""
+    chosen = db.chosen_languages()
+    langs = [l for l in chosen if l in CHART_LANGUAGES.values()] if chosen else list(CHART_LANGUAGES.values())
+    if not langs:
+        langs = list(CHART_LANGUAGES.values())
+    found, seen = [], set()
+    for title in ai.charts():
+        lang = CHART_LANGUAGES.get(title.get('lang'))
+        if lang not in langs:
+            continue
+        entry = _chart_match(title)
+        if not entry:
+            continue
+        key = same_film(entry['item']['name']) or entry['item']['name']
+        if key in seen:
+            continue
+        seen.add(key)
+        charts = ', '.join('{0} #{1}'.format(CHART_SOURCES[s], r)
+                           for s, r in sorted(title.get('ranks', {}).items(), key=lambda p: p[1]) if s in CHART_SOURCES)
+        found.append((-(title.get('score') or 0), langs.index(lang), len(found), entry, charts, lang))
+    found.sort(key=lambda x: x[:3])
+    picked = found[:limit]
+    if len(picked) < least:
+        return []
+    return [dict(entry, meta='#{0} Trending · {1}{2}'.format(n, cat.title_case(lang), (' · ' + charts) if charts else ''), rank=n)
+            for n, (_, _, _, entry, charts, lang) in enumerate(picked, 1)]
 
 
 def top_entries(limit=10):

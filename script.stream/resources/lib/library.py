@@ -21,8 +21,10 @@ import db
 PATH = os.path.join(cat.PROFILE, 'library.db')
 REFRESH_EVERY = 6 * 3600     # re-check the newest pages of a finished section this often
 FRESH_PAGES = 8              # at most this many pages per refresh, stopping early on a page with nothing new
+ENGLISH_PAGES = 10           # cap full crawl of huge English sections to the newest ~1000 titles each
 PAUSE = 1.5                  # seconds between listings, so the screen's own requests are never kept waiting
 SECTIONS = (('movies', 'Movies'), ('web_series', 'Web Series'), ('tv_shows', 'TV Shows'))
+ENGLISH_SECTIONS = (('english_movies', 'Movies'), ('english_tv', 'English TV'))
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS library (
@@ -122,6 +124,16 @@ def _plan():
                                      (key, kind, cat.title_case(folder['name']), json.dumps([[folder['url'], 'full', 0]]), 0, 0))
                     elif not json.loads(row['queue']) and time.time() - (row['done_at'] or 0) > REFRESH_EVERY:
                         conn.execute('UPDATE jobs SET queue=? WHERE key=?', (json.dumps([[folder['url'], 'fresh', 0]]), key))
+        if db.lang_match('english'):
+            for section, kind in ENGLISH_SECTIONS:
+                key = _job_key(kind, 'english')
+                keys.append(key)
+                row = conn.execute('SELECT * FROM jobs WHERE key=?', (key,)).fetchone()
+                if row is None:
+                    conn.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?)',
+                                 (key, kind, 'English', json.dumps([[cat.URLS[section], 'full', 0]]), 0, 0))
+                elif not json.loads(row['queue']) and time.time() - (row['done_at'] or 0) > REFRESH_EVERY:
+                    conn.execute('UPDATE jobs SET queue=? WHERE key=?', (json.dumps([[cat.URLS[section], 'fresh', 0]]), key))
     return keys
 
 
@@ -151,7 +163,8 @@ def _step(key):
     with _connect() as conn:
         new = _store(conn, url, kind, group, titles) if titles else 0
         rest = queue[1:]
-        if nxt and (mode == 'full' or (new and page + 1 < FRESH_PAGES)):
+        full_limit = ENGLISH_PAGES if group.lower() == 'english' else 0
+        if nxt and ((mode == 'full' and (not full_limit or page + 1 < full_limit)) or (new and page + 1 < FRESH_PAGES)):
             rest.insert(0, [nxt, mode, page + 1])
         known = {q[0] for q in rest}
         rest += [m for m in more if m[0] not in known and (mode == 'full' or page == 0)]
@@ -294,4 +307,43 @@ def search(query, limit=120):
                     'meta': '{0} · {1}'.format(r['kind'], r['grp'])})
         if len(out) >= limit:
             break
+    return out
+
+
+def find_by_title(title, kinds=None, limit=12):
+    """Look up titles in the local library whose name starts with `title`, for matching posted lists and language copies."""
+    q = normalize(title)
+    if not q or not os.path.exists(PATH):
+        return []
+    sql = 'SELECT * FROM library WHERE norm LIKE ?'
+    params = [q + '%']
+    if kinds:
+        sql += ' AND kind IN ({0})'.format(','.join('?' * len(kinds)))
+        params += list(kinds)
+    try:
+        with _connect() as conn:
+            rows = conn.execute(sql + ' ORDER BY first_seen DESC LIMIT ?', params + [limit]).fetchall()
+    except Exception:
+        return []
+    return [{'item': json.loads(r['item']), 'parent': r['parent'], 'group': r['grp'], 'kind': r['kind'],
+             'first_seen': r['first_seen']} for r in rows]
+
+
+def all_recent(per_group=150):
+    """Newest library entries per language and kind, for sharing a fuller index with the recommendation service."""
+    if not os.path.exists(PATH):
+        return []
+    try:
+        with _connect() as conn:
+            rows = conn.execute('SELECT * FROM library ORDER BY first_seen DESC, rowid ASC LIMIT 6000').fetchall()
+    except Exception:
+        return []
+    counts, out = {}, []
+    for r in rows:
+        key = ((r['grp'] or '').lower(), r['kind'] or '')
+        if counts.get(key, 0) >= per_group:
+            continue
+        counts[key] = counts.get(key, 0) + 1
+        out.append({'item': json.loads(r['item']), 'parent': r['parent'], 'group': r['grp'], 'kind': r['kind'],
+                    'first_seen': r['first_seen']})
     return out

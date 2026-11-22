@@ -21,13 +21,14 @@ import db  # noqa: E402
 import discover  # noqa: E402
 import downloads as dl  # noqa: E402
 import episodes  # noqa: E402
+import library  # noqa: E402
 import meta  # noqa: E402
 import recs  # noqa: E402
 import report  # noqa: E402
 import youtube as yt  # noqa: E402
 
-ROWS = 24
-ROW_LIMIT = 40  # tiles per row before See all; a TV stick holds sixteen rows of forty posters comfortably
+ROWS = 18
+ROW_LIMIT = 40  # tiles per row before See all; a TV stick holds rows of forty posters comfortably
 TABS_ID = 100
 CLOSE_ID = 110
 SEARCH_ID = 120
@@ -58,8 +59,8 @@ START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
 CANCEL_GRACE = 1.5  # seconds after a play request during which a cancel is taken as a repeated OK press
 
 TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'), ('sports', 'Sports'),
-        ('kids', 'Kids'), ('youtube', 'YouTube'), ('mylist', 'My List'), ('history', 'History')]
-KIDS_TABS = [('home', 'Home'), ('kids', 'Movies and Shows'), ('live', 'Kids TV'), ('mylist', 'My List'), ('history', 'History')]
+        ('youtube', 'YouTube'), ('mylist', 'My Stuff')]
+KIDS_TABS = [('home', 'Home'), ('kids', 'Movies and Shows'), ('live', 'Kids TV'), ('mylist', 'My Stuff')]
 CURRENT = {'profile': None}  # the viewer profile in use
 
 
@@ -1299,7 +1300,7 @@ def first_tap(window, control, li):
 # ---------- a title's own page ----------
 
 PLAY_B, TRAILER_B, LIST_B, LIKE_B, DISLIKE_B = 301, 302, 303, 304, 305
-SEASONS_ID, EPISODES_ID, ALIKE_ID = 310, 320, 330
+SEASONS_ID, EPISODES_ID, ALIKE_ID, LANGS_ID = 310, 320, 330, 340
 SEASON_LIKE = re.compile(
     r'\b(season|series|part|vol|volume|chapter|specials|episodes|'
     r'january|february|march|april|may|june|july|august|september|october|november|december)\b|\d', re.I)
@@ -1345,6 +1346,9 @@ class TitlePage(xbmcgui.WindowXML):
         self.seen_episode_keys = set()
         self.known_episodes = {}
         self.loading_more = False
+        self.versions = []           # other language copies of this film, Telugu first when one exists
+        self.version_index = 0
+        self.version_token = 0       # bumped when the viewer switches language, so a slower load is dropped
         self.fallback = False        # set when the folder turns out to list shows rather than seasons
         self.ready = self.closed = False
         self.loading = 0
@@ -1414,8 +1418,10 @@ class TitlePage(xbmcgui.WindowXML):
 
     def load(self):
         try:
+            self.show_languages()
+            token = self.version_token
             self.data = meta.lookup(self.name, self.show, lang=self.group or '') or {}
-            if self.closed:
+            if self.closed or token != self.version_token:
                 return
             apply_details(self.li, self.data)
             self.describe()
@@ -1427,13 +1433,90 @@ class TitlePage(xbmcgui.WindowXML):
             audit.error('title.load')
             self.setProperty('status', '')
 
+    def show_languages(self):
+        """Chips for each language this film is listed in. Telugu is selected when that copy exists; otherwise
+        the copy the viewer opened stays selected."""
+        try:
+            current = {'item': item_of(self.li), 'parent': self.parent, 'group': self.group or ''}
+            versions = discover.language_versions(self.name, self.show, current)
+        except Exception:
+            audit.error('title.languages')
+            versions = []
+        self.versions = versions
+        if len(versions) < 2:
+            return
+        labels = [cat.title_case(entry.get('group') or 'Other') for entry in versions]
+        telugu = next((n for n, entry in enumerate(versions) if db.lang_match(entry.get('group') or '', ['telugu'])), None)
+        opened = next((n for n, entry in enumerate(versions) if (entry['item'].get('url') or '') == (self.url or '')
+                       or ((entry.get('group') or '').lower() == (self.group or '').lower() and entry['item']['name'] == self.name)), 0)
+        # Telugu when that copy exists; otherwise the copy this page was opened on.
+        selected = telugu if telugu is not None else opened
+        self.setProperty('langs', '1')
+        with self.ui_lock:
+            if self.closed:
+                return
+            chips = self.getControl(LANGS_ID)
+            chips.reset()
+            chips.addItems([xbmcgui.ListItem(label=label) for label in labels])
+            chips.selectItem(selected)
+        self.setProperty('language', labels[selected])
+        if selected != opened:
+            self.apply_version(selected)
+        else:
+            self.version_index = selected
+        self.describe()
+
+    def apply_version(self, index):
+        """Point the page at one language copy, without loading its details."""
+        entry = self.versions[index]
+        item = entry['item']
+        self.version_index = index
+        self.name = item['name']
+        self.group = entry.get('group') or None
+        self.parent = entry.get('parent') or ''
+        self.url = item.get('url') or ''
+        self.show = item.get('t') == 'folder'
+        self.li = list_item(item, self.parent, self.group)
+        self.setProperty('show', '1' if self.show else '')
+        self.setProperty('section', 'Episodes' if self.show else 'More like this')
+        self.setProperty('language', cat.title_case(self.group or 'Other'))
+
+    def use_version(self, index):
+        """Switch to another language copy and reload its details, seasons or similar titles."""
+        if self.closed or not (0 <= index < len(self.versions)) or index == self.version_index:
+            return
+        self.version_token += 1
+        token = self.version_token
+        self.apply_version(index)
+        self.data = {}
+        self.describe()
+        self.setProperty('status', 'Loading…' if self.show else '')
+        try:
+            data = meta.lookup(self.name, self.show, lang=self.group or '') or {}
+        except Exception:
+            audit.error('title.version')
+            data = {}
+        if self.closed or token != self.version_token:
+            return
+        self.data = data
+        apply_details(self.li, self.data)
+        self.describe()
+        self.labels()
+        if self.show:
+            self.load_seasons()
+        else:
+            self.seasons = []
+            self.episode_items = []
+            self.load_alike()
+
     def load_alike(self):
+        token = self.version_token
         alike = discover.similar_entries(self.name, False, self.group or '', 24)
-        if self.closed:
+        if self.closed or token != self.version_token:
             return
         items = [entry_item(e, meta=e.get('reason') or cat.title_case(e.get('group') or '')) for e in alike]
         with self.ui_lock:
-            if self.closed:
+            if self.closed or token != self.version_token:
                 return
             self.getControl(ALIKE_ID).reset()
             if items:
@@ -1444,12 +1527,13 @@ class TitlePage(xbmcgui.WindowXML):
             enrich(self.getControl(ALIKE_ID), lambda: not self.closed, 12, self.ui_lock)
 
     def load_seasons(self):
+        token = self.version_token
         try:
             raw = cat.get_dir(self.url)
         except Exception as e:
             self.setProperty('status', 'Could not load: {0}'.format(e))
             return
-        if self.closed:
+        if self.closed or token != self.version_token:
             return
         shown = cat.showable(raw)
         folders = [f for f in shown if f['t'] == 'folder']
@@ -1489,7 +1573,7 @@ class TitlePage(xbmcgui.WindowXML):
         last = (db.meta('last:' + self.name) or {}).get('season')
         chosen = next((n for n, (label, _) in enumerate(self.seasons) if label.lower() == (last or '').lower()), 0)
         with self.ui_lock:
-            if self.closed:
+            if self.closed or token != self.version_token:
                 return
             chips = self.getControl(SEASONS_ID)
             chips.reset()
@@ -1500,6 +1584,7 @@ class TitlePage(xbmcgui.WindowXML):
     def show_season(self, index):
         """Put one season's episodes on screen, named from TMDb or Wikipedia when they know the show."""
         label, url = self.seasons[index]
+        version = self.version_token
         self.season = label
         self.setProperty('season', label)
         self.loading += 1
@@ -1510,10 +1595,12 @@ class TitlePage(xbmcgui.WindowXML):
         self.known_episodes = {}
         self.loading_more = False
         self.setProperty('status', 'Loading {0}…'.format(label))
-        self.load_episodes_page(url, label, token, first_page=True)
+        self.load_episodes_page(url, label, token, version=version, first_page=True)
 
-    def load_episodes_page(self, url, label, token, first_page=False):
+    def load_episodes_page(self, url, label, token, version=None, first_page=False):
         """Load one page of episodes (or nested sub-folders) for the active season."""
+        if version is None:
+            version = self.version_token
         if not url or url in self.episode_urls:
             return
         self.episode_urls.add(url)
@@ -1529,7 +1616,7 @@ class TitlePage(xbmcgui.WindowXML):
                 self.next_episodes_url = url  # allow retrying on the next scroll
                 self.setProperty('status', '')
             return
-        if self.closed or token != self.loading:
+        if self.closed or token != self.loading or version != self.version_token:
             return
         nxt = next((i['url'] for i in raw if i['t'] == 'next'), None)
         self.next_episodes_url = nxt if nxt and nxt not in self.episode_urls else None
@@ -1550,7 +1637,7 @@ class TitlePage(xbmcgui.WindowXML):
                         li.setArt({'thumb': self.getProperty('fanart')})
                     items.append(li)
                 with self.ui_lock:
-                    if self.closed or token != self.loading:
+                    if self.closed or token != self.loading or version != self.version_token:
                         return
                     row = self.getControl(EPISODES_ID)
                     row.reset()
@@ -1576,7 +1663,7 @@ class TitlePage(xbmcgui.WindowXML):
             except Exception as e:
                 cat.log('episode names failed: {0}'.format(e))
                 self.known_episodes = {}
-        if self.closed or token != self.loading:
+        if self.closed or token != self.loading or version != self.version_token:
             return
         known = self.known_episodes
         marks = db.progress_for([db.play_key(i) for i in found])
@@ -1608,7 +1695,7 @@ class TitlePage(xbmcgui.WindowXML):
         if first_page and upnext is None:
             upnext = next((n for n, i in enumerate(found) if not marks.get(db.play_key(i), (0, 0, False))[2]), 0)
         with self.ui_lock:
-            if self.closed or token != self.loading:
+            if self.closed or token != self.loading or version != self.version_token:
                 return
             row = self.getControl(EPISODES_ID)
             if first_page:
@@ -1709,6 +1796,12 @@ class TitlePage(xbmcgui.WindowXML):
             db.set_meta('recs_dirty', True)
             recs.mark_dirty()
             self.labels()
+        elif control_id == LANGS_ID:
+            index = self.getControl(LANGS_ID).getSelectedPosition()
+            if 0 <= index < len(self.versions) and index != self.version_index:
+                self.spawn(self.use_version, index)
+            else:
+                self.setFocusId(SEASONS_ID if self.show else ALIKE_ID)
         elif control_id == SEASONS_ID:
             index = self.getControl(SEASONS_ID).getSelectedPosition()
             if 0 <= index < len(self.seasons) and self.seasons[index][0] != self.season:
@@ -1735,7 +1828,12 @@ class TitlePage(xbmcgui.WindowXML):
                 self.close()
             return
         focus = self.getFocusId()
-        if focus == SEASONS_ID and code in (ACTION_LEFT, ACTION_RIGHT):
+        if focus == LANGS_ID and code in (ACTION_LEFT, ACTION_RIGHT):
+            # Moving along the language chips switches to that copy without needing OK.
+            index = self.getControl(LANGS_ID).getSelectedPosition()
+            if 0 <= index < len(self.versions) and index != self.version_index:
+                self.spawn(self.use_version, index)
+        elif focus == SEASONS_ID and code in (ACTION_LEFT, ACTION_RIGHT):
             # Moving along the season chips shows that season's episodes without needing OK.
             index = self.getControl(SEASONS_ID).getSelectedPosition()
             if 0 <= index < len(self.seasons) and self.seasons[index][0] != self.season:
@@ -2140,8 +2238,10 @@ class Home(xbmcgui.WindowXML):
         self.setProperty('kids', '1' if db.KIDS else '')
         tabs = []
         names = list(KIDS_TABS if db.KIDS else TABS)
+        if not db.KIDS and not yt.installed():
+            names = [t for t in names if t[0] != 'youtube']
         if TOUCH:
-            # A phone's top bar has less room: My List and History move to Settings, and Downloads takes their place.
+            # A phone's top bar has less room: My Stuff moves to Settings, and Downloads takes its place.
             names = [t for t in names if t[0] not in ('mylist', 'history')] + [('downloads', 'Downloads')]
         for key, label in names:
             li = xbmcgui.ListItem(label=label)
@@ -2164,20 +2264,24 @@ class Home(xbmcgui.WindowXML):
         self.spawn(watch_visibility, self)
 
     def keeper(self):
-        """While Stream is open: every hour, re-read the catalogue's first pages and rebuild the recommendations
-        (or fetch the batch the service finished in the background a few minutes after it was asked). Home's rows
+        """While Stream is open: every hour, re-read the catalogue's first pages, refresh videos and metadata, and
+        share the catalogue; every minute check whether a pending service recommendation batch is ready. Home's rows
         are redrawn straight away when nobody is using the remote; otherwise the next visit to Home shows them."""
         monitor = xbmc.Monitor()
+        last_hourly = time.time()  # background() already runs the initial pass on startup
         while not self.closed and not monitor.waitForAbort(60):
             if BUSY['on'] or xbmc.Player().isPlaying():
                 continue
             try:
-                cat.warm_index(ai.REFRESH_AFTER)
-                meta.warm(120)
-                gathered = recs.refresh_videos()
-                if recs.resolve_lists() or gathered:
-                    recs.mark_dirty()
-                recs.share_catalogue()
+                now = time.time()
+                if now - last_hourly >= ai.REFRESH_AFTER:
+                    last_hourly = now
+                    cat.warm_index(ai.REFRESH_AFTER)
+                    meta.warm(120)
+                    gathered = recs.refresh_videos(ai.REFRESH_AFTER)
+                    if recs.resolve_lists() or gathered:
+                        recs.mark_dirty()
+                    recs.share_catalogue()
                 made = ai.recommend(cat.top_groups(), pool=recs.pool_for_model())
                 if made:
                     recs.mark_dirty()
@@ -2359,6 +2463,8 @@ class Home(xbmcgui.WindowXML):
                       'Related Videos work without a key; your Subscriptions, History, Recommendations and Trending need it.'),
             tile('Refresh', 'setting', action='refresh', meta='Last built with: ' + engine,
                  plot='Rebuild the Top Picks and the other recommendation rows now.'),
+            tile('Library', 'setting', action='library', meta=self.library_note(),
+                 plot='Local copy of titles in your languages for instant search and list matching.'),
             tile('Reset', 'setting', action='clear_recs', plot='Remove the saved recommendations.'),
             tile('Forget', 'setting', action='clear_history',
                  plot='Forget everything played, including resume points and watched episodes.'),
@@ -2440,7 +2546,8 @@ class Home(xbmcgui.WindowXML):
             return self.kids_live_rows()
         if key == 'mylist':
             saved = db.mylist()
-            return [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
+            rows = [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
+            return rows + self.history_rows()
         if key == 'settings':
             return [('items', 'Settings', [tile('Switch profile', 'setting', action='switch',
                                                  meta='Now: ' + (CURRENT['profile'] or {}).get('name', ''),
@@ -2525,19 +2632,12 @@ class Home(xbmcgui.WindowXML):
             saved = db.mylist()
             if saved:
                 rows.append(('items', 'My List', [entry_item(e) for e in saved]))
-            rows += self.sports_rows(0)
-            if yt.installed():
-                if yt.has_key():
-                    rows.append(('dir', 'YouTube', yt.url('special/recommendations'), 'YouTube', None))
-                elif db.channels():
-                    rows.append(('dir', 'New from Your YouTube Subscriptions', yt.subs_url(), 'YouTube', None))
-                else:
-                    rows.append(('dir', 'YouTube', yt.url('special/related_videos'), 'YouTube', None))
             return rows
         if key == 'movies':
             if self.filter:
                 return self.filtered_rows(discover.MOVIE_KINDS)
-            return self.order_language_rows(self.language_rows(u['movies'], '{0} Movies', ROWS - 1) + english_movies)[:ROWS]
+            movie_rows = self.order_language_rows(self.language_rows(u['movies'], '{0} Movies', ROWS - 2) + english_movies)
+            return (movie_rows + [('dir', 'Kids Movies & Shows', u['kids'], 'Kids', None)])[:ROWS]
         if key == 'shows':
             if self.filter:
                 return self.filtered_rows(discover.SHOW_KINDS)
@@ -2556,7 +2656,8 @@ class Home(xbmcgui.WindowXML):
             return self.youtube_rows()
         if key == 'mylist':
             saved = db.mylist()
-            return [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
+            rows = [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
+            return rows + self.history_rows()
         if key == 'settings':
             return [('items', 'Settings', self.settings_tiles())]
         if key == 'live':
