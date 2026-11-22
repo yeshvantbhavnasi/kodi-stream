@@ -472,7 +472,7 @@ def start(li, restart=False):
             player.seekTime(resume)
         except Exception:
             pass
-    audit.event('play_started', title=label)
+    audit.event('play_started', title=label, kind=kind, startup_ms=int((time.time() - PLAY['since']) * 1000) if PLAY['since'] else 0)
     threading.Thread(target=follow, args=(key, label, group, kind, live), daemon=True).start()
 
 
@@ -2020,12 +2020,13 @@ class Grid(xbmcgui.WindowXML):
         self.loading = True
         self.seen_urls.add(url)
         first_page = self.panel.size() == 0
+        started = time.time()
         if not first_page:
             self.setProperty('status', 'Loading more…')
         try:
             items = cat.get_dir(url)
         except Exception as e:
-            audit.event('load_failed', screen=self.title, reason=str(e))
+            audit.event('load_failed', screen=self.title, page=len(self.seen_urls), ms=int((time.time() - started) * 1000), reason=str(e)[:200])
             if self.closed:
                 return
             self.seen_urls.discard(url)
@@ -2075,6 +2076,11 @@ class Grid(xbmcgui.WindowXML):
                 self.panel.selectItem(position)
         has_entries = bool(titles) or len(shown) > 1
         self.setProperty('status', '' if has_entries or not first_page else 'Nothing here')
+        took_ms = int((time.time() - started) * 1000)
+        audit.event('grid_loaded', screen=self.title, page=len(self.seen_urls), items=len(titles),
+                    ms=took_ms, source=cat.LAST_SOURCE.get(url, 'unknown'))
+        if first_page and not has_entries:
+            audit.event('empty_listing', screen=self.title, url=url[:160])
         if first_page:
             self.setFocusId(self.view)
             if titles:
@@ -2400,18 +2406,9 @@ class Home(xbmcgui.WindowXML):
         return rows
 
     def order_language_rows(self, rows):
-        """Order ('dir', title, url, group, only) rows by the viewer's language preference, keeping ties in place."""
+        """Order ('dir', title, url, group, only) rows with Telugu always first and Hindi/dubbed secondary."""
         order = cat.top_groups()
-        if not order:
-            return rows
-
-        def rank(row):
-            group = (row[3] or '').lower()
-            for n, lang in enumerate(order):
-                if db.lang_match(group, [lang]):
-                    return n
-            return len(order)
-        return [r for _, r in sorted(enumerate(rows), key=lambda p: (rank(p[1]), p[0]))]
+        return [r for _, r in sorted(enumerate(rows), key=lambda p: (db.language_rank(p[1][3], order), p[0]))]
 
     def language_rows(self, root, title, limit):
         """One row per sub-folder of root, limited to the chosen languages when any of them exist there."""
@@ -2713,6 +2710,7 @@ class Home(xbmcgui.WindowXML):
             return token == self.token and not self.closed
 
         slot = 0
+        started = time.time()
         try:
             specs = self.specs(key)[:ROWS]
             with self.ui_lock:
@@ -2782,7 +2780,10 @@ class Home(xbmcgui.WindowXML):
                                           'to keep it on this device and watch it without a connection.',
                              'youtube': yt.KEY_HELP}
                     self.setProperty('status', empty.get(key, 'Nothing to show. Check that the Sasta TV addon opens and is signed in.'))
+            if key not in ('mylist', 'history', 'downloads'):
+                audit.event('empty_listing', screen='tab:' + key, filter=self.filter or '')
             return
+        audit.event('tab_loaded', tab=key, rows=slot, ms=int((time.time() - started) * 1000), filter=self.filter or '')
         # Ratings arrive after the rows are on screen, so browsing never waits for them.
         for n in range(slot):
             if not current():
@@ -2817,6 +2818,7 @@ class Home(xbmcgui.WindowXML):
         if not query:
             return
         db.log_event('searched', query)
+        search_started = time.time()
         busy = xbmcgui.DialogProgressBG()
         busy.create('Stream', 'Searching…')
         try:
@@ -2865,6 +2867,8 @@ class Home(xbmcgui.WindowXML):
                 entries.insert(0 if not entries or entries[0].get('meta', '').startswith('No match') else len(entries), yt.search_entry(query))
         finally:
             busy.close()
+        audit.event('search', query=query[:80], local_hits=len(saved), total_hits=len(entries),
+                    ms=int((time.time() - search_started) * 1000))
         if open_grid('Results for “{0}”'.format(query), entries=entries):
             self.go_home()
 
@@ -3063,6 +3067,7 @@ class Home(xbmcgui.WindowXML):
             li = self.getControl(FILTER_ID).getSelectedItem()
             if li is not None:
                 self.filter = li.getProperty('genre') or None
+                audit.event('filter', tab=self.tab, genre=self.filter or 'All')
                 if self.filter:
                     db.log_event('browsed', self.filter, None, self.tab)
                 self.load_tab(self.tab, focus=False)  # the highlight stays on the strip; Down goes to the rows
@@ -3083,6 +3088,7 @@ class Home(xbmcgui.WindowXML):
             if li is None or first_tap(self, control, li):
                 return
             kind = li.getProperty('t')
+            audit.event('click', tab=self.tab, kind=kind, label=(li.getLabel() or '')[:80])
             if kind == 'download':
                 play_download(li)
                 return

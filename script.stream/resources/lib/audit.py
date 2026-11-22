@@ -2,6 +2,7 @@
 # It stays on the device (stream.log in the addon's data folder) and is shown under Settings > Activity log.
 import json
 import os
+import threading
 import time
 import traceback
 import uuid
@@ -17,6 +18,69 @@ FLAG = os.path.join(FOLDER, 'session.open')
 INSTALL = os.path.join(FOLDER, 'install.json')
 MAX_BYTES = 400 * 1024
 NEW = {'install': False}
+
+_LOCK = threading.Lock()
+_QUEUE = []
+_MAX_QUEUE = 300
+_FLUSH_EVERY = 30.0
+_LAST_FLUSH = [0.0]
+_FLUSHING = [False]
+_URGENT = frozenset(('error', 'play_timeout', 'load_failed', 'fetch_failed', 'previous_session_ended_unexpectedly',
+                     'slow_fetch', 'empty_listing', 'play_ended'))
+
+
+def _platform():
+    return next((p for p in ('Android', 'OSX', 'Windows', 'Linux', 'IOS', 'TVOS')
+                 if xbmc.getCondVisibility('System.Platform.' + p)), 'unknown')
+
+
+def _profile_key():
+    try:
+        import db
+        active = getattr(db, 'ACTIVE', 'default')
+    except Exception:
+        active = 'default'
+    return '{0} {1}/{2}'.format(xbmc.getInfoLabel('System.FriendlyName') or 'kodi', _install_id(), active).strip()
+
+
+def _ship(batch, timeout=10):
+    """Send a batch of interaction/observability events to the recommendation service (POST /telemetry)."""
+    if not batch:
+        return
+    try:
+        addon = xbmcaddon.Addon('script.stream')
+        url = addon.getSetting('recs_url').strip().rstrip('/')
+        if not url:
+            return
+        key = addon.getSetting('recs_key').strip()
+        import requests
+        body = {'profile': _profile_key(), 'version': addon.getAddonInfo('version'), 'platform': _platform(), 'events': batch}
+        requests.post(url + '/telemetry', json=body, timeout=timeout, headers={'X-Stream-Key': key})
+    except Exception:
+        pass  # observability must never disturb playback or navigation
+
+
+def flush(sync=False):
+    """Flush queued telemetry events to the service, asynchronously by default."""
+    with _LOCK:
+        if not _QUEUE or (_FLUSHING[0] and not sync):
+            return
+        batch = list(_QUEUE)
+        _QUEUE.clear()
+        _LAST_FLUSH[0] = time.time()
+        _FLUSHING[0] = True
+
+    def run():
+        try:
+            _ship(batch, timeout=4 if sync else 10)
+        finally:
+            with _LOCK:
+                _FLUSHING[0] = False
+
+    if sync:
+        run()
+    else:
+        threading.Thread(target=run, daemon=True).start()
 
 
 def _install_id():
@@ -35,17 +99,30 @@ def _install_id():
 
 
 def event(_name, **fields):
-    """Append one line: time, event name, and any details as JSON. Details may use any key, including "kind"."""
+    """Append one line locally (stream.log) and enqueue for central observability (POST /telemetry)."""
+    now = time.time()
     try:
         if not os.path.isdir(FOLDER):
             os.makedirs(FOLDER)
         if os.path.exists(PATH) and os.path.getsize(PATH) > MAX_BYTES:
             os.replace(PATH, PATH + '.1')
-        line = '{0} {1}'.format(time.strftime('%Y-%m-%d %H:%M:%S'), _name)
+        line = '{0} {1}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(now)), _name)
         if fields:
             line += ' ' + json.dumps(fields, ensure_ascii=False, default=str)
         with open(PATH, 'a', encoding='utf-8') as f:
             f.write(line + '\n')
+    except Exception:
+        pass
+    should_flush = False
+    try:
+        with _LOCK:
+            if len(_QUEUE) >= _MAX_QUEUE:
+                del _QUEUE[:50]
+            _QUEUE.append({'at': now, 'event': _name, 'data': fields})
+            if _name in _URGENT or len(_QUEUE) >= 20 or (now - _LAST_FLUSH[0] >= _FLUSH_EVERY):
+                should_flush = True
+        if should_flush:
+            flush(sync=False)
     except Exception:
         pass
 
@@ -94,6 +171,7 @@ def session_start():
 
 def session_end():
     event('exit', free_memory=memory())
+    flush(sync=True)
     try:
         os.remove(FLAG)
     except Exception:

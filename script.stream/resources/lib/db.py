@@ -604,13 +604,50 @@ def titles_in(groups, limit=40):
 
 # ---------- language preference ----------
 
-LANGUAGES = ['Hindi', 'Telugu', 'Tamil', 'Malayalam', 'Kannada', 'Marathi', 'Gujarati', 'Punjabi', 'Bengali', 'Urdu', 'English']
+LANGUAGES = ['Telugu', 'English', 'Hindi', 'Tamil', 'Malayalam', 'Kannada', 'Marathi', 'Gujarati', 'Punjabi', 'Bengali', 'Urdu']
 # Catalogue sections use different names for the same language, and file dubbed films separately.
 ALIASES = {'hindi': ['hindi', 'south dubbed', 'english dubbed'], 'bengali': ['bengali', 'bangla'], 'urdu': ['urdu', 'pakistani']}
+DUBBED = ('south dubbed', 'english dubbed', 'dubbed')
+
+
+def ordered_languages(langs):
+    """Order languages with Telugu always first and Hindi secondary (after Telugu and any other primary language)."""
+    seen, out = set(), []
+    for g in langs or []:
+        low = (g or '').strip().lower()
+        if low and low not in seen:
+            seen.add(low)
+            out.append(low)
+    if 'telugu' in out:
+        out.remove('telugu')
+        out.insert(0, 'telugu')
+    if 'hindi' in out and len(out) > 1:
+        out.remove('hindi')
+        out.append('hindi')
+    return out
 
 
 def chosen_languages():
-    return [g.lower() for g in (meta('profile') or {}).get('languages', [])]
+    return ordered_languages((meta('profile') or {}).get('languages', []))
+
+
+def language_rank(name, order=None):
+    """Sort key (rank, is_dubbed) for a section or title language: Telugu always leads, exact matches beat dubbed
+    sections, and Hindi stays secondary."""
+    order = chosen_languages() if order is None else ordered_languages(order)
+    low = (name or '').lower().strip()
+    is_dubbed = 1 if any(d in low for d in DUBBED) else 0
+    if low == 'telugu' or ('telugu' in low and not is_dubbed):
+        return (0, 0)
+    for n, lang in enumerate(order, 1):
+        if low == lang:
+            return (n, 0)
+    for n, lang in enumerate(order, 1):
+        if lang_match(low, [lang]):
+            return (n, 1 + is_dubbed)
+    if 'hindi' in low:
+        return (len(order) + 2, 1 + is_dubbed)
+    return (len(order) + 1, is_dubbed)
 
 
 def lang_match(name, chosen=None):

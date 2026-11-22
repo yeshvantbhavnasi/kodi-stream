@@ -108,6 +108,10 @@ CREATE TABLE IF NOT EXISTS lists (name TEXT PRIMARY KEY, title TEXT, by TEXT, pr
 CREATE TABLE IF NOT EXISTS shown (profile TEXT PRIMARY KEY, at REAL, rows TEXT, recent TEXT);
 CREATE TABLE IF NOT EXISTS related (key TEXT PRIMARY KEY, title TEXT, by TEXT, at REAL, items TEXT);
 CREATE TABLE IF NOT EXISTS catalogue (profile TEXT PRIMARY KEY, at REAL, titles TEXT);
+CREATE TABLE IF NOT EXISTS telemetry (id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL, profile TEXT, version TEXT,
+    platform TEXT, event TEXT, data TEXT);
+CREATE INDEX IF NOT EXISTS telemetry_at ON telemetry (at);
+CREATE INDEX IF NOT EXISTS telemetry_profile ON telemetry (profile, at);
 '''
 JSON_COLUMNS = ('candidates', 'picks')
 
@@ -318,6 +322,87 @@ def shown_for(profile=''):
     with connect() as conn:
         rows = conn.execute('SELECT * FROM shown' + (' WHERE profile=?' if profile else ''), (profile,) if profile else ()).fetchall()
     return {r['profile']: {'at': r['at'], 'rows': json.loads(r['rows'] or '[]'), 'recent': json.loads(r['recent'] or '[]')} for r in rows}
+
+
+# ---------- observability: interactions, latency and hiccups across boxes ----------
+
+TELEMETRY_KEEP = 30 * 24 * 3600
+TELEMETRY_MAX = 50000
+
+
+def save_telemetry(profile, version, platform, events):
+    """Store interaction and hiccup events from a Kodi box; prune old rows so the database stays compact."""
+    now = time.time()
+    rows = []
+    for e in list(events or [])[:300]:
+        if not isinstance(e, dict) or not e.get('event'):
+            continue
+        at = float(e.get('at') or now)
+        data = e.get('data') if isinstance(e.get('data'), dict) else {}
+        rows.append((at, profile[:200], str(version or '')[:20], str(platform or '')[:20],
+                     str(e['event'])[:60], json.dumps(data, ensure_ascii=False)[:4000]))
+    if not rows:
+        return 0
+    with connect() as conn:
+        conn.executemany('INSERT INTO telemetry (at, profile, version, platform, event, data) VALUES (?,?,?,?,?,?)', rows)
+        conn.execute('DELETE FROM telemetry WHERE at < ?', (now - TELEMETRY_KEEP,))
+        conn.execute('DELETE FROM telemetry WHERE id NOT IN (SELECT id FROM telemetry ORDER BY id DESC LIMIT ?)', (TELEMETRY_MAX,))
+    return len(rows)
+
+
+def query_telemetry(profile='', event='', hours=24, limit=200):
+    """Recent interaction events across boxes (newest first)."""
+    since = time.time() - max(1, hours) * 3600
+    sql = 'SELECT * FROM telemetry WHERE at >= ?'
+    params = [since]
+    if profile:
+        sql += ' AND profile LIKE ?'
+        params.append('%' + profile + '%')
+    if event:
+        sql += ' AND event = ?'
+        params.append(event)
+    sql += ' ORDER BY at DESC, id DESC LIMIT ?'
+    params.append(min(max(1, limit), 1000))
+    with connect() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [{'at': r['at'], 'time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(r['at'])),
+             'profile': r['profile'], 'version': r['version'], 'platform': r['platform'],
+             'event': r['event'], 'data': json.loads(r['data'] or '{}')} for r in rows]
+
+
+def hiccup_summary(hours=24):
+    """Observability rollup: per-box activity, index hit rates, latency averages, and every hiccup in the window."""
+    events = query_telemetry(hours=hours, limit=1000)
+    devices = {}
+    counts = {}
+    hiccups = []
+    latencies = {}
+    sources = {}
+    for e in events:
+        prof = e['profile']
+        d = devices.setdefault(prof, {'version': e['version'], 'platform': e['platform'], 'events': 0, 'last_seen': e['time'], 'hiccups': 0})
+        d['events'] += 1
+        ev = e['event']
+        counts[ev] = counts.get(ev, 0) + 1
+        data = e['data']
+        ms = data.get('ms') or data.get('startup_ms')
+        if isinstance(ms, (int, float)) and ms > 0:
+            latencies.setdefault(ev, []).append(ms)
+        if ev == 'grid_loaded' and data.get('source'):
+            src = data['source']
+            sources[src] = sources.get(src, 0) + 1
+        is_hiccup = (ev in ('error', 'previous_session_ended_unexpectedly', 'play_timeout', 'load_failed',
+                            'fetch_failed', 'slow_fetch', 'empty_listing')
+                     or (ev == 'play_ended' and data.get('ended') == 'broken')
+                     or (ev in ('tab_loaded', 'grid_loaded', 'search') and isinstance(ms, (int, float)) and ms >= 3000))
+        if is_hiccup:
+            d['hiccups'] += 1
+            if len(hiccups) < 50:
+                hiccups.append(e)
+    avg_ms = {k: {'avg_ms': int(sum(v) / len(v)), 'max_ms': int(max(v)), 'count': len(v)} for k, v in latencies.items()}
+    return {'hours': hours, 'total_events': len(events), 'devices': devices, 'event_counts': counts,
+            'grid_sources': sources, 'latency': avg_ms, 'hiccup_count': sum(d['hiccups'] for d in devices.values()),
+            'recent_hiccups': hiccups}
 
 
 def delete_list(name):
@@ -846,6 +931,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, CRICKET or {'at': 0, 'matches': []}) if self.pin_ok() else None
         if self.path.startswith('/rows') and self.query().get('pin'):
             return self._send(200, {'rows': shown_for(self.query().get('profile', ''))}) if self.pin_ok() else None
+        if self.path.startswith('/telemetry') and self.query().get('pin'):
+            if not self.pin_ok():
+                return
+            try:
+                hours, limit = int(q.get('hours') or 24), int(q.get('limit') or 200)
+            except ValueError:
+                hours, limit = 24, 200
+            return self._send(200, {'events': query_telemetry(q.get('profile', ''), q.get('event', ''), hours, limit)})
+        if self.path.startswith('/hiccups') and self.query().get('pin'):
+            if not self.pin_ok():
+                return
+            try:
+                hours = int(q.get('hours') or 24)
+            except ValueError:
+                hours = 24
+            return self._send(200, hiccup_summary(hours))
         if self.path.startswith('/titles') and self.query().get('pin'):
             if not self.pin_ok():
                 return
@@ -882,6 +983,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {'titles': catalogue_titles(q.get('lang', ''), q.get('kind', ''), days, min(limit, 5000), q.get('q', ''))})
         if self.path.startswith('/rows'):
             return self._send(200, {'rows': shown_for(q.get('profile', ''))})
+        if self.path.startswith('/telemetry'):
+            try:
+                hours, limit = int(q.get('hours') or 24), int(q.get('limit') or 200)
+            except ValueError:
+                hours, limit = 24, 200
+            return self._send(200, {'events': query_telemetry(q.get('profile', ''), q.get('event', ''), hours, limit)})
+        if self.path.startswith('/hiccups'):
+            try:
+                hours = int(q.get('hours') or 24)
+            except ValueError:
+                hours = 24
+            return self._send(200, hiccup_summary(hours))
         if self.path.startswith('/history'):
             with connect() as conn:
                 rows = conn.execute('SELECT key, at, model, took, picks FROM history ORDER BY at DESC LIMIT 500').fetchall()
@@ -964,6 +1077,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(400, {'error': 'profile needed'})
             kept = save_catalogue(profile, body.get('titles') or [])
             log('catalogue from {0}: {1} titles'.format(profile, kept))
+            return self._send(200, {'ok': True, 'kept': kept})
+        if self.path.startswith('/telemetry'):
+            if not self.allowed():
+                return
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 500000)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            profile = str(body.get('profile') or '').strip()[:200]
+            if not profile:
+                return self._send(400, {'error': 'profile needed'})
+            kept = save_telemetry(profile, body.get('version', ''), body.get('platform', ''), body.get('events') or [])
             return self._send(200, {'ok': True, 'kept': kept})
         if self.path.startswith('/related'):
             try:

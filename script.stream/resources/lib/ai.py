@@ -445,8 +445,8 @@ def _profile_lines():
 
 
 def priority_languages():
-    """Languages in the order recommendations favour them: the ones chosen at setup, first language leading."""
-    return list((db.meta('profile') or {}).get('languages', []))
+    """Languages in the order recommendations favour them: Telugu always first, Hindi secondary."""
+    return [g.title() for g in db.chosen_languages()]
 
 
 def watched_genres(limit=4):

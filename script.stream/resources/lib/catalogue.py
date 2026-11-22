@@ -229,14 +229,34 @@ def warm_memory(url, items, fetched_at=None):
         _cache[url] = {'t': fetched_at or time.time(), 'items': items}
 
 
+LAST_SOURCE = {}  # url -> 'memory' | 'index' | 'live' for observability
+
+
 def _fetch(url):
-    if yt.is_youtube(url):
-        items = yt.listing(rpc, url)
-    else:
-        result = rpc('Files.GetDirectory', {'directory': plugin_folder(url), 'media': 'video',
-                                            'properties': ['title', 'thumbnail', 'art', 'plot']})
-        items = [classify(e, n) for n, e in enumerate(result.get('files') or [])]
-        items = [i for i in items if i]
+    started = time.time()
+    try:
+        if yt.is_youtube(url):
+            items = yt.listing(rpc, url)
+        else:
+            result = rpc('Files.GetDirectory', {'directory': plugin_folder(url), 'media': 'video',
+                                                'properties': ['title', 'thumbnail', 'art', 'plot']})
+            items = [classify(e, n) for n, e in enumerate(result.get('files') or [])]
+            items = [i for i in items if i]
+    except Exception as e:
+        try:
+            import audit
+            audit.event('fetch_failed', url=url[:160], ms=int((time.time() - started) * 1000), reason=str(e)[:200])
+        except Exception:
+            pass
+        raise
+    took_ms = int((time.time() - started) * 1000)
+    if took_ms >= 4000:
+        try:
+            import audit
+            audit.event('slow_fetch', url=url[:160], ms=took_ms, count=len(items))
+        except Exception:
+            pass
+    LAST_SOURCE[url] = 'live'
     if not re.search(r'search=.', url):
         now = time.time()
         with _lock:
@@ -315,10 +335,10 @@ def warm_index(max_age=3600):
 
 
 def top_groups():
-    """Languages in order of preference: the ones chosen at setup first, then by how often they are played."""
-    chosen = [g.lower() for g in (db.meta('profile') or {}).get('languages', [])]
+    """Languages in order of preference: Telugu always first, Hindi secondary, then played affinity."""
+    chosen = db.chosen_languages()
     played = [g for g, _ in sorted(state['affinity'].items(), key=lambda p: -p[1]) if g not in chosen]
-    return chosen + played
+    return db.ordered_languages(chosen + played)
 
 
 _refresh_queue = []
@@ -355,6 +375,7 @@ def get_dir(url, fresh=False):
     live = _is_live_listing(url)
     stale_limit = LIVE_STALE if live else MAX_STALE
     fresh_limit = LIVE_FRESH if live else FRESH
+    source = 'memory'
     with _lock:
         hit = _cache.get(url)
     if hit is None and not fresh and not live and not yt.is_youtube(url) and not re.search(r'search=.', url):
@@ -363,11 +384,13 @@ def get_dir(url, fresh=False):
         if saved is not None:
             items, fetched_at = saved
             hit = {'t': fetched_at, 'items': items}
+            source = 'index'
             with _lock:
                 _cache[url] = hit
     age = time.time() - hit['t'] if hit else None
     if hit is None or fresh or age > stale_limit:
         return _fetch(url)
+    LAST_SOURCE[url] = source
     if age > fresh_limit:
         _refresh_later(url)
     return hit['items']
@@ -563,12 +586,9 @@ def play(parent, item, group=None, series=None, label=None):
 
 
 def by_affinity(folders):
-    """Preferred languages come first; ties keep the provider's order."""
+    """Telugu always comes first, Hindi (and dubbed sections) stay secondary; ties keep the provider's order."""
     order = top_groups()
-
-    def rank(name):
-        return order.index(name.lower()) if name.lower() in order else len(order)
-    ranked = sorted(enumerate(folders), key=lambda p: (rank(p[1]['name']), p[0]))
+    ranked = sorted(enumerate(folders), key=lambda p: (db.language_rank(p[1]['name'], order), p[0]))
     return [f for _, f in ranked]
 
 

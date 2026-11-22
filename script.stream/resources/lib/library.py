@@ -20,6 +20,7 @@ import db
 
 PATH = os.path.join(cat.PROFILE, 'library.db')
 REFRESH_EVERY = 3600         # check for new titles in every finished section every hour
+FULL_REFRESH = 24 * 3600     # walk every page of Movies/Shows once a day so deep pages and updates stay fresh
 FRESH_PAGES = 8              # at most this many pages per hourly refresh, stopping early once a page brings nothing new
 ENGLISH_PAGES = 10           # cap full crawl of huge English sections to the newest ~1000 titles each
 PAUSE = 1.5                  # seconds between listings, so the screen's own requests are never kept waiting
@@ -31,7 +32,7 @@ CREATE TABLE IF NOT EXISTS library (
     url TEXT PRIMARY KEY, name TEXT, norm TEXT, squeezed TEXT, kind TEXT, grp TEXT, item TEXT, parent TEXT,
     first_seen REAL, last_seen REAL);
 CREATE INDEX IF NOT EXISTS library_grp ON library(grp);
-CREATE TABLE IF NOT EXISTS jobs (key TEXT PRIMARY KEY, kind TEXT, grp TEXT, queue TEXT, done_at REAL, pages INTEGER);
+CREATE TABLE IF NOT EXISTS jobs (key TEXT PRIMARY KEY, kind TEXT, grp TEXT, queue TEXT, done_at REAL, pages INTEGER, full_at REAL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS pages (url TEXT PRIMARY KEY, items TEXT, fetched_at REAL);
 '''
 
@@ -51,6 +52,9 @@ def _connect():
 def init():
     with _connect() as conn:
         conn.executescript(SCHEMA)
+        cols = [r['name'] for r in conn.execute('PRAGMA table_info(jobs)').fetchall()]
+        if 'full_at' not in cols:
+            conn.execute('ALTER TABLE jobs ADD COLUMN full_at REAL DEFAULT 0')
 
 
 def normalize(text):
@@ -64,9 +68,9 @@ def squeeze(text):
 
 
 def languages():
-    """The languages to keep complete: the profile's choice in its own order, Telugu when nothing was chosen."""
+    """The languages to keep complete: Telugu always first, Hindi secondary."""
     chosen = [g for g in db.chosen_languages() if g != 'english']
-    return chosen or ['telugu']
+    return db.ordered_languages(chosen or ['telugu'])
 
 
 # ---------- storing ----------
@@ -127,13 +131,33 @@ def _job_key(kind, group):
     return '{0}|{1}'.format(kind, group.lower())
 
 
+def _schedule_job(conn, key, kind, group, start_url):
+    """Ensure a job exists and schedule either a daily full traversal or an hourly incremental refresh."""
+    now = time.time()
+    row = conn.execute('SELECT * FROM jobs WHERE key=?', (key,)).fetchone()
+    if row is None:
+        conn.execute('INSERT INTO jobs (key, kind, grp, queue, done_at, pages, full_at) VALUES (?,?,?,?,?,?,?)',
+                     (key, kind, group, json.dumps([[start_url, 'full', 0]]), 0, 0, 0))
+        return
+    if json.loads(row['queue']):
+        return
+    full_at = row['full_at'] or 0
+    has_page = conn.execute('SELECT 1 FROM pages WHERE url=?', (start_url,)).fetchone() is not None
+    if not full_at or now - full_at > FULL_REFRESH or not has_page:
+        conn.execute('UPDATE jobs SET queue=? WHERE key=?', (json.dumps([[start_url, 'full', 0]]), key))
+    elif now - (row['done_at'] or 0) > REFRESH_EVERY:
+        conn.execute('UPDATE jobs SET queue=? WHERE key=?', (json.dumps([[start_url, 'fresh', 0]]), key))
+
+
 def _plan():
-    """Make sure there is a job for every section in every chosen language; returns the job keys in order."""
+    """Make sure there is a job for every section in every chosen language (Telugu first, Hindi secondary);
+    returns the job keys in order."""
     keys = []
     roots = {}
     for section, kind in SECTIONS:
         try:
-            roots[kind] = [f for f in cat.get_dir(cat.URLS[section]) if f['t'] == 'folder']
+            folders = [f for f in cat.get_dir(cat.URLS[section]) if f['t'] == 'folder']
+            roots[kind] = cat.by_affinity(folders)
         except Exception as e:
             cat.log('library: could not read {0}: {1}'.format(kind, e))
             roots[kind] = []
@@ -144,23 +168,15 @@ def _plan():
                     if not db.lang_match(folder['name'], [lang]):
                         continue
                     key = _job_key(kind, folder['name'])
+                    if key in keys:
+                        continue
                     keys.append(key)
-                    row = conn.execute('SELECT * FROM jobs WHERE key=?', (key,)).fetchone()
-                    if row is None:
-                        conn.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?)',
-                                     (key, kind, cat.title_case(folder['name']), json.dumps([[folder['url'], 'full', 0]]), 0, 0))
-                    elif not json.loads(row['queue']) and time.time() - (row['done_at'] or 0) > REFRESH_EVERY:
-                        conn.execute('UPDATE jobs SET queue=? WHERE key=?', (json.dumps([[folder['url'], 'fresh', 0]]), key))
+                    _schedule_job(conn, key, kind, cat.title_case(folder['name']), folder['url'])
         if db.lang_match('english'):
             for section, kind in ENGLISH_SECTIONS:
                 key = _job_key(kind, 'english')
                 keys.append(key)
-                row = conn.execute('SELECT * FROM jobs WHERE key=?', (key,)).fetchone()
-                if row is None:
-                    conn.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?)',
-                                 (key, kind, 'English', json.dumps([[cat.URLS[section], 'full', 0]]), 0, 0))
-                elif not json.loads(row['queue']) and time.time() - (row['done_at'] or 0) > REFRESH_EVERY:
-                    conn.execute('UPDATE jobs SET queue=? WHERE key=?', (json.dumps([[cat.URLS[section], 'fresh', 0]]), key))
+                _schedule_job(conn, key, kind, 'English', cat.URLS[section])
     return keys
 
 
@@ -198,8 +214,9 @@ def _step(key):
             rest.insert(0, [nxt, mode, page + 1])
         known = {q[0] for q in rest}
         rest += [m for m in more if m[0] not in known and (mode == 'full' or page == 0)]
-        conn.execute('UPDATE jobs SET queue=?, pages=pages+1, done_at=? WHERE key=?',
-                     (json.dumps(rest), now if not rest else row['done_at'], key))
+        done_full = now if (not rest and mode == 'full') else (row['full_at'] or 0)
+        conn.execute('UPDATE jobs SET queue=?, pages=pages+1, done_at=?, full_at=? WHERE key=?',
+                     (json.dumps(rest), now if not rest else row['done_at'], done_full, key))
     if items:
         cat.warm_memory(url, items, now)
     if titles and (page == 0 or new > 0):
@@ -221,7 +238,8 @@ def _run(should_pause):
             if db.KIDS:
                 return
             keys = _plan()
-            worked, added = False, 0
+            started_pass = time.time()
+            worked, added, pages_read = False, 0, 0
             for key in keys:
                 failures = 0
                 while not _stop.is_set():
@@ -232,7 +250,7 @@ def _run(should_pause):
                         did, new = _step(key)
                         if not did:
                             break
-                        worked, added, failures = True, added + new, 0
+                        worked, added, pages_read, failures = True, added + new, pages_read + 1, 0
                     except Exception as e:
                         failures += 1
                         cat.log('library: {0} failed: {1}'.format(key, e))
@@ -241,6 +259,12 @@ def _run(should_pause):
                     if monitor.waitForAbort(PAUSE):
                         return
             STATUS['page'] = ''
+            if worked:
+                try:
+                    import audit
+                    audit.event('library_refresh', pages=pages_read, added=added, ms=int((time.time() - started_pass) * 1000))
+                except Exception:
+                    pass
             if added:
                 cat.log('library: {0} new titles indexed'.format(added))
                 try:

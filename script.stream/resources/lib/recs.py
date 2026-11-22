@@ -72,7 +72,7 @@ def taste(metadata):
         for label in _genre_labels(e, data):
             bad_genres[label] = bad_genres.get(label, 0) + 1.0
         bad_people.update((data.get('directors') or [])[:1])
-    order = [g.lower() for g in profile.get('languages', [])]
+    order = db.chosen_languages()
     charts = {}
     try:
         for n, title in enumerate(ai.charts()[:40]):
