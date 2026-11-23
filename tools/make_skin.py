@@ -880,32 +880,32 @@ def search_xml():
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>
 
         <!-- Top search bar -->
-        <control type="image"><left>70</left><top>36</top><width>1160</width><height>68</height><texture colordiffuse="26FFFFFF" border="23">pill.png</texture></control>
+        <control type="image"><left>70</left><top>36</top><width>1130</width><height>68</height><texture colordiffuse="26FFFFFF" border="23">pill.png</texture></control>
         <control type="image"><left>94</left><top>54</top><width>32</width><height>32</height><texture colordiffuse="FFD6D6D6">search-thin.png</texture></control>
         <control type="label">
-            <left>142</left><top>36</top><width>1064</width><height>68</height>
+            <left>142</left><top>36</top><width>1034</width><height>68</height>
             <font>font14</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor>
             <label>[B]$INFO[Window.Property(query)][/B][COLOR FFE50914]|[/COLOR]</label>
             <visible>!String.IsEmpty(Window.Property(query))</visible>
         </control>
         <control type="label">
-            <left>142</left><top>36</top><width>1064</width><height>68</height>
+            <left>142</left><top>36</top><width>1034</width><height>68</height>
             <font>font14</font><aligny>center</aligny><textcolor>FF8E8E98</textcolor>
             <label>$INFO[Window.Property(placeholder)]</label>
             <visible>String.IsEmpty(Window.Property(query))</visible>
         </control>
 
         <!-- Voice Mode pill (501): red glow when listening -->
-        <control type="image"><left>1250</left><top>36</top><width>230</width><height>68</height><texture colordiffuse="33FFFFFF" border="23">pill.png</texture><visible>!Control.HasFocus(501) + String.IsEmpty(Window.Property(voice_active))</visible></control>
-        <control type="image"><left>1250</left><top>36</top><width>230</width><height>68</height><texture colordiffuse="FFE50914" border="23">pill.png</texture><visible>!Control.HasFocus(501) + !String.IsEmpty(Window.Property(voice_active))</visible></control>
-        <control type="image"><left>1250</left><top>36</top><width>230</width><height>68</height><texture colordiffuse="FFFFFFFF" border="23">pill.png</texture><visible>Control.HasFocus(501)</visible></control>
-        <control type="image"><left>1276</left><top>54</top><width>32</width><height>32</height><texture colordiffuse="FFFFFFFF">mic-thin.png</texture><visible>!Control.HasFocus(501)</visible></control>
-        <control type="image"><left>1276</left><top>54</top><width>32</width><height>32</height><texture colordiffuse="FF141414">mic-thin.png</texture><visible>Control.HasFocus(501) + String.IsEmpty(Window.Property(voice_active))</visible></control>
-        <control type="image"><left>1276</left><top>54</top><width>32</width><height>32</height><texture colordiffuse="FFE50914">mic-thin.png</texture><visible>Control.HasFocus(501) + !String.IsEmpty(Window.Property(voice_active))</visible></control>
+        <control type="image"><left>1220</left><top>36</top><width>260</width><height>68</height><texture colordiffuse="33FFFFFF" border="23">pill.png</texture><visible>!Control.HasFocus(501) + String.IsEmpty(Window.Property(voice_active))</visible></control>
+        <control type="image"><left>1220</left><top>36</top><width>260</width><height>68</height><texture colordiffuse="FFE50914" border="23">pill.png</texture><visible>!Control.HasFocus(501) + !String.IsEmpty(Window.Property(voice_active))</visible></control>
+        <control type="image"><left>1220</left><top>36</top><width>260</width><height>68</height><texture colordiffuse="FFFFFFFF" border="23">pill.png</texture><visible>Control.HasFocus(501)</visible></control>
+        <control type="image"><left>1244</left><top>54</top><width>32</width><height>32</height><texture colordiffuse="FFFFFFFF">mic-thin.png</texture><visible>!Control.HasFocus(501)</visible></control>
+        <control type="image"><left>1244</left><top>54</top><width>32</width><height>32</height><texture colordiffuse="FF141414">mic-thin.png</texture><visible>Control.HasFocus(501) + String.IsEmpty(Window.Property(voice_active))</visible></control>
+        <control type="image"><left>1244</left><top>54</top><width>32</width><height>32</height><texture colordiffuse="FFE50914">mic-thin.png</texture><visible>Control.HasFocus(501) + !String.IsEmpty(Window.Property(voice_active))</visible></control>
         <control type="button" id="501">
-            <left>1250</left><top>36</top><width>230</width><height>68</height>
+            <left>1220</left><top>36</top><width>260</width><height>68</height>
             <texturefocus>-</texturefocus><texturenofocus>-</texturenofocus>
-            <textoffsetx>66</textoffsetx>
+            <textoffsetx>64</textoffsetx>
             <label>$INFO[Window.Property(voice_label)]</label>
             <font>font13</font><align>left</align><aligny>center</aligny>
             <textcolor>FFFFFFFF</textcolor><focusedcolor>FF141414</focusedcolor>
@@ -1028,7 +1028,7 @@ def search_xml():
             <visible>!String.IsEmpty(Window.Property(results_empty))</visible>
         </control>
         <control type="panel" id="{res}">
-            <left>674</left><top>190</top><width>1180</width><height>740</height>
+            <left>674</left><top>190</top><width>1180</width><height>680</height>
             <orientation>vertical</orientation>
             <onleft>{keys}</onleft><onright>{res}</onright><onup>502</onup><ondown>{res}</ondown>
             <itemlayout width="232" height="340">
@@ -1046,7 +1046,7 @@ def search_xml():
 
         <!-- Focused result details strip at bottom right -->
         <control type="textbox">
-            <left>684</left><top>944</top><width>1160</width><height>106</height>
+            <left>684</left><top>894</top><width>1160</width><height>120</height>
             <font>font12</font><textcolor>FFB3B3B3</textcolor>
             <label>[B][COLOR FFFFFFFF]$INFO[Container({res}).ListItem.Label][/COLOR][/B]  [COLOR FF46D369]$INFO[Container({res}).ListItem.Property(meta)][/COLOR][CR]$INFO[Container({res}).ListItem.Property(plot)]</label>
             <visible>Control.HasFocus({res})</visible>
