@@ -132,12 +132,46 @@ def make_backspace_icon(path):
     _stroke_icon(path, 64, d, half_w=2.1)
 
 
+def make_yt_icon(path):
+    """84x58 crisp YouTube-style red rounded play pill with white center triangle."""
+    w, h, r = 84, 58, 14
+    def in_tri(px, py):
+        # Right-pointing play triangle centered in the red pill
+        x1, y1 = 34.0, 17.0
+        x2, y2 = 34.0, 41.0
+        x3, y3 = 55.0, 29.0
+        d1 = (px - x2) * (y1 - y2) - (x1 - x2) * (py - y2)
+        d2 = (px - x3) * (y2 - y3) - (x2 - x3) * (py - y3)
+        d3 = (px - x1) * (y3 - y1) - (x3 - x1) * (py - y1)
+        return (d1 <= 0 and d2 <= 0 and d3 <= 0) or (d1 >= 0 and d2 >= 0 and d3 >= 0)
+    def in_pill(px, py):
+        cx = min(max(px, r), w - r)
+        cy = min(max(py, r), h - r)
+        return (px - cx) ** 2 + (py - cy) ** 2 <= r * r
+    def pixel(x, y):
+        pr = pg = pb = pa = 0
+        for i in range(4):
+            for j in range(4):
+                sx, sy = x + (i + 0.5) / 4, y + (j + 0.5) / 4
+                if in_pill(sx, sy):
+                    pa += 1
+                    if in_tri(sx, sy):
+                        pr += 255; pg += 255; pb += 255
+                    else:
+                        pr += 0xFF; pg += 0x00; pb += 0x00
+        if not pa:
+            return (0, 0, 0, 0)
+        return (pr // pa, pg // pa, pb // pa, pa * 255 // 16)
+    png(path, w, h, pixel)
+
+
 def make_images():
     rounded(os.path.join(MEDIA, 'pill.png'), 48, 48, 24)                 # 9-slice with border="23"
     rounded(os.path.join(MEDIA, 'round.png'), 32, 32, 10)                # 9-slice with border="14": frames and badges
     rounded(os.path.join(MEDIA, 'key_bg.png'), 48, 48, 12)               # 9-slice with border="12": modern keyboard keys
     make_mic_icon(os.path.join(MEDIA, 'mic-thin.png'))
     make_backspace_icon(os.path.join(MEDIA, 'backspace-thin.png'))
+    make_yt_icon(os.path.join(MEDIA, 'yt-badge.png'))
     rounded(os.path.join(MEDIA, 'mask_poster.png'), 200, 300, 12)        # diffuse masks round the artwork's corners
     rounded(os.path.join(MEDIA, 'mask_wide.png'), 356, 200, 12)
     rounded(os.path.join(MEDIA, 'mask_card.png'), 200, 200, 12)
@@ -199,15 +233,16 @@ def wide_tile(rid, focused):
     if focused:
         parts.append('<control type="image"><left>-5</left><top>-5</top><width>366</width><height>210</height><texture border="14">round.png</texture><visible>Control.HasFocus({r})</visible></control>'.format(r=rid))
     parts += [
-        '<!-- wide tiles: YouTube videos -->',
-        '<control type="image"><left>0</left><top>0</top><width>356</width><height>200</height><texture colordiffuse="FF1E1E28" border="14">round.png</texture></control>',
+        '<!-- wide tiles: authentic YouTube TV 16:9 cards -->',
+        '<control type="image"><left>0</left><top>0</top><width>356</width><height>200</height><texture colordiffuse="FF1E1E24" border="14">round.png</texture></control>',
+        '<control type="textbox"><left>12</left><top>58</top><width>332</width><height>88</height><font>font13</font><align>center</align><textcolor>FFD6D6DE</textcolor><label>$INFO[ListItem.Label]</label></control>',
         '<control type="image"><left>0</left><top>0</top><width>356</width><height>200</height><aspectratio>scale</aspectratio><texture background="true" diffuse="mask_wide.png">$INFO[ListItem.Art(thumb)]</texture></control>',
-        progress(10, 186, 336, 6),
-        '<control type="image"><left>282</left><top>160</top><width>66</width><height>26</height><texture colordiffuse="D0000000" border="10">round.png</texture><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>',
-        '<control type="label"><left>282</left><top>160</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>',
-        '<control type="textbox"><left>10</left><top>58</top><width>336</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>',
-        '<control type="label"><left>0</left><top>208</top><width>356</width><height>34</height><font>{f}</font><textcolor>{tc}</textcolor><label>{lb}</label></control>'.format(
-            f='font13' if focused else 'font12', tc='FFFFFFFF' if focused else 'FFB8B8B8', lb='[B]$INFO[ListItem.Label][/B]' if focused else '$INFO[ListItem.Label]'),
+        progress(8, 190, 340, 5),
+        '<control type="image"><left>278</left><top>160</top><width>70</width><height>26</height><texture colordiffuse="E6000000" border="8">round.png</texture><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>',
+        '<control type="label"><left>278</left><top>160</top><width>70</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(length)][/B]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>',
+        '<control type="textbox"><left>2</left><top>208</top><width>352</width><height>56</height><font>{f}</font><textcolor>{tc}</textcolor><label>{lb}</label></control>'.format(
+            f='font12' if focused else 'font12', tc='FFFFFFFF' if focused else 'FFE0E0E6', lb='[B]$INFO[ListItem.Label][/B]' if focused else '$INFO[ListItem.Label]'),
+        '<control type="label"><left>2</left><top>268</top><width>352</width><height>28</height><font>font10</font><textcolor>FF9A9AA6</textcolor><label>$INFO[ListItem.Property(meta)]</label><visible>!String.IsEmpty(ListItem.Property(meta))</visible></control>',
     ]
     return '\n'.join(parts)
 
@@ -339,12 +374,12 @@ def billboard(n):
             {slide}
             <visible>{shown}</visible>
             <animation effect="fade" start="0" end="100" time="300">Visible</animation>
-            <!-- the title's backdrop fills the right of the screen; without one, its poster stands in -->
-            <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[{c}.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + {has_art}</visible></control>
-            <control type="image"><left>820</left><top>0</top><width>1100</width><height>620</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="60FFFFFF">$INFO[{c}.Art(thumb)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + {no_art}</visible></control>
-            <control type="image"><left>640</left><top>0</top><width>700</width><height>720</height><texture>fade_left.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
-            <control type="image"><left>640</left><top>300</top><width>1280</width><height>420</height><texture>fade_bottom.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
-            <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[{c}.Art(thumb)]</texture><visible>{no_art} | !String.IsEmpty(Window.Property(kids))</visible></control>
+            <!-- full-bleed Netflix hero backdrop fills the right 78% of the screen; without one, the poster stands in -->
+            <control type="image"><left>440</left><top>0</top><width>1480</width><height>760</height><aspectratio>scale</aspectratio><texture background="true">$INFO[{c}.Art(fanart)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + {has_art}</visible></control>
+            <control type="image"><left>760</left><top>0</top><width>1160</width><height>640</height><aspectratio>scale</aspectratio><texture background="true" colordiffuse="60FFFFFF">$INFO[{c}.Art(thumb)]</texture><fadetime>400</fadetime><visible>String.IsEmpty(Window.Property(kids)) + {no_art}</visible></control>
+            <control type="image"><left>440</left><top>0</top><width>820</width><height>760</height><texture>fade_left.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>440</left><top>320</top><width>1480</width><height>440</height><texture>fade_bottom.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+            <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[{c}.Art(thumb)]</texture><visible>String.IsEmpty(Window.Property(youtube_tab)) + [{no_art} | !String.IsEmpty(Window.Property(kids))]</visible></control>
             <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[{c}.Label][/B]</label></control>
             <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[{c}.Property(meta)]</label></control>
             <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
@@ -386,14 +421,20 @@ def top_bar():
     # Touch layouts make room for seven roomy tabs and 60px icons a finger can hit: search becomes an icon.
     if TOUCH['on']:
         bar = dict(tabs_w=1290, tab_w=180, pill_w=168, search_l=1636, search_w=60, search_i=1650, search_label='', search_t=22, search_h=60, search_it=36, profile_l=1706,
-                   gear_l=1776, close_l=1846, icon=60, icon_t=22)
+                   gear_l=1776, close_l=1846, icon=60, icon_t=22, search_mic='')
     else:
+        search_mic = (
+            '        <control type="image"><left>1686</left><top>38</top><width>28</width><height>28</height><texture colordiffuse="99FFFFFF">mic-thin.png</texture><visible>!Control.HasFocus({s}) + String.IsEmpty(Window.Property(kids))</visible></control>\n'
+            '        <control type="image"><left>1686</left><top>38</top><width>28</width><height>28</height><texture colordiffuse="FFE50914">mic-thin.png</texture><visible>Control.HasFocus({s}) + String.IsEmpty(Window.Property(kids))</visible></control>'
+        ).format(s=SEARCH)
         bar = dict(tabs_w=1140, tab_w=160, pill_w=148, search_l=1490, search_w=240, search_i=1506, search_label='Search', search_t=28, search_h=48, search_it=36, profile_l=1746,
-                   gear_l=1800, close_l=1856, icon=44, icon_t=30)
+                   gear_l=1800, close_l=1856, icon=44, icon_t=30, search_mic=search_mic)
     downs = '<ondown condition="Control.IsVisible({flt})">{flt}</ondown>\n            <ondown>{first}</ondown>'.format(flt=FILTER, first=FIRST)
     return '''        <!-- top bar: a dark fade keeps it readable over the billboard -->
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>150</height><texture>top_fade.png</texture></control>
-        <control type="image"><left>56</left><top>22</top><width>236</width><height>58</height><aspectratio>keep</aspectratio><texture>logo.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
+        <control type="image"><left>56</left><top>22</top><width>236</width><height>58</height><aspectratio>keep</aspectratio><texture>logo.png</texture><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(youtube_tab))</visible></control>
+        <control type="image"><left>58</left><top>30</top><width>60</width><height>42</height><aspectratio>keep</aspectratio><texture>yt-badge.png</texture><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Window.Property(youtube_tab))</visible></control>
+        <control type="label"><left>128</left><top>26</top><width>180</width><height>50</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><label>[B]YouTube[/B]</label><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Window.Property(youtube_tab))</visible></control>
         <control type="label"><left>60</left><top>26</top><width>230</width><height>50</height><font>font36_title</font><textcolor>FFFFD640</textcolor><label>[B]KIDS[/B]</label><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="list" id="{tabs}">
             <left>330</left><top>24</top><width>{tabs_w}</width><height>56</height>
@@ -408,6 +449,7 @@ def top_bar():
             </itemlayout>
             <focusedlayout width="{tab_w}" height="56" condition="String.IsEmpty(Window.Property(kids))">
                 <control type="image"><left>0</left><top>6</top><width>{pill_w}</width><height>44</height><texture colordiffuse="FFFFFFFF" border="22">pill.png</texture><visible>Control.HasFocus({tabs})</visible><animation effect="zoom" start="90" end="100" time="120" center="auto">Visible</animation></control>
+                <control type="image"><left>34</left><top>48</top><width>80</width><height>4</height><texture colordiffuse="FFE50914" border="2">round.png</texture><visible>!Control.HasFocus({tabs})</visible></control>
                 <control type="label"><left>0</left><top>0</top><width>{pill_w}</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({tabs})</visible></control>
                 <control type="label"><left>0</left><top>0</top><width>{pill_w}</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>!Control.HasFocus({tabs})</visible></control>
             </focusedlayout>
@@ -423,6 +465,7 @@ def top_bar():
         <control type="image"><left>{search_l}</left><top>{search_t}</top><width>{search_w}</width><height>{search_h}</height><texture colordiffuse="FFFFFFFF" border="23">pill.png</texture><visible>Control.HasFocus({search})</visible></control>
         <control type="image"><left>{search_i}</left><top>{search_it}</top><width>32</width><height>32</height><texture colordiffuse="FFD6D6D6">search-thin.png</texture><visible>!Control.HasFocus({search})</visible></control>
         <control type="image"><left>{search_i}</left><top>{search_it}</top><width>32</width><height>32</height><texture colordiffuse="FF141414">search-thin.png</texture><visible>Control.HasFocus({search})</visible></control>
+{search_mic}
         <control type="button" id="{search}">
             <left>{search_l}</left><top>{search_t}</top><width>{search_w}</width><height>{search_h}</height>
             <texturefocus>-</texturefocus>
@@ -478,6 +521,7 @@ def home_xml():
            '    <defaultcontrol always="false">{0}</defaultcontrol>'.format(TABS),
            '    <controls>',
            '        <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>',
+           '        <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture colordiffuse="FF0F0F0F">white.png</texture><visible>!String.IsEmpty(Window.Property(youtube_tab)) + String.IsEmpty(Window.Property(kids))</visible></control>',
            '        <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>',
            '        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor>{0}<label>$INFO[Window.Property(status)]</label><visible>{1}</visible></control>'.format(SLIDE, TOP_BAR)]
     out += [billboard(n).rstrip('\n') for n in range(ROWS)]
@@ -509,8 +553,8 @@ def grid_xml():
             parts.append('<control type="image"><left>-5</left><top>-5</top><width>210</width><height>310</height><texture border="14">round.png</texture><visible>Control.HasFocus(50)</visible></control>')
         parts += [
             '<control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><texture colordiffuse="FF1E1E26" border="14">round.png</texture></control>',
-            '<control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>',
-            '<control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio>scale</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(logo)) + String.IsEmpty(ListItem.Property(wide))</visible></control>',
+            '<control type="textbox"><left>10</left><top>90</top><width>180</width><height>120</height><font>font13</font><align>center</align><textcolor>FFDDDDDD</textcolor><label>$INFO[ListItem.Label]</label></control>',
+            '<control type="image"><left>0</left><top>0</top><width>200</width><height>300</height><aspectratio align="center" aligny="top">scale</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[ListItem.Art(thumb)]</texture><visible>String.IsEmpty(ListItem.Property(logo)) + String.IsEmpty(ListItem.Property(wide))</visible></control>',
             '<control type="image"><left>0</left><top>94</top><width>200</width><height>112</height><aspectratio>scale</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(wide))</visible></control>',
             '<control type="image"><left>16</left><top>50</top><width>168</width><height>200</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>!String.IsEmpty(ListItem.Property(logo))</visible></control>',
             '<control type="image"><left>8</left><top>8</top><width>96</width><height>28</height><texture colordiffuse="FFE50914" border="10">round.png</texture><visible>!String.IsEmpty(ListItem.Property(tag))</visible></control>',
@@ -528,14 +572,15 @@ def grid_xml():
         if focused:
             parts.append('<control type="image"><left>-5</left><top>-5</top><width>360</width><height>207</height><texture border="14">round.png</texture><visible>Control.HasFocus(50)</visible></control>')
         parts += [
-            '<control type="image"><left>0</left><top>0</top><width>350</width><height>197</height><texture colordiffuse="FF1E1E28" border="14">round.png</texture></control>',
+            '<control type="image"><left>0</left><top>0</top><width>350</width><height>197</height><texture colordiffuse="FF1E1E24" border="14">round.png</texture></control>',
+            '<control type="textbox"><left>10</left><top>60</top><width>330</width><height>90</height><font>font13</font><align>center</align><textcolor>FFD6D6DE</textcolor><label>$INFO[ListItem.Label]</label></control>',
             '<control type="image"><left>0</left><top>0</top><width>350</width><height>197</height><aspectratio>scale</aspectratio><texture background="true" diffuse="mask_wide.png">$INFO[ListItem.Art(thumb)]</texture></control>',
-            progress(10, 183, 330, 6),
-            '<control type="image"><left>276</left><top>157</top><width>66</width><height>26</height><texture colordiffuse="D0000000" border="10">round.png</texture><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>',
-            '<control type="label"><left>276</left><top>157</top><width>66</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Property(length)]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>',
-            '<control type="textbox"><left>10</left><top>60</top><width>330</width><height>90</height><font>font13</font><align>center</align><textcolor>FFFFFFFF</textcolor><label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Art(thumb))</visible></control>',
-            '<control type="label"><left>0</left><top>204</top><width>350</width><height>34</height><font>{f}</font><textcolor>{tc}</textcolor><label>{lb}</label></control>'.format(
-                f='font13' if focused else 'font12', tc='FFFFFFFF' if focused else 'FFB8B8B8', lb='[B]$INFO[ListItem.Label][/B]' if focused else '$INFO[ListItem.Label]'),
+            progress(8, 187, 334, 5),
+            '<control type="image"><left>272</left><top>157</top><width>70</width><height>26</height><texture colordiffuse="E6000000" border="8">round.png</texture><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>',
+            '<control type="label"><left>272</left><top>157</top><width>70</width><height>26</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Property(length)][/B]</label><visible>!String.IsEmpty(ListItem.Property(length))</visible></control>',
+            '<control type="textbox"><left>2</left><top>204</top><width>346</width><height>56</height><font>font12</font><textcolor>{tc}</textcolor><label>{lb}</label></control>'.format(
+                tc='FFFFFFFF' if focused else 'FFE0E0E6', lb='[B]$INFO[ListItem.Label][/B]' if focused else '$INFO[ListItem.Label]'),
+            '<control type="label"><left>2</left><top>264</top><width>346</width><height>28</height><font>font10</font><textcolor>FF9A9AA6</textcolor><label>$INFO[ListItem.Property(meta)]</label><visible>!String.IsEmpty(ListItem.Property(meta))</visible></control>',
         ]
         return indent('\n'.join(parts), 24)
 
@@ -546,28 +591,33 @@ def grid_xml():
     <defaultcontrol always="true">50</defaultcontrol>
     <controls>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>
+        <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture colordiffuse="FF0F0F0F">white.png</texture><visible>!String.IsEmpty(Window.Property(wide)) + String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
+        <!-- Netflix Browse hero backdrop for the highlighted title -->
+        <control type="image"><left>700</left><top>0</top><width>1220</width><height>460</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Container(50).ListItem.Art(fanart)]</texture><fadetime>300</fadetime><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(mode)) + !String.IsEmpty(Container(50).ListItem.Art(fanart))</visible></control>
+        <control type="image"><left>700</left><top>0</top><width>720</width><height>460</height><texture>fade_left.png</texture><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(mode)) + !String.IsEmpty(Container(50).ListItem.Art(fanart))</visible></control>
+        <control type="image"><left>700</left><top>180</top><width>1220</width><height>280</height><texture>fade_bottom.png</texture><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(mode)) + !String.IsEmpty(Container(50).ListItem.Art(fanart))</visible></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>180</height><texture>top_fade.png</texture></control>
         <control type="label"><left>60</left><top>30</top><width>1100</width><height>60</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
         <control type="label"><left>1180</left><top>30</top><width>360</width><height>60</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
-        <!-- the highlighted title's facts and synopsis -->
-        <control type="textbox"><left>60</left><top>92</top><width>1800</width><height>70</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR]  $INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
+        <!-- the highlighted title's name, facts and synopsis -->
+        <control type="textbox"><left>60</left><top>94</top><width>1340</width><height>84</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[B][COLOR FFFFFFFF]$INFO[Container(50).ListItem.Label][/COLOR][/B]  [COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR][CR]$INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
         <control type="panel" id="50">
             <visible>String.IsEmpty(Window.Property(mode))</visible>
             <onleft>noop</onleft>
             <onright>noop</onright>
             <onup>noop</onup>
             <ondown>noop</ondown>
-            <left>60</left><top>180</top><width>1810</width><height>900</height>
+            <left>60</left><top>190</top><width>1810</width><height>890</height>
             <orientation>vertical</orientation>
             <scrolltime tween="quadratic">200</scrolltime>
-            <!-- wide tiles: a listing of videos (Window.Property(wide) is set by the script) -->
-            <itemlayout width="362" height="260" condition="!String.IsEmpty(Window.Property(wide))">
+            <!-- wide tiles: a listing of YouTube videos (Window.Property(wide) is set by the script) -->
+            <itemlayout width="362" height="306" condition="!String.IsEmpty(Window.Property(wide))">
                 <control type="group"><left>6</left><top>6</top>
 {wide_item}
                 </control>
             </itemlayout>
-            <focusedlayout width="362" height="260" condition="!String.IsEmpty(Window.Property(wide))">
+            <focusedlayout width="362" height="306" condition="!String.IsEmpty(Window.Property(wide))">
                 <control type="group"><left>6</left><top>6</top>
                     {z}
 {wide_focus}
@@ -637,9 +687,10 @@ PLAY_B, TRAILER_B, LIST_B, LIKE_B, DISLIKE_B = 301, 302, 303, 304, 305
 SEASONS, EPISODES, ALIKE, LANGS = 310, 320, 330, 340
 
 
-def pill_button(cid, left, width, label, nav):
-    """A pill button: translucent when idle, white with dark text when highlighted."""
-    return '''        <control type="image"><left>{l}</left><top>430</top><width>{w}</width><height>56</height><texture colordiffuse="4DFFFFFF" border="23">pill.png</texture><visible>!Control.HasFocus({c})</visible></control>
+def pill_button(cid, left, width, label, nav, primary=False):
+    """A pill button: primary Play uses Netflix Red when idle and bright White when focused; others are dark glass."""
+    idle_color = 'FFE50914' if primary else '4DFFFFFF'
+    return '''        <control type="image"><left>{l}</left><top>430</top><width>{w}</width><height>56</height><texture colordiffuse="{idle}" border="23">pill.png</texture><visible>!Control.HasFocus({c})</visible></control>
         <control type="image"><left>{l}</left><top>430</top><width>{w}</width><height>56</height><texture colordiffuse="FFFFFFFF" border="23">pill.png</texture><visible>Control.HasFocus({c})</visible></control>
         <control type="button" id="{c}">
             <left>{l}</left><top>430</top><width>{w}</width><height>56</height>
@@ -649,7 +700,7 @@ def pill_button(cid, left, width, label, nav):
             <textcolor>FFFFFFFF</textcolor><focusedcolor>FF141414</focusedcolor>
             {nav}
         </control>
-'''.format(l=left, w=width, c=cid, lb=label, nav=nav)
+'''.format(l=left, w=width, c=cid, lb='[B]' + label + '[/B]' if primary else label, nav=nav, idle=idle_color)
 
 
 def episode_tile(focused):
@@ -694,7 +745,7 @@ def title_xml():
                '<ondown condition="!String.IsEmpty(Window.Property(langs))">{langs}</ondown>'
                '<ondown condition="{s}">{seasons}</ondown><ondown>{alike}</ondown>').format(
             p=prev, x=nxt, b=BACK if TOUCH['on'] else cid, s=is_show, seasons=SEASONS, alike=ALIKE, langs=LANGS)
-        rows.append(pill_button(cid, left, width, label, nav))
+        rows.append(pill_button(cid, left, width, label, nav, primary=(cid == PLAY_B)))
     back = ''
     if TOUCH['on']:
         back = '''        <control type="image"><left>40</left><top>31</top><width>150</width><height>48</height><texture colordiffuse="4DFFFFFF" border="23">pill.png</texture></control>
@@ -716,10 +767,10 @@ def title_xml():
     <controls>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
-        <!-- the backdrop fills the right of the screen; without one the poster stands in -->
-        <control type="image"><left>640</left><top>0</top><width>1280</width><height>720</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Window.Property(fanart)]</texture><fadetime>400</fadetime><visible>!String.IsEmpty(Window.Property(fanart))</visible></control>
-        <control type="image"><left>640</left><top>0</top><width>700</width><height>720</height><texture>fade_left.png</texture></control>
-        <control type="image"><left>640</left><top>300</top><width>1280</width><height>420</height><texture>fade_bottom.png</texture></control>
+        <!-- full-bleed Netflix hero backdrop fills the right 78% of the screen; without one the poster stands in -->
+        <control type="image"><left>440</left><top>0</top><width>1480</width><height>780</height><aspectratio>scale</aspectratio><texture background="true">$INFO[Window.Property(fanart)]</texture><fadetime>400</fadetime><visible>!String.IsEmpty(Window.Property(fanart))</visible></control>
+        <control type="image"><left>440</left><top>0</top><width>820</width><height>780</height><texture>fade_left.png</texture></control>
+        <control type="image"><left>440</left><top>340</top><width>1480</width><height>440</height><texture>fade_bottom.png</texture></control>
         <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Window.Property(poster)]</texture><visible>String.IsEmpty(Window.Property(fanart)) + !String.IsEmpty(Window.Property(poster))</visible></control>
 {back}        <control type="label"><left>60</left><top>96</top><width>1180</width><height>80</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Window.Property(title)][/B]</label></control>
         <control type="label"><left>60</left><top>182</top><width>1180</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Window.Property(meta)]</label></control>

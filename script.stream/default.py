@@ -3203,6 +3203,7 @@ class Home(xbmcgui.WindowXML):
             if key != 'search':
                 self.search_query = None
         self.tab = key
+        self.setProperty('youtube_tab', '1' if key == 'youtube' else '')
         self.token += 1
         self.setProperty('status', 'Loading…')
         self.spawn(self.fill, key, self.token, focus)
