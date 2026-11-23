@@ -25,6 +25,7 @@ import library  # noqa: E402
 import meta  # noqa: E402
 import recs  # noqa: E402
 import report  # noqa: E402
+import voice  # noqa: E402
 import youtube as yt  # noqa: E402
 
 ROWS = 18
@@ -2266,6 +2267,265 @@ class Grid(xbmcgui.WindowXML):
             self.spawn(self.load, url)
 
 
+SEARCH_KEYS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
+
+
+def open_search(prompt='Search movies, shows, or channels', initial='', kinds=None, youtube_mode=False):
+    """Open the modern in-app Search overlay (compact 6x6 keyboard, Voice Mode QR bridge, live poster results).
+    Returns ('query', text), ('item', ListItem), or (None, None) if cancelled."""
+    win = SearchDialog(skin('search'), ADDON_PATH, 'Default', '1080i')
+    win.setup(prompt, initial=initial, kinds=kinds, youtube_mode=youtube_mode)
+    was_busy, BUSY['on'] = BUSY['on'], False
+    OPEN['grids'] += 1
+    try:
+        win.doModal()
+    finally:
+        win.stop()
+        BUSY['on'] = was_busy
+        OPEN['grids'] -= 1
+    result = win.result
+    del win
+    return result
+
+
+class SearchDialog(xbmcgui.WindowXMLDialog):
+    VOICE_BTN, GO_BTN, CLOSE_BTN = 501, 502, 503
+    SPACE_BTN, BKSP_BTN, CLEAR_BTN = 510, 511, 512
+    KEYS_ID, RECENT_ID, RES_ID = 520, 530, 540
+
+    def setup(self, prompt, initial='', kinds=None, youtube_mode=False):
+        self.prompt = prompt
+        self.query = (initial or '').strip()
+        self.kinds = kinds
+        self.youtube_mode = youtube_mode
+        self.result = (None, None)
+        self.closed = False
+        self.search_seq = 0
+        self.voice_active = False
+        self.voice_code = None
+        self.voice_seq = 0
+        self.last_entries = []
+
+    def stop(self):
+        self.closed = True
+        self.voice_active = False
+
+    def onInit(self):
+        self.setProperty('placeholder', self.prompt)
+        self.setProperty('voice_label', 'Voice')
+        self.setProperty('voice_active', '')
+        self.setProperty('query', self.query)
+        keys = self.getControl(self.KEYS_ID)
+        keys.reset()
+        keys.addItems([xbmcgui.ListItem(ch) for ch in SEARCH_KEYS])
+        self._load_recent()
+        self._trigger_live_search(immediate=True)
+        self.setFocusId(self.KEYS_ID)
+
+    def _load_recent(self):
+        seen, recent = set(), []
+        try:
+            for ev in reversed(db.events(100)):
+                if ev.get('action') == 'searched':
+                    q = (ev.get('name') or '').strip()
+                    if q and q.lower() not in seen:
+                        seen.add(q.lower())
+                        recent.append(q)
+                        if len(recent) >= 5:
+                            break
+        except Exception:
+            pass
+        ctrl = self.getControl(self.RECENT_ID)
+        ctrl.reset()
+        if recent:
+            ctrl.addItems([xbmcgui.ListItem(q) for q in recent])
+            self.setProperty('has_recent', '1')
+        else:
+            self.setProperty('has_recent', '')
+
+    def _set_query(self, text, immediate=False):
+        self.query = text
+        self.setProperty('query', self.query)
+        self._trigger_live_search(immediate=immediate)
+
+    def _trigger_live_search(self, immediate=False):
+        self.search_seq += 1
+        seq = self.search_seq
+        q = self.query.strip()
+        if self.youtube_mode:
+            self.setProperty('results_heading', 'YouTube Search' if not q else 'YouTube · “{0}”'.format(q))
+            self.setProperty('results_empty', 'Press Search (or use Voice) to search YouTube for “{0}”'.format(q) if q else 'Type or use Voice Mode to search YouTube')
+            try:
+                self.getControl(self.RES_ID).reset()
+            except Exception:
+                pass
+            return
+
+        def worker():
+            if not immediate:
+                time.sleep(0.16)
+            if self.closed or seq != self.search_seq:
+                return
+            entries = []
+            if not q:
+                # Show recent / popular titles when query is empty so the right pane feels alive
+                try:
+                    entries = library.search('', kinds=self.kinds, limit=15) if hasattr(library, 'search') else []
+                except Exception:
+                    entries = []
+                heading = 'Type or tap Voice to search'
+                empty_msg = '' if entries else 'Use the keyboard or tap Voice to speak in English, Telugu, or Hindi'
+            else:
+                try:
+                    saved = [] if db.KIDS else library.search(q, kinds=self.kinds, limit=30)
+                except Exception:
+                    saved = []
+                try:
+                    local = [dict(h, meta=cat.title_case(h.get('group') or '')) for h in db.find_names(q, 20)
+                             if not self.kinds or not h.get('kind') or h.get('kind') in self.kinds]
+                    local = db.only_chosen(local, lambda e: e.get('group')) if local else []
+                except Exception:
+                    local = []
+                seen = set()
+                for e in list(saved) + list(local):
+                    name = (e.get('item') or {}).get('name') or ''
+                    key = name.lower()
+                    if name and key not in seen:
+                        seen.add(key)
+                        entries.append(e)
+                heading = 'Instant Results ({0})'.format(len(entries)) if entries else 'No instant matches yet'
+                empty_msg = '' if entries else 'Press Search to check full Sasta TV catalogue for “{0}”'.format(q)
+            if self.closed or seq != self.search_seq:
+                return
+            self.last_entries = entries[:25]
+            tiles = [entry_item(e, meta=e.get('meta')) for e in self.last_entries]
+            try:
+                self.setProperty('results_heading', heading)
+                self.setProperty('results_empty', empty_msg)
+                ctrl = self.getControl(self.RES_ID)
+                ctrl.reset()
+                if tiles:
+                    ctrl.addItems(tiles)
+            except Exception:
+                pass
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _toggle_voice(self):
+        if self.voice_active:
+            self._stop_voice()
+            return
+        self.voice_active = True
+        self.voice_code = None
+        self.voice_seq = 0
+        self.setProperty('voice_active', '1')
+        self.setProperty('voice_label', 'Listening…')
+        self.setProperty('voice_qr', '')
+        self.setProperty('voice_short_url', 'Connecting…')
+        self.setProperty('voice_status', 'Starting secure voice session…')
+
+        def voice_worker():
+            try:
+                code, url, qr_path = voice.start_session()
+            except Exception as exc:
+                if not self.closed and self.voice_active:
+                    self.setProperty('voice_short_url', 'Voice unavailable')
+                    self.setProperty('voice_status', str(exc)[:100])
+                return
+            if self.closed or not self.voice_active:
+                return
+            self.voice_code = code
+            short = url.replace('https://', '').replace('http://', '')
+            self.setProperty('voice_qr', qr_path)
+            self.setProperty('voice_short_url', short)
+            self.setProperty('voice_status', 'Tap the mic on your phone and speak in English, Telugu, or Hindi')
+            while not self.closed and self.voice_active and self.voice_code == code:
+                time.sleep(0.6)
+                try:
+                    data = voice.poll_session(code)
+                except Exception:
+                    data = None
+                if not data or self.closed or not self.voice_active:
+                    continue
+                seq = data.get('seq') or 0
+                if seq > self.voice_seq:
+                    self.voice_seq = seq
+                    text = (data.get('text') or '').strip()
+                    if text:
+                        self._set_query(text, immediate=True)
+                    if data.get('final') and text:
+                        self._stop_voice()
+                        try:
+                            if self.last_entries and not self.youtube_mode:
+                                self.setFocusId(self.RES_ID)
+                            else:
+                                self.setFocusId(self.GO_BTN)
+                        except Exception:
+                            pass
+                        return
+
+        threading.Thread(target=voice_worker, daemon=True).start()
+
+    def _stop_voice(self):
+        self.voice_active = False
+        self.voice_code = None
+        self.setProperty('voice_active', '')
+        self.setProperty('voice_label', 'Voice')
+
+    def onClick(self, control_id):
+        if control_id == self.CLOSE_BTN:
+            self.close()
+        elif control_id == self.VOICE_BTN:
+            self._toggle_voice()
+        elif control_id == self.GO_BTN:
+            if self.query.strip():
+                self.result = ('query', self.query.strip())
+                self.close()
+            else:
+                notify('Type or speak a title first')
+        elif control_id == self.SPACE_BTN:
+            if self.query and not self.query.endswith(' '):
+                self._set_query(self.query + ' ')
+        elif control_id == self.BKSP_BTN:
+            if self.query:
+                self._set_query(self.query[:-1])
+        elif control_id == self.CLEAR_BTN:
+            self._set_query('')
+        elif control_id == self.KEYS_ID:
+            li = self.getControl(self.KEYS_ID).getSelectedItem()
+            if li:
+                ch = li.getLabel()
+                self._set_query(self.query + (ch if not self.query or self.query.endswith(' ') else ch.lower()))
+        elif control_id == self.RECENT_ID:
+            li = self.getControl(self.RECENT_ID).getSelectedItem()
+            if li:
+                self.result = ('query', li.getLabel().strip())
+                self.close()
+        elif control_id == self.RES_ID:
+            li = self.getControl(self.RES_ID).getSelectedItem()
+            if li:
+                self.result = ('item', li)
+                self.close()
+
+    def onAction(self, action):
+        aid = action.getId()
+        if aid in ACTION_BACK:
+            if self.voice_active:
+                self._stop_voice()
+                self.setFocusId(self.KEYS_ID)
+                return
+            self.close()
+            return
+        if aid == 110:  # ACTION_BACKSPACE
+            if self.query:
+                self._set_query(self.query[:-1])
+            return
+        # Support direct physical/Bluetooth keyboard typing (e.g., on Mac)
+        code = action.getButtonCode() & 0xFF
+        if 32 <= code <= 126 and aid == 0:
+            self._set_query(self.query + chr(code))
+
+
 class Home(xbmcgui.WindowXML):
     def onInit(self):
         if getattr(self, 'ready', False):
@@ -3036,35 +3296,46 @@ class Home(xbmcgui.WindowXML):
 
     def search(self):
         if self.tab == 'youtube':
-            query = xbmcgui.Dialog().input('Search YouTube')
-            if query:
-                db.log_event('searched', query, 'YouTube')
-                if open_grid('YouTube: \u201c{0}\u201d'.format(query), url=yt.search_url(query), group='YouTube'):
+            kind, val = open_search('Search YouTube', youtube_mode=True)
+            if kind == 'query' and val:
+                db.log_event('searched', val, 'YouTube')
+                if open_grid('YouTube: \u201c{0}\u201d'.format(val), url=yt.search_url(val), group='YouTube'):
                     self.go_home()
             return
         if db.KIDS:
-            query = xbmcgui.Dialog().input('Search kids movies and shows')
-            if not query:
+            kind, val = open_search('Search kids movies and shows', kinds=('Kids',))
+            if kind == 'item' and val is not None:
+                if activate(val, (), category=False):
+                    self.go_home()
                 return
-            db.log_event('searched', query, 'Kids')
-            hits = cat.rank_results(query, cat.search(query))
-            if open_grid('Results for “{0}”'.format(query), entries=hits, group='Kids'):
+            if kind != 'query' or not val:
+                return
+            db.log_event('searched', val, 'Kids')
+            hits = cat.rank_results(val, cat.search(val))
+            if open_grid('Results for “{0}”'.format(val), entries=hits, group='Kids'):
                 self.go_home()
             return
         if self.tab == 'shows':
             prompt = 'Search shows, web series, or channels'
             target_tab = 'shows'
+            kinds = discover.SHOW_KINDS
         elif self.tab == 'movies':
             prompt = 'Search movies by title or year'
             target_tab = 'movies'
+            kinds = discover.MOVIE_KINDS
         else:
             prompt = 'Search movies, shows, or channels'
             target_tab = 'search'
-        query = xbmcgui.Dialog().input(prompt, defaultt=self.search_query or '')
-        if not query:
+            kinds = None
+        kind, val = open_search(prompt, initial=self.search_query or '', kinds=kinds)
+        if kind == 'item' and val is not None:
+            if activate(val, (), category=False):
+                self.go_home()
             return
-        db.log_event('searched', query, None, target_tab)
-        self.search_query = query.strip()
+        if kind != 'query' or not val:
+            return
+        db.log_event('searched', val, None, target_tab)
+        self.search_query = val.strip()
         self.filter = self.year_filter = self.letter_filter = None
         self.load_tab(target_tab, focus=True)
 

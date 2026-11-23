@@ -847,6 +847,146 @@ def refresh_top10():
         time.sleep(600)
 
 
+VOICE_LOCK = threading.Lock()
+VOICE_SESSIONS = {}  # code -> {'created': ts, 'text': '', 'final': False, 'seq': 0}
+VOICE_TTL = 600
+VOICE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+
+
+def _prune_voice():
+    cutoff = time.time() - VOICE_TTL
+    for k in [k for k, v in VOICE_SESSIONS.items() if v['created'] < cutoff]:
+        VOICE_SESSIONS.pop(k, None)
+
+
+def create_voice_session():
+    with VOICE_LOCK:
+        _prune_voice()
+        for _ in range(20):
+            code = ''.join(VOICE_ALPHABET[b % len(VOICE_ALPHABET)] for b in os.urandom(6))
+            if code not in VOICE_SESSIONS:
+                VOICE_SESSIONS[code] = {'created': time.time(), 'text': '', 'final': False, 'seq': 0}
+                return code
+    raise RuntimeError('voice session pool full')
+
+
+def _clean_voice_code(raw):
+    return ''.join(c for c in str(raw or '').upper() if c.isalnum())[:8]
+
+
+def voice_page(code=''):
+    safe_code = html.escape(_clean_voice_code(code))
+    return ('''<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Stream Voice Search</title>
+<style>
+  :root { --bg:#0e0e12; --card:#18181f; --border:rgba(255,255,255,.12); --accent:#e50914; --text:#f5f5f7; --muted:#9a9aa6; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; min-height:100dvh; background:radial-gradient(circle at top,#1c1c26 0%,var(--bg) 65%); color:var(--text);
+         font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .wrap { width:100%; max-width:440px; background:var(--card); border:1px solid var(--border); border-radius:26px; padding:28px 22px; box-shadow:0 24px 60px rgba(0,0,0,.55); text-align:center; }
+  .brand { font-size:13px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  h1 { margin:0 0 8px; font-size:24px; font-weight:700; }
+  .sub { color:var(--muted); font-size:14px; margin:0 0 22px; }
+  .langs { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:24px; }
+  .lang { border:1px solid var(--border); background:rgba(255,255,255,.06); color:var(--text); border-radius:999px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+  .lang.on { background:#fff; color:#141414; border-color:#fff; }
+  .mic { width:124px; height:124px; border-radius:50%; border:none; background:linear-gradient(145deg,#ff2a36,var(--accent)); color:#fff;
+         display:inline-flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 12px 34px rgba(229,9,20,.45); transition:transform .15s,box-shadow .2s; }
+  .mic:active { transform:scale(.95); }
+  .mic.live { animation:pulse 1.3s infinite; }
+  @keyframes pulse { 0% { box-shadow:0 0 0 0 rgba(229,9,20,.65); } 70% { box-shadow:0 0 0 26px rgba(229,9,20,0); } 100% { box-shadow:0 0 0 0 rgba(229,9,20,0); } }
+  .status { margin-top:16px; min-height:22px; font-size:14px; color:var(--muted); }
+  .transcript { margin:16px 0; min-height:52px; padding:14px 16px; border-radius:16px; background:rgba(255,255,255,.05); border:1px solid var(--border); font-size:18px; font-weight:600; word-break:break-word; }
+  .row { display:flex; gap:8px; margin-top:14px; }
+  input[type=text] { flex:1; background:rgba(255,255,255,.07); border:1px solid var(--border); border-radius:14px; padding:13px 15px; color:#fff; font-size:16px; outline:none; }
+  input[type=text]:focus { border-color:#fff; }
+  .go { background:#fff; color:#141414; border:none; border-radius:14px; padding:0 18px; font-weight:700; font-size:15px; cursor:pointer; }
+  .code-row { margin-top:14px; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">Stream TV</div>
+  <h1>Voice Search</h1>
+  <p class="sub">Tap the mic and speak — results appear live on your TV</p>
+  <div class="langs">
+    <button class="lang on" data-lang="en-IN">English</button>
+    <button class="lang" data-lang="te-IN">Telugu</button>
+    <button class="lang" data-lang="hi-IN">Hindi</button>
+  </div>
+  <button id="mic" class="mic" aria-label="Start voice search">
+    <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+      <path d="M5 10v2a7 7 0 0 0 14 0v-2"></path>
+      <line x1="12" y1="19" x2="12" y2="22"></line>
+      <line x1="8" y1="22" x2="16" y2="22"></line>
+    </svg>
+  </button>
+  <div id="status" class="status">Ready</div>
+  <div id="transcript" class="transcript" style="color:var(--muted)">Say a movie, show, actor, or channel…</div>
+  <form id="form" class="row">
+    <input id="box" type="text" placeholder="Or type / dictate here…" autocomplete="off" autocorrect="off">
+    <button class="go" type="submit">Send</button>
+  </form>
+  <div class="code-row">TV Code: <strong id="codeLabel">''' + (safe_code or '—') + '''</strong></div>
+</div>
+<script>
+const code = "''' + safe_code + '''";
+let lang = "en-IN";
+let rec = null, listening = false, lastSent = "";
+const mic = document.getElementById("mic"), st = document.getElementById("status"),
+      tr = document.getElementById("transcript"), box = document.getElementById("box");
+document.querySelectorAll(".lang").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".lang").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); lang = b.dataset.lang;
+});
+async function push(text, isFinal) {
+  text = (text || "").trim();
+  if (!code || (!text && !isFinal)) return;
+  if (!isFinal && text === lastSent) return;
+  lastSent = text;
+  tr.style.color = "#fff"; tr.textContent = text; box.value = text;
+  try {
+    const r = await fetch("/voice/send", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({code, text, final: !!isFinal})
+    });
+    if (r.ok) st.textContent = isFinal ? "Sent to TV!" : "Listening…";
+    else st.textContent = "Session expired — press Voice on TV again";
+  } catch (e) { st.textContent = "Connection error"; }
+}
+document.getElementById("form").onsubmit = e => { e.preventDefault(); push(box.value, true); };
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) {
+  st.textContent = "Use keyboard mic below to dictate";
+  mic.onclick = () => box.focus();
+} else {
+  mic.onclick = () => {
+    if (listening && rec) { rec.stop(); return; }
+    rec = new SR(); rec.lang = lang; rec.interimResults = true; rec.continuous = false;
+    rec.onstart = () => { listening = true; mic.classList.add("live"); st.textContent = "Listening…"; };
+    rec.onresult = ev => {
+      let txt = "", fin = false;
+      for (let i = 0; i < ev.results.length; i++) {
+        txt += ev.results[i][0].transcript;
+        if (ev.results[i].isFinal) fin = true;
+      }
+      push(txt, fin);
+    };
+    rec.onerror = ev => { st.textContent = ev.error === "not-allowed" ? "Microphone permission denied" : ("Mic error: " + ev.error); };
+    rec.onend = () => { listening = false; mic.classList.remove("live"); if (st.textContent === "Listening…") st.textContent = "Tap mic to speak again"; };
+    rec.start();
+  };
+}
+</script>
+</body>
+</html>''').encode('utf-8')
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, data):
         body = json.dumps(data).encode()
@@ -921,6 +1061,20 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 n = len(BATCHES)
             return self._send(200, {'ok': True, 'model': MODEL, 'ollama': ollama_up(), 'batches': n})
+        if self.path.startswith('/voice/poll'):
+            if not self.allowed():
+                return
+            code = _clean_voice_code(self.query().get('code'))
+            with VOICE_LOCK:
+                _prune_voice()
+                sess = VOICE_SESSIONS.get(code)
+                if not sess:
+                    return self._send(404, {'error': 'session expired'})
+                return self._send(200, {'ok': True, 'text': sess['text'], 'final': sess['final'], 'seq': sess['seq']})
+        if self.path == '/voice' or self.path.startswith('/voice/'):
+            tail = self.path.split('?', 1)[0].rstrip('/')
+            code = tail.split('/')[-1] if tail.startswith('/voice/') else self.query().get('code', '')
+            return self._html(200, voice_page(code))
         q = self.query()
         embed = q.get('embed') == '1'
         if self.path.startswith('/login'):
@@ -1014,6 +1168,32 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {'error': 'not found'})
 
     def do_POST(self):
+        if self.path.startswith('/voice/session'):
+            if not self.allowed():
+                return
+            code = create_voice_session()
+            proto = self.headers.get('X-Forwarded-Proto') or 'https'
+            host = self.headers.get('Host') or 'recs.senapati.si'
+            return self._send(200, {'ok': True, 'code': code, 'url': '{0}://{1}/voice/{2}'.format(proto, host, code)})
+        if self.path.startswith('/voice/send'):
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 4096)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            code = _clean_voice_code(body.get('code'))
+            text = str(body.get('text') or '').strip()[:120]
+            final = bool(body.get('final'))
+            with VOICE_LOCK:
+                _prune_voice()
+                sess = VOICE_SESSIONS.get(code)
+                if not sess:
+                    return self._send(404, {'error': 'session expired'})
+                sess['text'] = text
+                sess['final'] = final
+                sess['seq'] += 1
+                sess['created'] = time.time()
+            return self._send(200, {'ok': True})
         if self.path.startswith('/login'):
             length = int(self.headers.get('Content-Length') or 0)
             form = {k: v[0] for k, v in parse_qs(self.rfile.read(min(length, 4096)).decode('utf-8', 'replace')).items()}
