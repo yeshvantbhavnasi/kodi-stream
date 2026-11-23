@@ -2368,37 +2368,82 @@ class SearchDialog(xbmcgui.WindowXMLDialog):
                 return
             entries = []
             if not q:
-                # Show recent / popular titles when query is empty so the right pane feels alive
+                # Populate with Trending / Top Picks from recs or recent watch history so Search never opens blank
+                seen = set()
                 try:
-                    entries = library.search('', kinds=self.kinds, limit=15) if hasattr(library, 'search') else []
+                    for row in (recs.STATE.get('rows') or []):
+                        for e in (row.get('entries') or []):
+                            it = e.get('item') or {}
+                            if self.kinds and e.get('kind') and e.get('kind') not in self.kinds:
+                                continue
+                            clean = (quality_of(it.get('name') or '')[0] or it.get('name') or '').strip().lower()
+                            if clean and clean not in seen and it.get('img') and not cat.GENERIC_IMG.search(it.get('img')):
+                                seen.add(clean)
+                                entries.append(e)
+                                if len(entries) >= 20:
+                                    break
+                        if len(entries) >= 20:
+                            break
                 except Exception:
-                    entries = []
-                heading = 'Type or tap Voice to search'
+                    pass
+                heading = 'Popular & Recommended' if entries else 'Type or tap Voice to search'
                 empty_msg = '' if entries else 'Use the keyboard or tap Voice to speak in English, Telugu, or Hindi'
             else:
                 try:
-                    saved = [] if db.KIDS else library.search(q, kinds=self.kinds, limit=30)
+                    saved = [] if db.KIDS else library.search(q, kinds=self.kinds, limit=60)
                 except Exception:
                     saved = []
                 try:
-                    local = [dict(h, meta=cat.title_case(h.get('group') or '')) for h in db.find_names(q, 20)
+                    local = [dict(h, meta=cat.title_case(h.get('group') or '')) for h in db.find_names(q, 30)
                              if not self.kinds or not h.get('kind') or h.get('kind') in self.kinds]
                     local = db.only_chosen(local, lambda e: e.get('group')) if local else []
                 except Exception:
                     local = []
-                seen = set()
+                # Deduplicate by cleaned title, preferring real artwork and full titles over teasers/duplicates
+                by_title = {}
+                order = []
                 for e in list(saved) + list(local):
-                    name = (e.get('item') or {}).get('name') or ''
-                    key = name.lower()
-                    if name and key not in seen:
-                        seen.add(key)
-                        entries.append(e)
+                    it = e.get('item') or {}
+                    raw_name = it.get('name') or ''
+                    if not raw_name:
+                        continue
+                    clean = (quality_of(raw_name)[0] or raw_name).strip()
+                    key = clean.lower()
+                    has_img = bool(it.get('img') and not cat.GENERIC_IMG.search(it.get('img')))
+                    is_teaser = bool(re.search(r'\b(teaser|trailer|promo|glimpse)\b', raw_name, re.I))
+                    rank = (1 if is_teaser else 0, 0 if has_img else 1)
+                    if key not in by_title:
+                        by_title[key] = (rank, e)
+                        order.append(key)
+                    elif rank < by_title[key][0]:
+                        by_title[key] = (rank, e)
+                ranked = [by_title[k] for k in order]
+                ranked.sort(key=lambda pair: pair[0])
+                entries = [pair[1] for pair in ranked]
                 heading = 'Instant Results ({0})'.format(len(entries)) if entries else 'No instant matches yet'
                 empty_msg = '' if entries else 'Press Search to check full Sasta TV catalogue for “{0}”'.format(q)
             if self.closed or seq != self.search_seq:
                 return
             self.last_entries = entries[:25]
-            tiles = [entry_item(e, meta=e.get('meta')) for e in self.last_entries]
+            tiles = []
+            for e in self.last_entries:
+                li = entry_item(e, meta=e.get('meta'))
+                # Prefer official 2:3 portrait TMDb poster + rating/plot when cached (fixes landscape/cropped thumbs)
+                try:
+                    is_show = (e.get('kind') in ('TV Shows', 'Web Series', 'English TV')) or (e.get('item', {}).get('t') == 'folder')
+                    info = meta.lookup(li.getLabel(), show=is_show, fetch=False)
+                    if info:
+                        if info.get('poster'):
+                            li.setArt({'thumb': info['poster']})
+                            li.setProperty('wide', '')
+                        rt = meta.rating_text(info)
+                        if rt:
+                            li.setProperty('rating', rt)
+                        if info.get('plot') and not li.getProperty('plot'):
+                            li.setProperty('plot', info['plot'])
+                except Exception:
+                    pass
+                tiles.append(li)
             try:
                 self.setProperty('results_heading', heading)
                 self.setProperty('results_empty', empty_msg)
