@@ -123,3 +123,69 @@ def sync_async(profile_name=None, force=False, on_change=None):
             except Exception:
                 pass
     threading.Thread(target=_run, daemon=True).start()
+
+
+# ---------- Live TV EPG ("Now Playing" & "Up Next") ----------
+
+import re as _re  # noqa: E402
+
+_EPG_NOISE = _re.compile(
+    r'\b(4k|uhd|fhd|hd|sd|usa|us|uk|ca|canada|india|in|backup|test|vip|hevc|h265|50fps|60fps|plus|\+|tv)\b',
+    _re.I,
+)
+_EPG_NON_ALNUM = _re.compile(r'[^a-z0-9]+')
+_epg_cache = {'data': {}, 'at': 0.0, 'loading': False}
+
+
+def _norm_chan(name):
+    s = (name or '').lower().strip()
+    s = _re.sub(r'\(.*?\)', ' ', s)
+    s = _EPG_NOISE.sub(' ', s)
+    return _EPG_NON_ALNUM.sub('', s)
+
+
+def _fetch_epg():
+    url = (ai.service_url() or '').rstrip('/')
+    if not url:
+        return
+    hdrs = {'User-Agent': 'StreamKodi/2.2'}
+    key = ai.service_key()
+    if key:
+        hdrs['X-Stream-Key'] = key
+    try:
+        req = Request(url + '/api/epg/now', headers=hdrs)
+        with urlopen(req, timeout=4.0) as resp:
+            res = json.loads(resp.read().decode('utf-8'))
+        if res.get('ok') and isinstance(res.get('channels'), dict):
+            _epg_cache['data'] = res['channels']
+            _epg_cache['at'] = time.time()
+    except Exception:
+        pass
+    finally:
+        _epg_cache['loading'] = False
+
+
+def warm_epg():
+    now = time.time()
+    if _epg_cache['loading'] or (now - _epg_cache['at'] < 300 and _epg_cache['data']):
+        return
+    _epg_cache['loading'] = True
+    threading.Thread(target=_fetch_epg, daemon=True).start()
+
+
+def epg_for(channel_name):
+    """Return {now, next, desc, pct} for a live channel from the cached backend EPG map, or None."""
+    if not channel_name:
+        return None
+    if time.time() - _epg_cache['at'] > 300:
+        warm_epg()
+    data = _epg_cache['data']
+    if not data:
+        return None
+    raw_k = _EPG_NON_ALNUM.sub('', channel_name.lower())
+    if raw_k in data:
+        return data[raw_k]
+    nk = _norm_chan(channel_name)
+    if nk in data:
+        return data[nk]
+    return None

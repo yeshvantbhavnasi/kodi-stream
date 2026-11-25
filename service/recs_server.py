@@ -68,6 +68,7 @@ from urllib.parse import parse_qs, quote, urlparse
 
 import charts
 import cricket
+import epg
 
 PORT = int(os.environ.get('PORT', '8770'))
 BIND = [h.strip() for h in os.environ.get('BIND', '127.0.0.1').split(',') if h.strip()]
@@ -1166,6 +1167,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, cache_get_meta(name))
         if self.path.startswith('/cache/stats'):
             return self._send(200, cache_stats())
+        if self.path.startswith('/api/epg/status'):
+            return self._send(200, epg.status())
+        if self.path.startswith('/api/epg/now'):
+            return self._send(200, {'ok': True, 'channels': epg.now_playing(), 'status': epg.status()})
         if self.path.startswith('/api/sync/state'):
             return self._send(200, sync_get(q.get('profile', 'default')))
         if self.path.startswith('/api/endpoints'):
@@ -1738,6 +1743,7 @@ def api_overall_status():
         'search': api_search_status(),
         'recs': api_recs_status(),
         'listings': api_listings_status(),
+        'epg': epg.status(),
         'stream_core': _stream_core_stats(),
     }
 
@@ -1816,6 +1822,8 @@ def api_endpoints_directory():
             {'method': 'GET', 'path': '/api/status', 'desc': 'Unified status across index, search, recs, listings, and stream-core'},
             {'method': 'GET', 'path': '/api/sync/state?profile=', 'desc': 'Fetch cross-device Continue Watching, My List, and Likes for a profile'},
             {'method': 'POST', 'path': '/api/sync/state', 'desc': 'Merge & sync Continue Watching, My List, and Likes across devices'},
+            {'method': 'GET', 'path': '/api/epg/now', 'desc': 'Live TV Now Playing & Up Next EPG map for all channels'},
+            {'method': 'GET', 'path': '/api/epg/status', 'desc': 'Live TV EPG worker status & channel/programme counts'},
             {'method': 'GET', 'path': '/api/index/status', 'desc': 'Hourly index schedule, last run telemetry, and indexed counts'},
             {'method': 'POST', 'path': '/api/index/refresh', 'desc': 'Trigger an immediate background index & cache hub refresh'},
             {'method': 'GET', 'path': '/api/search?q=&lang=&kind=&limit=', 'desc': 'Search indexed catalogue titles'},
@@ -1855,6 +1863,7 @@ if __name__ == '__main__':
     threading.Thread(target=refresh_top10, daemon=True).start()
     threading.Thread(target=refresh_cricket, daemon=True).start()
     threading.Thread(target=index_scheduler, daemon=True).start()
+    epg.start()
     for server in servers[1:]:
         threading.Thread(target=server.serve_forever, daemon=True).start()
     servers[0].serve_forever()

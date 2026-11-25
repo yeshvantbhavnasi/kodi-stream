@@ -242,6 +242,17 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     )
     if is_show and label != 'See all ›':
         li.setProperty('is_show', '1')
+    if cat.is_live(item):
+        epg = sync.epg_for(item.get('name'))
+        if epg and epg.get('now'):
+            parts = ['LIVE · Now: ' + epg['now']]
+            if epg.get('next'):
+                parts.append('Next: ' + epg['next'])
+            li.setProperty('meta', '  ·  '.join(parts))
+            if epg.get('desc'):
+                li.setProperty('plot', epg['desc'])
+            if epg.get('pct'):
+                li.setProperty('progress', str(epg['pct']))
     if item.get('season'):
         li.setProperty('season', item['season'])  # saved episodes remember their season, for the S/E tag and Up Next
     li.setProperty('saved', '1' if saved else '')
@@ -2704,6 +2715,7 @@ class Home(xbmcgui.WindowXML):
         self.spawn(self.background)
         self.spawn(self.keeper)
         sync.sync_async(force=True)
+        sync.warm_epg()
         # Thin-client mode on low-RAM TV sticks (<=2GB): skip local 111-page Sasta TV crawling;
         # the Mac mini backend hub handles full indexing & TMDb enrichment so TVs stay fast & swap-free.
         if not _low_ram_device():
