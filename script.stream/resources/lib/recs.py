@@ -470,13 +470,6 @@ def build():
     if picks:
         _, by = posted_picks()
         rows.append(('Top Picks for You' + ('  \u00b7  ' + by if by else ai.engine_note()), picks))
-    try:
-        cricket = cricket_rows()
-    except Exception as e:
-        log('cricket row failed: {0}'.format(e))
-        cricket = []
-    if cricket and any(e.get('soon') for e in cricket[0][1]):
-        rows += cricket  # live or starting today only; otherwise cricket sits on the Sports tab
     fresh = discover.new_entries(ROW_SIZE * 2)
     if len(fresh) >= 4:
         # Show fresh arrivals that aren't already leading Top Picks first so the viewer sees new posters right away.
@@ -494,6 +487,13 @@ def build():
     rows += show_row(scored, order)
     taste_rows = genre_rows(scored, t, limit=1) or rated_rows(scored, t)
     rows += taste_rows
+    try:
+        cricket = cricket_rows()
+    except Exception as e:
+        log('cricket row failed: {0}'.format(e))
+        cricket = []
+    if cricket and any(e.get('soon') for e in cricket[0][1]):
+        rows += cricket  # placed below all Movie & Show rows so poster rows stay cleanly grouped
     try:
         rows += video_rows()
     except Exception as e:
