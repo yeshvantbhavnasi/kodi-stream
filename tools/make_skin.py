@@ -208,7 +208,6 @@ def make_images():
     make_mic_icon(os.path.join(MEDIA, 'mic-thin.png'))
     make_backspace_icon(os.path.join(MEDIA, 'backspace-thin.png'))
     make_yt_icon(os.path.join(MEDIA, 'yt-badge.png'))
-    make_modern_icons()
     rounded(os.path.join(MEDIA, 'mask_poster.png'), 200, 300, 12)        # diffuse masks round the artwork's corners
     rounded(os.path.join(MEDIA, 'mask_wide.png'), 356, 200, 12)
     rounded(os.path.join(MEDIA, 'mask_card.png'), 200, 200, 12)

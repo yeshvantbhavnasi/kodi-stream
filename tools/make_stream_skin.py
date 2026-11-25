@@ -1,16 +1,61 @@
 #!/usr/bin/env python3
 """Generate the custom Kodi 21 skin `skin.stream` (Inter typography, Netflix-style Player OSD,
 minimal red busy spinner, and dark Stream palette) using Estuary's base system dialogs."""
+import math
 import os
 import shutil
+import struct
 import subprocess
 import tempfile
+import zlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'skin.stream')
 FONTS_SRC = os.path.join(ROOT, 'tools', 'fonts')
 ESTUARY = '/Applications/Kodi.app/Contents/Resources/Kodi/addons/skin.estuary'
 MAGICK = shutil.which('magick') or '/opt/homebrew/bin/magick'
+
+
+def _write_png(path, width, height, pixel):
+    rows = []
+    for y in range(height):
+        row = bytearray([0])
+        for x in range(width):
+            row.extend(pixel(x, y))
+        rows.append(bytes(row))
+    def chunk(tag, data):
+        return struct.pack('>I', len(data)) + tag + data + struct.pack('>I', zlib.crc32(tag + data) & 0xFFFFFFFF)
+    ihdr = struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)
+    with open(path, 'wb') as f:
+        f.write(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', ihdr) + chunk(b'IDAT', zlib.compress(b''.join(rows), 9)) + chunk(b'IEND', b''))
+
+
+def _dist_seg(px, py, x1, y1, x2, y2):
+    dx, dy = x2 - x1, y2 - y1
+    l2 = dx * dx + dy * dy
+    if l2 == 0:
+        return math.hypot(px - x1, py - y1)
+    t = max(0.0, min(1.0, ((px - x1) * dx + (py - y1) * dy) / l2))
+    return math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
+
+
+def _dist_box_outline(px, py, x1, y1, x2, y2, r=0.0):
+    cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+    hx, hy = (x2 - x1) / 2.0 - r, (y2 - y1) / 2.0 - r
+    qx, qy = abs(px - cx) - hx, abs(py - cy) - hy
+    sd = math.hypot(max(qx, 0.0), max(qy, 0.0)) + min(max(qx, qy), 0.0) - r
+    return abs(sd)
+
+
+def _render_sdf(path, size, dist_fn, half_w=2.8, color=(255, 255, 255)):
+    def pixel(x, y):
+        hits = 0
+        for i in range(4):
+            for j in range(4):
+                if dist_fn(x + (i + 0.5) / 4.0, y + (j + 0.5) / 4.0) <= half_w:
+                    hits += 1
+        return (color[0], color[1], color[2], hits * 255 // 16)
+    _write_png(path, size, size, pixel)
 
 
 def render_svg(svg, out_path, width, height=None):
@@ -32,43 +77,86 @@ def make_osd_assets(media_dir):
     osd = os.path.join(media_dir, 'stream_osd')
     os.makedirs(osd, exist_ok=True)
 
-    # Crisp Lucide-style 24x24 icons rendered at 96x96 (2x DPI for 48px display)
-    icons = {
-        'play.png': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M6.5 4.2c0-1 1.1-1.6 1.9-1.1l12.2 7.8c.8.5.8 1.7 0 2.2L8.4 20.9c-.8.5-1.9-.1-1.9-1.1V4.2z"/></svg>',
-        'pause.png': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFFFFF"><rect x="6" y="4" width="4.2" height="16" rx="1.4"/><rect x="13.8" y="4" width="4.2" height="16" rx="1.4"/></svg>',
-        'stop.png': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#FFFFFF"><rect x="5" y="5" width="14" height="14" rx="2.5"/></svg>',
-        'rw10.png': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
-            <path d="M9.6 10.2v4.6" stroke-width="1.6"/>
-            <rect x="12.2" y="10.2" width="3.2" height="4.6" rx="1.5" stroke-width="1.6"/>
-        </svg>''',
-        'ff10.png': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>
-            <path d="M9.6 10.2v4.6" stroke-width="1.6"/>
-            <rect x="12.2" y="10.2" width="3.2" height="4.6" rx="1.5" stroke-width="1.6"/>
-        </svg>''',
-        'subtitles.png': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/>
-            <path d="M6.5 13h4"/><path d="M13.5 13h4"/><path d="M6.5 16h2.5"/><path d="M12 16h5.5"/>
-        </svg>''',
-        'audio.png': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="11 5 6 9 2.5 9 2.5 15 6 15 11 19 11 5" fill="#FFFFFF" stroke="none"/>
-            <path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.8 5.5a9 9 0 0 1 0 13"/>
-        </svg>''',
-        'settings.png': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>''',
-        'back.png': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>
-        </svg>''',
-        'spinner_ring.png': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-            <circle cx="32" cy="32" r="24" stroke="#E50914" stroke-opacity="0.18" stroke-width="5"/>
-            <path d="M32 8 A24 24 0 1 1 8 32" stroke="#E50914" stroke-width="5" stroke-linecap="round"/>
-        </svg>''',
+    # Filled geometric icons (100% solid SVG fills)
+    filled_icons = {
+        'play.png': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#FFFFFF" d="M6.5 4.2c0-1 1.1-1.6 1.9-1.1l12.2 7.8c.8.5.8 1.7 0 2.2L8.4 20.9c-.8.5-1.9-.1-1.9-1.1V4.2z"/></svg>',
+        'pause.png': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect fill="#FFFFFF" x="6" y="4" width="4.2" height="16" rx="1.4"/><rect fill="#FFFFFF" x="13.8" y="4" width="4.2" height="16" rx="1.4"/></svg>',
+        'stop.png': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect fill="#FFFFFF" x="5" y="5" width="14" height="14" rx="2.5"/></svg>',
     }
-    for name, svg in icons.items():
-        render_svg(svg, os.path.join(osd, name), 128 if name == 'spinner_ring.png' else 96)
+    for name, svg in filled_icons.items():
+        render_svg(svg, os.path.join(osd, name), 96)
+
+    # Crisp 4x supersampled SDF stroke icons (96x96)
+    # Back arrow
+    _render_sdf(os.path.join(osd, 'back.png'), 96,
+                lambda x, y: min(_dist_seg(x, y, 22, 48, 76, 48), _dist_seg(x, y, 48, 22, 22, 48), _dist_seg(x, y, 48, 74, 22, 48)), half_w=3.8)
+
+    # Rewind 10s (counter-clockwise arc + arrow + "10")
+    def d_rw10(x, y):
+        ang = math.degrees(math.atan2(y - 48.0, x - 48.0))
+        arc = abs(math.hypot(x - 48.0, y - 48.0) - 32.0) if not (-155 < ang < -75) else 999.0
+        arr = min(_dist_seg(x, y, 22, 28, 36, 26), _dist_seg(x, y, 22, 28, 24, 14))
+        one = _dist_seg(x, y, 40, 39, 40, 57)
+        zero = _dist_box_outline(x, y, 49, 39, 60, 57, r=5.0)
+        return min(arc, arr, one, zero)
+    _render_sdf(os.path.join(osd, 'rw10.png'), 96, d_rw10, half_w=3.2)
+
+    # Forward 10s (clockwise arc + arrow + "10")
+    def d_ff10(x, y):
+        ang = math.degrees(math.atan2(y - 48.0, x - 48.0))
+        arc = abs(math.hypot(x - 48.0, y - 48.0) - 32.0) if not (-105 < ang < -25) else 999.0
+        arr = min(_dist_seg(x, y, 74, 28, 60, 26), _dist_seg(x, y, 74, 28, 72, 14))
+        one = _dist_seg(x, y, 40, 39, 40, 57)
+        zero = _dist_box_outline(x, y, 49, 39, 60, 57, r=5.0)
+        return min(arc, arr, one, zero)
+    _render_sdf(os.path.join(osd, 'ff10.png'), 96, d_ff10, half_w=3.2)
+
+    # Subtitles (CC box with text lines)
+    def d_subs(x, y):
+        box = _dist_box_outline(x, y, 12, 20, 84, 76, r=9.0)
+        l1 = _dist_seg(x, y, 24, 52, 44, 52)
+        l2 = _dist_seg(x, y, 52, 52, 72, 52)
+        l3 = _dist_seg(x, y, 24, 64, 38, 64)
+        l4 = _dist_seg(x, y, 46, 64, 72, 64)
+        return min(box, l1, l2, l3, l4)
+    _render_sdf(os.path.join(osd, 'subtitles.png'), 96, d_subs, half_w=3.4)
+
+    # Audio (speaker + sound waves)
+    def d_audio(x, y):
+        spk = min(
+            _dist_seg(x, y, 16, 38, 30, 38), _dist_seg(x, y, 16, 58, 30, 58), _dist_seg(x, y, 16, 38, 16, 58),
+            _dist_seg(x, y, 30, 38, 48, 22), _dist_seg(x, y, 30, 58, 48, 74), _dist_seg(x, y, 48, 22, 48, 74),
+        )
+        ang = math.degrees(math.atan2(y - 48.0, x - 48.0))
+        w1 = abs(math.hypot(x - 48.0, y - 48.0) - 18.0) if -48 <= ang <= 48 else 999.0
+        w2 = abs(math.hypot(x - 48.0, y - 48.0) - 30.0) if -55 <= ang <= 55 else 999.0
+        return min(spk, w1, w2)
+    _render_sdf(os.path.join(osd, 'audio.png'), 96, d_audio, half_w=3.4)
+
+    # Settings (crisp 8-tooth gear)
+    def d_gear(x, y):
+        r = math.hypot(x - 48.0, y - 48.0)
+        inner = abs(r - 12.0)
+        outer = abs(r - 24.0)
+        teeth = 999.0
+        for k in range(8):
+            a = math.radians(k * 45.0)
+            teeth = min(teeth, _dist_seg(x, y, 48 + 24 * math.cos(a), 48 + 24 * math.sin(a), 48 + 33 * math.cos(a), 48 + 33 * math.sin(a)))
+        return min(inner, outer, teeth)
+    _render_sdf(os.path.join(osd, 'settings.png'), 96, d_gear, half_w=3.4)
+
+    # Netflix-red 270-degree spinner ring (128x128)
+    def spinner_pixel(x, y):
+        a_sum = 0
+        for i in range(4):
+            for j in range(4):
+                sx, sy = x + (i + 0.5) / 4.0, y + (j + 0.5) / 4.0
+                r = math.hypot(sx - 64.0, sy - 64.0)
+                if abs(r - 48.0) <= 5.5:
+                    ang = (math.degrees(math.atan2(sy - 64.0, sx - 64.0)) + 360.0) % 360.0
+                    a_sum += 255 if ang <= 270.0 else 48
+        return (0xE5, 0x09, 0x14, a_sum // 16)
+    _write_png(os.path.join(osd, 'spinner_ring.png'), 128, 128, spinner_pixel)
 
     # Circles & pills for OSD transport controls
     render_svg('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#FFFFFF"/></svg>',
@@ -108,7 +196,7 @@ def make_osd_assets(media_dir):
 
 
 ADDON_XML = '''<?xml version="1.0" encoding="UTF-8"?>
-<addon id="skin.stream" version="1.0.0" name="Stream" provider-name="yeshvantbhavnasi">
+<addon id="skin.stream" version="1.0.1" name="Stream" provider-name="yeshvantbhavnasi">
 	<requires>
 		<import addon="xbmc.gui" version="5.17.0"/>
 	</requires>
