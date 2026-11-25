@@ -2925,20 +2925,27 @@ class Home(xbmcgui.WindowXML):
     def show_filters(self, key):
         """Fill the browse/filter strip on Movies, Shows, and Search; hide it elsewhere. Called with the UI lock held."""
         strip = self.getControl(FILTER_ID)
-        active = ('__find__' if self.search_query else '__year__' if self.year_filter
+        active = (cat.state.get('live_lang') or (self.live_langs[0]['name'] if getattr(self, 'live_langs', None) else '')) if key == 'live' else (
+                  '__find__' if self.search_query else '__year__' if self.year_filter
                   else '__az__' if self.letter_filter else (self.filter or ''))
         self.setProperty('filter', active)
-        if key not in ('movies', 'shows', 'search', 'youtube') or db.KIDS:
+        if key not in ('movies', 'shows', 'search', 'youtube', 'live') or db.KIDS:
             strip.reset()
             self.strip_for = None
             self.setProperty('filters', '')
             return
-        stamp = (key, self.year_filter, self.letter_filter, self.search_query)
+        stamp = (key, self.year_filter, self.letter_filter, self.search_query, active if key == 'live' else '')
         if self.strip_for == stamp:
             return  # same tab reloading after a pick: keep the chips, and the highlight on them
         pos = strip.getSelectedPosition() if self.strip_for and self.strip_for[0] == key else 0
         strip.reset()
-        if key == 'youtube':
+        if key == 'live':
+            langs = getattr(self, 'live_langs', None) or []
+            chips = [tile(cat.title_case(l['name']), 'filter', genre=l['name']) for l in langs]
+            if not chips:
+                self.setProperty('filters', '')
+                return
+        elif key == 'youtube':
             chips = [
                 tile('All', 'filter', genre=''),
                 tile('Subs', 'filter', genre='yt_subs'),
@@ -3356,10 +3363,12 @@ class Home(xbmcgui.WindowXML):
                 if any(db.lang_match(l['name'], chosen) for l in kept):
                     langs = kept
             langs = cat.by_affinity(langs)  # the viewer's first language leads here too
+            self.live_langs = langs
             saved = cat.state.get('live_lang')
             current = next((l for l in langs if l['name'] == saved), langs[0] if langs else None)
-            tiles = [tile(cat.title_case(lang['name']), 'lang', lang=lang['name']) for lang in langs]
-            out = fav_rows + [('items', 'Language', tiles)]
+            if current and not saved:
+                cat.state['live_lang'] = current['name']
+            out = list(fav_rows)
             if current:
                 folders = [f for f in cat.get_dir(current['url']) if f['t'] == 'folder']
                 out += [('dir', '{0} · {1}'.format(cat.title_case(current['name']), cat.title_case(f['name'])), f['url'], f['name'], None)
@@ -3773,6 +3782,12 @@ class Home(xbmcgui.WindowXML):
             li = self.getControl(FILTER_ID).getSelectedItem()
             if li is not None:
                 choice = li.getProperty('genre') or ''
+                if self.tab == 'live':
+                    if choice and choice != cat.state.get('live_lang'):
+                        cat.state['live_lang'] = choice
+                        cat.save_state()
+                        self.load_tab('live', focus=True)
+                    return
                 kinds = discover.MOVIE_KINDS if self.tab == 'movies' else discover.SHOW_KINDS
                 section_name = 'Movies' if self.tab == 'movies' else 'Shows'
                 if choice == '__home__':
