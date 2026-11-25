@@ -235,6 +235,12 @@ def list_item(item, parent, group=None, meta=None, saved=False, suggestion=False
     li.setProperty('parent', parent or '')
     li.setProperty('group', group or '')
     li.setProperty('series', series or '')
+    sec = cat.section_of(parent)[0] if parent else ''
+    is_show = bool(series) or (item.get('t') == 'folder' and sec in ('Web Series', 'TV Shows', 'English TV')) or (
+        item.get('kind') in ('Web Series', 'TV Shows', 'English TV')
+    )
+    if is_show and label != 'See all ›':
+        li.setProperty('is_show', '1')
     if item.get('season'):
         li.setProperty('season', item['season'])  # saved episodes remember their season, for the S/E tag and Up Next
     li.setProperty('saved', '1' if saved else '')
