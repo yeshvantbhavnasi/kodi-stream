@@ -3,6 +3,7 @@
     <category label="General">
         <setting id="autostart" type="bool" label="Open Stream when Kodi starts" default="true"/>
         <setting id="touch" type="enum" label="Touch screen layout (Auto: on for iPhone and iPad)" values="Auto|On|Off" default="0"/>
+        <setting id="auto_trailer" type="enum" label="Auto-play muted trailer preview on title pages (Auto: Mac/desktop)" values="Auto|On|Off" default="0"/>
     </category>
     <category label="AI">
         <setting id="ai_enabled" type="bool" label="Use AI for recommendations and search" default="true"/>

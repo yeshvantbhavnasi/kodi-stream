@@ -248,7 +248,7 @@ def make_osd_assets(media_dir):
 
 
 ADDON_XML = '''<?xml version="1.0" encoding="UTF-8"?>
-<addon id="skin.stream" version="1.1.0" name="Stream" provider-name="yeshvantbhavnasi">
+<addon id="skin.stream" version="1.1.1" name="Stream" provider-name="yeshvantbhavnasi">
 	<requires>
 		<import addon="xbmc.gui" version="5.17.0"/>
 	</requires>
@@ -1160,13 +1160,22 @@ def build_skin():
     render_svg('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><circle cx="64" cy="64" r="56" fill="#E50914"/></svg>',
                os.path.join(btn_dir, 'button-fo.png'), 128)
     # Point Kodi's out-of-the-box VideoOSD button textures to our crisp Apple SF Symbols (bypassing Textures.xbt)
+    # and wire the VideoOSD Channels button to Stream's Quick Channel Switcher overlay
     xml_dir = os.path.join(OUT, 'xml')
     for fn in os.listdir(xml_dir):
         if fn.endswith('.xml'):
             p = os.path.join(xml_dir, fn)
             txt = open(p, 'r', encoding='utf-8').read()
+            changed = False
             if 'osd/fullscreen/buttons/' in txt:
-                open(p, 'w', encoding='utf-8').write(txt.replace('osd/fullscreen/buttons/', 'stream_osd/buttons/'))
+                txt = txt.replace('osd/fullscreen/buttons/', 'stream_osd/buttons/')
+                changed = True
+            if fn == 'VideoOSD.xml' and 'ActivateWindow(PVROSDChannels)' in txt:
+                txt = txt.replace('ActivateWindow(PVROSDChannels)', 'RunScript(script.stream,guide)')
+                txt = txt.replace('<visible>VideoPlayer.Content(livetv)</visible>', '<visible>Player.HasVideo</visible>')
+                changed = True
+            if changed:
+                open(p, 'w', encoding='utf-8').write(txt)
 
     # Write Stream native skin overrides (zero Estuary Home / zero Kodi branding;
     # keep Kodi's out-of-the-box VideoOSD.xml & DialogSeekBar.xml themed with Inter + Stream red palette

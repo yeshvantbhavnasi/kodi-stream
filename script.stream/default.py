@@ -1430,8 +1430,62 @@ class TitlePage(xbmcgui.WindowXML):
 
     def finish(self):
         self.closed = True
+        self._stop_preview()
         for thread in self.workers:
             thread.join(3)
+
+    def _auto_trailer_enabled(self):
+        choice = ADDON.getSetting('auto_trailer') or '0'
+        if choice == '1':
+            return True
+        if choice == '2':
+            return False
+        return not _low_ram_device()
+
+    def _stop_preview(self):
+        if getattr(self, '_previewing', False):
+            self._previewing = False
+            self.setProperty('preview_playing', '')
+            try:
+                if xbmc.Player().isPlaying():
+                    xbmc.Player().stop()
+            except Exception:
+                pass
+            if getattr(self, '_preview_muted', False):
+                self._preview_muted = False
+                try:
+                    if xbmc.getCondVisibility('Player.Muted'):
+                        xbmc.executebuiltin('Mute')
+                except Exception:
+                    pass
+
+    def _maybe_start_preview(self):
+        if not self._auto_trailer_enabled() or not yt.installed() or xbmc.Player().isPlaying():
+            return
+        monitor = xbmc.Monitor()
+        for _ in range(25):  # 2.5s settle before starting muted trailer preview
+            if self.closed or xbmc.Player().isPlaying() or monitor.waitForAbort(0.1):
+                return
+        vid = (self.data or {}).get('trailer')
+        if not vid or self.closed or xbmc.Player().isPlaying():
+            return
+        try:
+            was_muted = xbmc.getCondVisibility('Player.Muted')
+            if not was_muted:
+                xbmc.executebuiltin('Mute')
+                self._preview_muted = True
+            self._previewing = True
+            xbmc.Player().play(yt.play_url(vid), windowed=True)
+            for _ in range(40):
+                if self.closed or monitor.waitForAbort(0.15):
+                    self._stop_preview()
+                    return
+                if xbmc.Player().isPlayingVideo():
+                    self.setProperty('preview_playing', '1')
+                    return
+            self._stop_preview()
+        except Exception:
+            self._stop_preview()
 
     def close(self):
         if not self.closed:
@@ -1449,6 +1503,7 @@ class TitlePage(xbmcgui.WindowXML):
         self.setProperty('status', 'Loading…' if self.show else '')
         self.spawn(self.load)
         self.spawn(watch_visibility, self)
+        self.spawn(self._maybe_start_preview)
         # Pre-warm 2 MB VOD buffer in Go stream-core while viewer reads the title page for sub-second Play start
         if not self.show:
             def _prewarm():
@@ -1861,6 +1916,7 @@ class TitlePage(xbmcgui.WindowXML):
         self.play(li)
 
     def play(self, li):
+        self._stop_preview()
         start(li)
         if xbmc.Player().isPlaying():
             self.spawn(self.after_playback, li)
@@ -3306,6 +3362,16 @@ class Home(xbmcgui.WindowXML):
                         li.setProperty('logo', '1')
                     tiles.append(li)
                 rows.append(('items', title, tiles))
+            rows.append(('items', 'Quick Picks', [
+                tile('Quick 30-min Watch', 'mood', action='mood_quick', meta='Short shows & comedies',
+                     plot='Jump straight into quick comedies and bite-sized shows you can finish in one sitting.'),
+                tile('Family Movie Night', 'mood', action='mood_family', meta='Family & Comedy · Telugu & Hindi',
+                     plot='High-rated family and comedy movies everyone in the room can enjoy together.'),
+                tile('Kids Bedtime', 'mood', action='mood_kids', meta='Ms Rachel & Songs',
+                     plot='Ms Rachel and gentle toddler learning songs, ad-free on YouTube.'),
+                tile('Live Cricket & Sports', 'mood', action='mood_sports', meta='Live matches & channels',
+                     plot='Jump directly to live cricket matches, fixtures, and sports channels.'),
+            ]))
             saved = db.mylist()
             if saved:
                 rows.append(('items', 'My List', [entry_item(e) for e in saved]))
@@ -3614,6 +3680,25 @@ class Home(xbmcgui.WindowXML):
             busy.close()
         return made
 
+    def run_mood(self, action):
+        if action == 'mood_sports':
+            self.load_tab('sports')
+            return
+        if action == 'mood_kids':
+            if yt.ensure_installed('watch Kids Bedtime videos'):
+                if open_grid('Kids Bedtime · Ms Rachel', url=yt.uploads_url(yt.PINNED[0][1]), group='YouTube'):
+                    self.go_home()
+            return
+        if action == 'mood_family':
+            entries = discover.genre_entries('Family', discover.MOVIE_KINDS, 80) + discover.genre_entries('Comedy', discover.MOVIE_KINDS, 80)
+            if entries and open_grid('Family Movie Night', entries=entries[:80], group='Family'):
+                self.go_home()
+            return
+        if action == 'mood_quick':
+            entries = discover.genre_entries('Comedy', discover.SHOW_KINDS, 60) + discover.genre_entries('Comedy', discover.MOVIE_KINDS, 40)
+            if entries and open_grid('Quick 30-min Watch', entries=entries[:60], group='Comedy'):
+                self.go_home()
+
     def run_setting(self, action):
         if action in ('open_mylist', 'open_history'):
             self.load_tab(action[5:])  # shown like a tab; Back returns to Home
@@ -3890,6 +3975,8 @@ class Home(xbmcgui.WindowXML):
                     group, found = self.more_entries[more_key]
                     if open_grid(more_key, entries=found, group=group):
                         self.go_home()
+            elif kind == 'mood':
+                self.run_mood(li.getProperty('action'))
             elif kind == 'setting':
                 self.run_setting(li.getProperty('action'))
             elif is_title(li):
@@ -4065,6 +4152,75 @@ def run():
     audit.session_end()
 
 
+class LiveGuideDialog(xbmcgui.WindowXMLDialog):
+    LIST_ID = 610
+
+    def onInit(self):
+        sync.warm_epg()
+        ctrl = self.getControl(self.LIST_ID)
+        ctrl.reset()
+        tiles, seen = [], set()
+        # 1. Most-watched live channels first
+        for e in db.recent(60):
+            it = e.get('item') or {}
+            if not cat.is_live(it):
+                continue
+            k = (it.get('name') or '').strip().lower()
+            if not k or k in seen:
+                continue
+            seen.add(k)
+            li = entry_item(e, meta=e.get('group') or 'Live TV')
+            epg = sync.epg_for(it.get('name'))
+            if epg and epg.get('now'):
+                li.setProperty('now', epg['now'])
+            tiles.append(li)
+            if len(tiles) >= 24:
+                break
+        # 2. Fill out with Telugu live channels if fewer than 12 favorites
+        if len(tiles) < 12:
+            try:
+                langs = cat.by_affinity([f for f in cat.get_dir(cat.URLS['live']) if f['t'] == 'folder' and f['name'].lower() != 'sports'])
+                if langs:
+                    folders = [f for f in cat.get_dir(langs[0]['url']) if f['t'] == 'folder']
+                    for folder in folders[:2]:
+                        for it in cat.showable(cat.get_dir(folder['url']))[:12]:
+                            if it.get('t') != 'play':
+                                continue
+                            k = (it.get('name') or '').strip().lower()
+                            if not k or k in seen:
+                                continue
+                            seen.add(k)
+                            li = list_item(it, folder['url'], langs[0]['name'])
+                            epg = sync.epg_for(it.get('name'))
+                            if epg and epg.get('now'):
+                                li.setProperty('now', epg['now'])
+                            tiles.append(li)
+            except Exception:
+                pass
+        if tiles:
+            ctrl.addItems(tiles)
+            self.setFocusId(self.LIST_ID)
+
+    def onClick(self, control_id):
+        if control_id == self.LIST_ID:
+            li = self.getControl(self.LIST_ID).getSelectedItem()
+            if li:
+                self.close()
+                start(li)
+
+    def onAction(self, action):
+        if action.getId() in ACTION_BACK:
+            self.close()
+
+
+def open_live_guide():
+    db.use_profile(db.last_profile() or {'name': 'Default', 'slug': 'default'})
+    cat.load_state()
+    dlg = LiveGuideDialog('script-stream-guide.xml', ADDON_PATH, 'Default', '1080i')
+    dlg.doModal()
+    del dlg
+
+
 if __name__ == '__main__':
     home = xbmcgui.Window(10000)
     opened = home.getProperty('script.stream.running')
@@ -4075,6 +4231,8 @@ if __name__ == '__main__':
         sasta = False
     if sys.argv[1:2] == ['youtube']:
         yt.open_settings()  # RunScript(script.stream,youtube): the YouTube sign-in and API key helper on its own
+    elif sys.argv[1:2] == ['guide']:
+        open_live_guide()   # RunScript(script.stream,guide): in-player Quick Channel Switcher overlay
     elif not sasta:
         xbmcgui.Dialog().ok('Stream', 'Install the Sasta TV addon and sign in to it first.')
     elif opened and time.time() - float(opened) < 12 * 3600:

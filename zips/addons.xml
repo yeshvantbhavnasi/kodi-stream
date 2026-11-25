@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="script.stream" name="Stream" version="2.2.1" provider-name="yeshvantbhavnasi">
+<addon id="script.stream" name="Stream" version="2.3.0" provider-name="yeshvantbhavnasi">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
         <import addon="script.module.requests"/>
-        <import addon="skin.stream" version="1.1.0"/>
+        <import addon="skin.stream" version="1.1.1"/>
     </requires>
     <extension point="xbmc.python.pluginsource" library="plugin.py">
         <provides>video</provides>
@@ -48,7 +48,7 @@
         </assets>
     </extension>
 </addon>
-<addon id="skin.stream" version="1.1.0" name="Stream" provider-name="yeshvantbhavnasi">
+<addon id="skin.stream" version="1.1.1" name="Stream" provider-name="yeshvantbhavnasi">
 	<requires>
 		<import addon="xbmc.gui" version="5.17.0"/>
 	</requires>

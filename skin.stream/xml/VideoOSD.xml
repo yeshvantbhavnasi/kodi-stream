@@ -128,7 +128,7 @@
 						<selected>!PVR.IsRecordingPlayingChannel</selected>
 						<onclick>PVR.ToggleRecordPlayingChannel</onclick>
 						<visible>PVR.CanRecordPlayingChannel</visible>
-						<visible>VideoPlayer.Content(livetv)</visible>
+						<visible>Player.HasVideo</visible>
 					</control>
 				</control>
 				<control type="grouplist" id="202">
@@ -158,8 +158,8 @@
 							<param name="texture" value="stream_osd/buttons/channels.png"/>
 						</include>
 						<onclick>Dialog.Close(VideoOSD)</onclick>
-						<onclick>ActivateWindow(PVROSDChannels)</onclick>
-						<visible>VideoPlayer.Content(livetv)</visible>
+						<onclick>RunScript(script.stream,guide)</onclick>
+						<visible>Player.HasVideo</visible>
 					</control>
 					<control type="radiobutton" id="70041">
 						<include content="OSDButton">
