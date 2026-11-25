@@ -7,7 +7,7 @@ import shutil
 import zipfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-ADDONS = ['script.stream', 'repository.stream']
+ADDONS = ['script.stream', 'repository.stream', 'skin.stream']
 SKIP = ('__pycache__', '.DS_Store')
 
 

@@ -267,6 +267,13 @@ def _fetch(url):
             lib = _library()
             if lib is not None:
                 lib.put_page(url, items)
+            def _share_page(u=url, it=items):
+                try:
+                    import ai
+                    ai.cache_put_page(u, it)
+                except Exception:
+                    pass
+            threading.Thread(target=_share_page, daemon=True).start()
         index(url, items)
     return items
 
@@ -388,6 +395,20 @@ def get_dir(url, fresh=False):
             source = 'index'
             with _lock:
                 _cache[url] = hit
+        else:
+            try:
+                import ai
+                remote = ai.cache_get_page(url)
+            except Exception:
+                remote = None
+            if remote is not None:
+                items, fetched_at = remote
+                hit = {'t': fetched_at, 'items': items}
+                source = 'backend'
+                with _lock:
+                    _cache[url] = hit
+                if lib is not None:
+                    lib.put_page(url, items)
     age = time.time() - hit['t'] if hit else None
     if hit is None or fresh or age > stale_limit:
         return _fetch(url)

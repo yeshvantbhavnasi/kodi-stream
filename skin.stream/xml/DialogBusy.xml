@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<window>
+	<animation effect="fade" start="0" end="100" time="220">WindowOpen</animation>
+	<animation effect="fade" start="100" end="0" time="160">WindowClose</animation>
+	<controls>
+		<control type="group">
+			<visible>!Window.IsActive(startup) + !Player.Caching</visible>
+			<control type="image">
+				<left>0</left><top>0</top><width>1920</width><height>1080</height>
+				<texture>colors/black.png</texture>
+				<colordiffuse>55000000</colordiffuse>
+				<visible>!Window.IsVisible(fullscreenvideo)</visible>
+			</control>
+			<control type="image">
+				<centerleft>50%</centerleft>
+				<centertop>50%</centertop>
+				<width>76</width>
+				<height>76</height>
+				<aspectratio>keep</aspectratio>
+				<texture>stream_osd/spinner_ring.png</texture>
+				<animation effect="rotate" start="0" end="-360" center="auto" time="900" loop="true" reversible="false" condition="true">Conditional</animation>
+			</control>
+		</control>
+	</controls>
+</window>

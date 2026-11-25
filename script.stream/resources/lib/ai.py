@@ -191,6 +191,70 @@ def _describe(entry):
 LANGUAGES = ('telugu', 'tamil', 'hindi', 'malayalam', 'kannada', 'marathi', 'gujarati', 'punjabi', 'bengali', 'english')
 
 
+def _service_headers():
+    return {'X-Stream-Key': _setting('recs_key'), 'User-Agent': 'Stream-Kodi/1.9'}
+
+
+def cache_get_page(url):
+    """Fetch a pre-indexed Sasta TV page from the home backend cache hub. Returns (items, fetched_at) or None."""
+    base = service_url()
+    if not base:
+        return None
+    import requests
+    try:
+        r = requests.get(base + '/cache/page', params={'url': url}, headers=_service_headers(), timeout=2.5)
+        if r.status_code == 200:
+            body = r.json()
+            if body.get('hit') and isinstance(body.get('items'), list):
+                return body['items'], float(body.get('at') or time.time())
+    except Exception:
+        pass
+    return None
+
+
+def cache_put_page(url, items):
+    """Share a freshly fetched VOD page to the home backend cache hub so Fire TV / iPhone get instant hits."""
+    base = service_url()
+    if not base or not items:
+        return
+    import requests
+    try:
+        requests.post(base + '/cache/page', json={'url': url, 'items': items, 'at': time.time()},
+                      headers=_service_headers(), timeout=4)
+    except Exception:
+        pass
+
+
+def cache_get_meta(name):
+    """Fetch cached TMDb metadata from the home backend cache hub. Returns dict or None."""
+    base = service_url()
+    if not base or not name:
+        return None
+    import requests
+    try:
+        r = requests.get(base + '/cache/meta', params={'name': name}, headers=_service_headers(), timeout=2.0)
+        if r.status_code == 200:
+            body = r.json()
+            if body.get('hit') and isinstance(body.get('data'), dict) and body['data']:
+                return body['data']
+    except Exception:
+        pass
+    return None
+
+
+def cache_put_meta(name, data):
+    """Share resolved TMDb metadata to the home backend cache hub."""
+    base = service_url()
+    if not base or not name or not data:
+        return
+    import requests
+    try:
+        requests.post(base + '/cache/meta', json={'name': name, 'data': data, 'at': time.time()},
+                      headers=_service_headers(), timeout=4)
+    except Exception:
+        pass
+
+
 def ask_service(kind, system, prompt_intro, candidates, count):
     """Picks from the recommendation service: [{'name', 'reason'}]. A recommendation request gets the last batch for
     this profile straight away while the service rebuilds in the background; a search waits for its answer."""

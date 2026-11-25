@@ -165,6 +165,42 @@ def make_yt_icon(path):
     png(path, w, h, pixel)
 
 
+def _render_svg_icon(svg, out_path, width, height=None):
+    """Render a crisp anti-aliased SVG vector icon to PNG32 via ImageMagick."""
+    import shutil, subprocess, tempfile
+    magick = shutil.which('magick') or '/opt/homebrew/bin/magick'
+    if not os.path.exists(magick):
+        return False
+    height = height or width
+    with tempfile.NamedTemporaryFile('w', suffix='.svg', delete=False, encoding='utf-8') as f:
+        f.write(svg)
+        tmp = f.name
+    try:
+        subprocess.run(
+            [magick, '-background', 'none', '-density', '384', tmp,
+             '-resize', '{0}x{1}!'.format(width, height), 'PNG32:' + out_path],
+            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        return True
+    finally:
+        os.unlink(tmp)
+
+
+def make_modern_icons():
+    """Generate crisp 2x DPI Lucide-style vector PNG icons for top bar, search, and YouTube TV."""
+    svgs = {
+        'search-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-3.8-3.8"/></svg>'),
+        'person-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>'),
+        'gear-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'),
+        'close-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'),
+        'mic-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 10.5a7 7 0 0 0 14 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>'),
+        'backspace-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="m17 9-6 6"/><path d="m11 9 6 6"/></svg>'),
+        'yt-badge.png': (120, 84, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 84"><rect x="2" y="2" width="116" height="80" rx="22" fill="#FF0000"/><path d="M48 25v34l30-17z" fill="#FFFFFF"/></svg>'),
+    }
+    for name, (w, h, svg) in svgs.items():
+        _render_svg_icon(svg, os.path.join(MEDIA, name), w, h)
+
+
 def make_images():
     rounded(os.path.join(MEDIA, 'pill.png'), 48, 48, 24)                 # 9-slice with border="23"
     rounded(os.path.join(MEDIA, 'round.png'), 32, 32, 10)                # 9-slice with border="14": frames and badges
@@ -172,6 +208,7 @@ def make_images():
     make_mic_icon(os.path.join(MEDIA, 'mic-thin.png'))
     make_backspace_icon(os.path.join(MEDIA, 'backspace-thin.png'))
     make_yt_icon(os.path.join(MEDIA, 'yt-badge.png'))
+    make_modern_icons()
     rounded(os.path.join(MEDIA, 'mask_poster.png'), 200, 300, 12)        # diffuse masks round the artwork's corners
     rounded(os.path.join(MEDIA, 'mask_wide.png'), 356, 200, 12)
     rounded(os.path.join(MEDIA, 'mask_card.png'), 200, 200, 12)

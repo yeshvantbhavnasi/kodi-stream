@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS telemetry (id INTEGER PRIMARY KEY AUTOINCREMENT, at R
     platform TEXT, event TEXT, data TEXT);
 CREATE INDEX IF NOT EXISTS telemetry_at ON telemetry (at);
 CREATE INDEX IF NOT EXISTS telemetry_profile ON telemetry (profile, at);
+CREATE TABLE IF NOT EXISTS page_cache (url TEXT PRIMARY KEY, at REAL, items TEXT);
+CREATE TABLE IF NOT EXISTS meta_cache (key TEXT PRIMARY KEY, at REAL, data TEXT);
 '''
 JSON_COLUMNS = ('candidates', 'picks')
 
@@ -1151,6 +1153,18 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError:
                 hours = 24
             return self._send(200, hiccup_summary(hours))
+        if self.path.startswith('/cache/page'):
+            url = q.get('url', '').strip()
+            if not url:
+                return self._send(400, {'error': 'url needed'})
+            return self._send(200, cache_get_page(url))
+        if self.path.startswith('/cache/meta'):
+            name = q.get('name', '').strip()
+            if not name:
+                return self._send(400, {'error': 'name needed'})
+            return self._send(200, cache_get_meta(name))
+        if self.path.startswith('/cache/stats'):
+            return self._send(200, cache_stats())
         if self.path.startswith('/history'):
             with connect() as conn:
                 rows = conn.execute('SELECT key, at, model, took, picks FROM history ORDER BY at DESC LIMIT 500').fetchall()
@@ -1260,6 +1274,34 @@ class Handler(BaseHTTPRequestHandler):
             kept = save_catalogue(profile, body.get('titles') or [])
             log('catalogue from {0}: {1} titles'.format(profile, kept))
             return self._send(200, {'ok': True, 'kept': kept})
+        if self.path.startswith('/cache/page'):
+            if not self.allowed():
+                return
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 2000000)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            url = str(body.get('url') or '').strip()
+            items = body.get('items')
+            if not url or not isinstance(items, list):
+                return self._send(400, {'error': 'url and items needed'})
+            cache_put_page(url, items, body.get('at'))
+            return self._send(200, {'ok': True, 'count': len(items)})
+        if self.path.startswith('/cache/meta'):
+            if not self.allowed():
+                return
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 200000)) or b'{}')
+            except ValueError:
+                return self._send(400, {'error': 'bad json'})
+            name = str(body.get('name') or '').strip()
+            data = body.get('data')
+            if not name or not isinstance(data, dict):
+                return self._send(400, {'error': 'name and data needed'})
+            cache_put_meta(name, data, body.get('at'))
+            return self._send(200, {'ok': True})
         if self.path.startswith('/telemetry'):
             if not self.allowed():
                 return
@@ -1330,6 +1372,93 @@ class Handler(BaseHTTPRequestHandler):
         pass  # the build log above is enough
 
 
+def cache_get_page(url):
+    with connect() as conn:
+        row = conn.execute('SELECT at, items FROM page_cache WHERE url=?', (url,)).fetchone()
+    if not row:
+        return {'hit': False}
+    try:
+        return {'hit': True, 'at': row['at'], 'items': json.loads(row['items'])}
+    except Exception:
+        return {'hit': False}
+
+
+def cache_put_page(url, items, fetched_at=None):
+    now = float(fetched_at) if fetched_at else time.time()
+    blob = json.dumps(items, separators=(',', ':'))
+    with connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO page_cache (url, at, items) VALUES (?, ?, ?)', (url, now, blob))
+
+
+def cache_get_meta(name):
+    key = name.strip().lower()
+    with connect() as conn:
+        row = conn.execute('SELECT at, data FROM meta_cache WHERE key=?', (key,)).fetchone()
+    if not row:
+        return {'hit': False}
+    try:
+        return {'hit': True, 'at': row['at'], 'data': json.loads(row['data'])}
+    except Exception:
+        return {'hit': False}
+
+
+def cache_put_meta(name, data, fetched_at=None):
+    key = name.strip().lower()
+    if not key:
+        return
+    now = float(fetched_at) if fetched_at else time.time()
+    blob = json.dumps(data, separators=(',', ':'))
+    with connect() as conn:
+        conn.execute('INSERT OR REPLACE INTO meta_cache (key, at, data) VALUES (?, ?, ?)', (key, now, blob))
+
+
+def cache_stats():
+    with connect() as conn:
+        pages = conn.execute('SELECT COUNT(*) FROM page_cache').fetchone()[0]
+        meta_n = conn.execute('SELECT COUNT(*) FROM meta_cache').fetchone()[0]
+    return {'pages': pages, 'meta': meta_n}
+
+
+def seed_cache_from_kodi():
+    """Periodically mirror local Mac Kodi's library.db pages & stream.db TMDb metadata into the shared cache hub."""
+    base = os.path.expanduser('~/Library/Application Support/Kodi/userdata/addon_data/script.stream')
+    while True:
+        pages_added = meta_added = 0
+        try:
+            lib_db = os.path.join(base, 'library.db')
+            if os.path.exists(lib_db):
+                src = sqlite3.connect('file:' + lib_db + '?mode=ro', uri=True, timeout=5)
+                rows = src.execute('SELECT url, items, fetched_at FROM pages WHERE items IS NOT NULL').fetchall()
+                src.close()
+                if rows:
+                    with connect() as conn:
+                        for url, items, at in rows:
+                            cur = conn.execute('SELECT at FROM page_cache WHERE url=?', (url,)).fetchone()
+                            if cur is None or (at or 0) > (cur['at'] or 0):
+                                conn.execute('INSERT OR REPLACE INTO page_cache (url, at, items) VALUES (?, ?, ?)', (url, at or time.time(), items))
+                                pages_added += 1
+            str_db = os.path.join(base, 'stream.db')
+            if os.path.exists(str_db):
+                src = sqlite3.connect('file:' + str_db + '?mode=ro', uri=True, timeout=5)
+                rows = src.execute('SELECT name, data, fetched_at FROM metadata WHERE data IS NOT NULL AND data != "{}"').fetchall()
+                src.close()
+                if rows:
+                    with connect() as conn:
+                        for name, data, at in rows:
+                            key = (name or '').strip().lower()
+                            if not key:
+                                continue
+                            cur = conn.execute('SELECT at FROM meta_cache WHERE key=?', (key,)).fetchone()
+                            if cur is None or (at or 0) > (cur['at'] or 0):
+                                conn.execute('INSERT OR REPLACE INTO meta_cache (key, at, data) VALUES (?, ?, ?)', (key, at or time.time(), data))
+                                meta_added += 1
+            if pages_added or meta_added:
+                log('cache hub seeded from local Kodi: +{0} pages, +{1} metadata'.format(pages_added, meta_added))
+        except Exception as e:
+            log('cache hub seed note: {0}'.format(e))
+        time.sleep(1800)
+
+
 if __name__ == '__main__':
     load()
     servers, bound = [], []
@@ -1344,6 +1473,7 @@ if __name__ == '__main__':
     log('serving on {0} port {1}, model {2} at {3}, {4} batches remembered'.format(', '.join(bound), PORT, MODEL, OLLAMA, len(BATCHES)))
     threading.Thread(target=refresh_top10, daemon=True).start()
     threading.Thread(target=refresh_cricket, daemon=True).start()
+    threading.Thread(target=seed_cache_from_kodi, daemon=True).start()
     for server in servers[1:]:
         threading.Thread(target=server.serve_forever, daemon=True).start()
     servers[0].serve_forever()

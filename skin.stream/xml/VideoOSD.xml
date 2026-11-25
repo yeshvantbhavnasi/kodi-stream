@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<window>
+	<onload condition="!Player.PauseEnabled">SetFocus(603)</onload>
+	<defaultcontrol always="true">602</defaultcontrol>
+	<animation effect="fade" start="0" end="100" time="160">WindowOpen</animation>
+	<animation effect="fade" start="100" end="0" time="140">WindowClose</animation>
+	<controls>
+		<!-- Bottom Transport & Utility Bar -->
+		<control type="group" id="200">
+			<left>72</left><top>962</top><width>1776</width><height>84</height>
+			<visible>![Window.IsVisible(SliderDialog) | Window.IsVisible(osdaudiosettings) | Window.IsVisible(osdvideosettings) | Window.IsVisible(osdsubtitlesettings)]</visible>
+
+			<!-- Left: Back button -->
+			<control type="button" id="600">
+				<left>0</left><top>10</top><width>64</width><height>64</height>
+				<texturefocus>stream_osd/circle_white.png</texturefocus>
+				<texturenofocus>stream_osd/circle_dark.png</texturenofocus>
+				<onclick>Dialog.Close(videoosd)</onclick>
+				<onright>601</onright>
+			</control>
+			<control type="image">
+				<left>18</left><top>28</top><width>28</width><height>28</height>
+				<aspectratio>keep</aspectratio>
+				<texture colordiffuse="FF141414">stream_osd/back.png</texture>
+				<visible>Control.HasFocus(600)</visible>
+			</control>
+			<control type="image">
+				<left>18</left><top>28</top><width>28</width><height>28</height>
+				<aspectratio>keep</aspectratio>
+				<texture>stream_osd/back.png</texture>
+				<visible>!Control.HasFocus(600)</visible>
+			</control>
+
+			<!-- Center Transport: Rewind 10s, Play/Pause, Forward 10s -->
+			<control type="group">
+				<left>756</left><top>0</top><width>264</width><height>84</height>
+
+				<!-- Rewind 10s -->
+				<control type="button" id="601">
+					<left>0</left><top>10</top><width>64</width><height>64</height>
+					<texturefocus>stream_osd/circle_white.png</texturefocus>
+					<texturenofocus>stream_osd/circle_dark.png</texturenofocus>
+					<onclick>Seek(-10)</onclick>
+					<onleft>600</onleft>
+					<onright>602</onright>
+				</control>
+				<control type="image">
+					<left>16</left><top>26</top><width>32</width><height>32</height>
+					<aspectratio>keep</aspectratio>
+					<texture colordiffuse="FF141414">stream_osd/rw10.png</texture>
+					<visible>Control.HasFocus(601)</visible>
+				</control>
+				<control type="image">
+					<left>16</left><top>26</top><width>32</width><height>32</height>
+					<aspectratio>keep</aspectratio>
+					<texture>stream_osd/rw10.png</texture>
+					<visible>!Control.HasFocus(601)</visible>
+				</control>
+
+				<!-- Play / Pause (prominent center button) -->
+				<control type="button" id="602">
+					<left>94</left><top>4</top><width>76</width><height>76</height>
+					<texturefocus>stream_osd/circle_white.png</texturefocus>
+					<texturenofocus>stream_osd/circle_dark.png</texturenofocus>
+					<onclick>PlayerControl(Play)</onclick>
+					<onleft>601</onleft>
+					<onright>603</onright>
+				</control>
+				<control type="image">
+					<left>114</left><top>24</top><width>36</width><height>36</height>
+					<aspectratio>keep</aspectratio>
+					<texture colordiffuse="FF141414">stream_osd/play.png</texture>
+					<visible>Player.Paused + Control.HasFocus(602)</visible>
+				</control>
+				<control type="image">
+					<left>114</left><top>24</top><width>36</width><height>36</height>
+					<aspectratio>keep</aspectratio>
+					<texture>stream_osd/play.png</texture>
+					<visible>Player.Paused + !Control.HasFocus(602)</visible>
+				</control>
+				<control type="image">
+					<left>114</left><top>24</top><width>36</width><height>36</height>
+					<aspectratio>keep</aspectratio>
+					<texture colordiffuse="FF141414">stream_osd/pause.png</texture>
+					<visible>!Player.Paused + Control.HasFocus(602)</visible>
+				</control>
+				<control type="image">
+					<left>114</left><top>24</top><width>36</width><height>36</height>
+					<aspectratio>keep</aspectratio>
+					<texture>stream_osd/pause.png</texture>
+					<visible>!Player.Paused + !Control.HasFocus(602)</visible>
+				</control>
+
+				<!-- Forward 10s -->
+				<control type="button" id="603">
+					<left>200</left><top>10</top><width>64</width><height>64</height>
+					<texturefocus>stream_osd/circle_white.png</texturefocus>
+					<texturenofocus>stream_osd/circle_dark.png</texturenofocus>
+					<onclick>Seek(10)</onclick>
+					<onleft>602</onleft>
+					<onright>604</onright>
+				</control>
+				<control type="image">
+					<left>216</left><top>26</top><width>32</width><height>32</height>
+					<aspectratio>keep</aspectratio>
+					<texture colordiffuse="FF141414">stream_osd/ff10.png</texture>
+					<visible>Control.HasFocus(603)</visible>
+				</control>
+				<control type="image">
+					<left>216</left><top>26</top><width>32</width><height>32</height>
+					<aspectratio>keep</aspectratio>
+					<texture>stream_osd/ff10.png</texture>
+					<visible>!Control.HasFocus(603)</visible>
+				</control>
+			</control>
+
+			<!-- Right Utility Controls: Subtitles, Audio, Video Settings, Stop -->
+			<control type="group">
+				<right>0</right><top>10</top><width>316</width><height>64</height>
+
+				<!-- Subtitles -->
+				<control type="button" id="604">
+					<left>0</left><top>0</top><width>64</width><height>64</height>
+					<texturefocus>stream_osd/circle_white.png</texturefocus>
+					<texturenofocus>stream_osd/circle_dark.png</texturenofocus>
+					<onclick>ActivateWindow(osdsubtitlesettings)</onclick>
+					<onleft>603</onleft>
+					<onright>605</onright>
+				</control>
+				<control type="image">
+					<left>17</left><top>17</top><width>30</width><height>30</height>
+					<aspectratio>keep</aspectratio>
+					<texture colordiffuse="FF141414">stream_osd/subtitles.png</texture>
+					<visible>Control.HasFocus(604)</visible>
+				</control>
+				<control type="image">
+					<left>17</left><top>17</top><width>30</width><height>30</height>
+					<aspectratio>keep</aspectratio>
+					<texture>stream_osd/subtitles.png</texture>
+					<visible>!Control.HasFocus(604)</visible>
+				</control>
+
+				<!-- Audio -->
+				<control type="button" id="605">
+					<left>84</left><top>0</top><width>64</width><height>64</height>
+					<texturefocus>stream_osd/circle_white.png</texturefocus>
+					<texturenofocus>stream_osd/circle_dark.png</texturenofocus>
+					<onclick>ActivateWindow(osdaudiosettings)</onclick>
+					<onleft>604</onleft>
+					<onright>606</onright>
+				</control>
+				<control type="image">
+					<left>101</left><top>17</top><width>30</width><height>30</height>
+					<aspectratio>keep</aspectratio>
+					<texture colordiffuse="FF141414">stream_osd/audio.png</texture>
+					<visible>Control.HasFocus(605)</visible>
+				</control>
+				<control type="image">
+					<left>101</left><top>17</top><width>30</width><height>30</height>
+					<aspectratio>keep</aspectratio>
+					<texture>stream_osd/audio.png</texture>
+					<visible>!Control.HasFocus(605)</visible>
+				</control>
+
+				<!-- Video Settings -->
+				<control type="button" id="606">
+					<left>168</left><top>0</top><width>64</width><height>64</height>
+					<texturefocus>stream_osd/circle_white.png</texturefocus>
+					<texturenofocus>stream_osd/circle_dark.png</texturenofocus>
+					<onclick>ActivateWindow(osdvideosettings)</onclick>
+					<onleft>605</onleft>
+					<onright>607</onright>
+				</control>
+				<control type="image">
+					<left>185</left><top>17</top><width>30</width><height>30</height>
+					<aspectratio>keep</aspectratio>
+					<texture colordiffuse="FF141414">stream_osd/settings.png</texture>
+					<visible>Control.HasFocus(606)</visible>
+				</control>
+				<control type="image">
+					<left>185</left><top>17</top><width>30</width><height>30</height>
+					<aspectratio>keep</aspectratio>
+					<texture>stream_osd/settings.png</texture>
+					<visible>!Control.HasFocus(606)</visible>
+				</control>
+
+				<!-- Stop -->
+				<control type="button" id="607">
+					<left>252</left><top>0</top><width>64</width><height>64</height>
+					<texturefocus>stream_osd/circle_white.png</texturefocus>
+					<texturenofocus>stream_osd/circle_dark.png</texturenofocus>
+					<onclick>PlayerControl(Stop)</onclick>
+					<onleft>606</onleft>
+				</control>
+				<control type="image">
+					<left>270</left><top>18</top><width>28</width><height>28</height>
+					<aspectratio>keep</aspectratio>
+					<texture colordiffuse="FF141414">stream_osd/stop.png</texture>
+					<visible>Control.HasFocus(607)</visible>
+				</control>
+				<control type="image">
+					<left>270</left><top>18</top><width>28</width><height>28</height>
+					<aspectratio>keep</aspectratio>
+					<texture>stream_osd/stop.png</texture>
+					<visible>!Control.HasFocus(607)</visible>
+				</control>
+			</control>
+		</control>
+	</controls>
+</window>

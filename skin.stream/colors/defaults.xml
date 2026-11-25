@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<colors>
+	<color name="primary_background">FF0F0F0F</color>
+	<color name="secondary_background">FF181818</color>
+	<color name="dialog_tint">F2141414</color>
+	<color name="background">FF0B0B0B</color>
+	<color name="bg_image">FF909090</color>
+	<color name="bg_overlay">24FFFFFF</color>
+	<color name="black">FF000000</color>
+	<color name="white">FFF5F5F5</color>
+	<color name="grey">FFA8A8A8</color>
+	<color name="blue">FFE50914</color>
+	<color name="red">FFE50914</color>
+	<color name="button_focus">FFE50914</color>
+	<color name="button_alt_focus">80E50914</color>
+	<color name="text_shadow">33000000</color>
+	<color name="border_alpha">45FFFFFF</color>
+	<color name="disabled">40FFFFFF</color>
+	<color name="selected">FFE50914</color>
+	<color name="invalid">FFFF3B30</color>
+</colors>

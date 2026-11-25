@@ -2843,7 +2843,7 @@ class Home(xbmcgui.WindowXML):
         active = ('__find__' if self.search_query else '__year__' if self.year_filter
                   else '__az__' if self.letter_filter else (self.filter or ''))
         self.setProperty('filter', active)
-        if key not in ('movies', 'shows', 'search') or db.KIDS:
+        if key not in ('movies', 'shows', 'search', 'youtube') or db.KIDS:
             strip.reset()
             self.strip_for = None
             self.setProperty('filters', '')
@@ -2853,7 +2853,19 @@ class Home(xbmcgui.WindowXML):
             return  # same tab reloading after a pick: keep the chips, and the highlight on them
         pos = strip.getSelectedPosition() if self.strip_for and self.strip_for[0] == key else 0
         strip.reset()
-        if key == 'search':
+        if key == 'youtube':
+            chips = [
+                tile('All', 'filter', genre=''),
+                tile('Subscriptions', 'filter', genre='yt_subs'),
+                tile('Trending', 'filter', genre='yt_trending'),
+                tile('Live', 'filter', genre='yt_live'),
+                tile('Telugu', 'filter', genre='yt_telugu'),
+                tile('Music', 'filter', genre='yt_music'),
+                tile('News', 'filter', genre='yt_news'),
+                tile('History', 'filter', genre='yt_history'),
+                tile('Search YouTube', 'filter', genre='__find__'),
+            ]
+        elif key == 'search':
             chips = [
                 tile('← Back Home', 'filter', genre='__home__'),
                 tile('New Search', 'filter', genre='__find__'),
@@ -3065,9 +3077,68 @@ class Home(xbmcgui.WindowXML):
         return rows
 
     def youtube_rows(self):
-        """Subscriptions kept in Stream, rows that follow what was watched here, then the add-on's own lists."""
-        rows = [('dir', title, yt.uploads_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
+        """YouTube TV shelves: supports category chips (All, Subscriptions, Trending, Live, Telugu, Music, News, History)."""
+        flt = self.filter or ''
         followed = db.channels()
+        if flt == 'yt_subs':
+            rows = []
+            if followed:
+                rows.append(('dir', 'New from Your Subscriptions', yt.subs_url(), 'YouTube', None))
+                tiles = []
+                for channel in followed:
+                    url = yt.uploads_url(channel['id'])
+                    li = list_item({'t': 'folder', 'name': channel['name'], 'url': url, 'img': channel['img'], 'yt': 1}, url, 'YouTube',
+                                   meta='Channel')
+                    li.setProperty('wide', '1')
+                    li.setProperty('channel', channel['id'])
+                    li.setProperty('hint', touch_words('OK  Open     Hold OK  Unsubscribe'))
+                    tiles.append(li)
+                rows.append(('items', 'Your Subscriptions', tiles))
+            rows += [('dir', title, yt.uploads_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
+            return rows or [('items', 'Subscriptions', [tile('Follow channels in Stream', 'setting', action='subscribe_help',
+                                                             meta='Hold OK on any YouTube video to subscribe')])]
+        if flt == 'yt_trending':
+            return [
+                ('dir', 'Trending Now', yt.url('special/popular_right_now/'), 'YouTube', None),
+                ('dir', 'Trending in Telugu', yt.search_url('Telugu trending videos today'), 'YouTube', None),
+                ('dir', 'Trending in India', yt.search_url('India trending videos today'), 'YouTube', None),
+            ]
+        if flt == 'yt_live':
+            return [
+                ('dir', 'Live Now on YouTube', yt.url('special/live/'), 'YouTube', None),
+                ('dir', 'Telugu Live News', yt.search_url('Telugu live news TV9 NTV ABN'), 'YouTube', None),
+                ('dir', 'Live Music & Lo-Fi', yt.search_url('live music radio stream'), 'YouTube', None),
+            ]
+        if flt == 'yt_telugu':
+            return [
+                ('dir', 'Telugu Trailers & Teasers', yt.search_url('Telugu movie trailer 2026'), 'YouTube', None),
+                ('dir', 'Bigg Boss Telugu Promos & Clips', yt.search_url('Bigg Boss Telugu Season 10'), 'YouTube', None),
+                ('dir', 'Telugu Interviews & Podcasts', yt.search_url('Telugu celebrity interview latest'), 'YouTube', None),
+                ('dir', 'Telugu Comedy Scenes', yt.search_url('Telugu comedy scenes Brahmanandam'), 'YouTube', None),
+            ]
+        if flt == 'yt_music':
+            return [
+                ('dir', 'Latest Telugu Songs', yt.search_url('latest Telugu video songs 2026'), 'YouTube', None),
+                ('dir', 'Latest Hindi Songs', yt.search_url('latest Bollywood video songs 2026'), 'YouTube', None),
+                ('dir', 'Top Music Videos', yt.search_url('top trending music videos'), 'YouTube', None),
+            ]
+        if flt == 'yt_news':
+            return [
+                ('dir', 'Telugu News Today', yt.search_url('Telugu news today live'), 'YouTube', None),
+                ('dir', 'India News Headlines', yt.search_url('India news headlines today'), 'YouTube', None),
+                ('dir', 'Tech & AI News', yt.search_url('AI tech news today'), 'YouTube', None),
+            ]
+        if flt == 'yt_history':
+            played = [e for e in db.recent(80) if yt.is_youtube((e.get('item') or {}).get('url'))]
+            rows = []
+            if played:
+                rows.append(('items', 'Recently Watched on YouTube', [entry_item(e, meta=e.get('note')) for e in played[:40]]))
+            for title, path in yt.lists():
+                if 'history' in title.lower() or 'watch later' in title.lower():
+                    rows.append(('dir', title, yt.url(path), 'YouTube', None))
+            return rows or [('items', 'YouTube History', [tile('No YouTube videos watched yet', 'info')])]
+
+        rows = [('dir', title, yt.uploads_url(channel_id), 'YouTube', None) for title, channel_id in yt.PINNED]
         if followed:
             rows.append(('dir', 'New from Your Subscriptions', yt.subs_url(), 'YouTube', None))
         for video, name in db.recent_videos(2):
@@ -3729,7 +3800,7 @@ class Home(xbmcgui.WindowXML):
             # Back climbs one level at a time: row/browse -> filter/clear -> tabs -> Home tab -> exit.
             if stop_if_playing_behind():
                 return
-            if focus == FILTER_ID and self.tab in ('movies', 'shows') and (self.filter or self.year_filter or self.letter_filter or self.search_query):
+            if focus == FILTER_ID and self.tab in ('movies', 'shows', 'youtube') and (self.filter or self.year_filter or self.letter_filter or self.search_query):
                 self.filter = self.year_filter = self.letter_filter = self.search_query = None
                 self.load_tab(self.tab, focus=False)
                 return

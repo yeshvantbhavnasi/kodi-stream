@@ -193,11 +193,25 @@ def lookup(name, show=False, fetch=True, lang=''):
     if not fetch or not enabled():
         return {}
     try:
+        import ai
+        shared = ai.cache_get_meta(name)
+        if shared:
+            db.put_metadata(name, shared)
+            return shared
+    except Exception:
+        pass
+    try:
         data = _fetch(name, show, lang)
     except Exception as e:
         xbmc.log('STREAM META: lookup failed: {0}'.format(e), xbmc.LOGINFO)
         return cached[0] if cached else {}
     db.put_metadata(name, data)
+    if data:
+        try:
+            import ai, threading
+            threading.Thread(target=ai.cache_put_meta, args=(name, data), daemon=True).start()
+        except Exception:
+            pass
     return data
 
 
