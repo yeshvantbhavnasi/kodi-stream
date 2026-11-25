@@ -1,5 +1,5 @@
-# Kodi Media Center language file
-# Addon Name: Estuary
+# Stream Media Center language file
+# Addon Name: Stream
 # Addon id: skin.estuary
 # Addon Provider: phil65, Ichabod Fletchman
 msgid ""
@@ -8,7 +8,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: https://github.com/xbmc/xbmc/issues/\n"
 "POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: Kodi Translation Team\n"
+"Last-Translator: Stream Translation Team\n"
 "Language-Team: English (United Kingdom) (http://www.transifex.com/projects/p/kodi-main/language/en_GB/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -17,15 +17,15 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgctxt "Addon Summary"
-msgid "Estuary skin by phil65. (Kodi's default skin)"
+msgid "Stream skin by phil65. (Stream's default skin)"
 msgstr ""
 
 msgctxt "Addon Description"
-msgid "Estuary is the default skin for Kodi 17.0 and above. It attempts to be easy for first time Kodi users to understand and use."
+msgid "Stream is the default skin for Stream 17.0 and above. It attempts to be easy for first time Stream users to understand and use."
 msgstr ""
 
 msgctxt "Addon Disclaimer"
-msgid "Estuary is the default skin for Kodi, removing it may cause issues"
+msgid "Stream is the default skin for Stream, removing it may cause issues"
 msgstr ""
 
 #: /xml/Home.xml /xml/DialogSeekBar.xml
@@ -446,7 +446,7 @@ msgstr ""
 
 #: /xml/LoginScreen.xml
 msgctxt "#31098"
-msgid "Select your Kodi user profile[CR]to login and continue"
+msgid "Select your Stream user profile[CR]to login and continue"
 msgstr ""
 
 #. viewtype name
@@ -548,7 +548,7 @@ msgstr ""
 
 #: /xml/Home.xml
 msgctxt "#31119"
-msgid "You do not have any add-ons installed yet. Visit our add-on browser to browse through our collection and improve your Kodi experience."
+msgid "You do not have any add-ons installed yet. Visit our add-on browser to browse through our collection and improve your Stream experience."
 msgstr ""
 
 #: /xml/Home.xml

@@ -72,19 +72,125 @@ def _tune_kodi_cache():
         xbmc.log('[script.stream] tuned Kodi filecache (ram=%dMB): %s' % (ram_mb, applied), xbmc.LOGINFO)
 
 
+def _ensure_stream_skin():
+    """Enable and activate skin.stream automatically when installed so the native OSD and zero-Kodi UI apply."""
+    try:
+        raw = xbmc.executeJSONRPC(json.dumps({
+            'jsonrpc': '2.0', 'id': 1,
+            'method': 'Addons.GetAddonDetails',
+            'params': {'addonid': 'skin.stream', 'properties': ['enabled']},
+        }))
+        res = json.loads(raw).get('result', {}).get('addon')
+        if not res:
+            return
+        if not res.get('enabled'):
+            xbmc.executeJSONRPC(json.dumps({
+                'jsonrpc': '2.0', 'id': 2,
+                'method': 'Addons.SetAddonEnabled',
+                'params': {'addonid': 'skin.stream', 'enabled': True},
+            }))
+        cur = json.loads(xbmc.executeJSONRPC(json.dumps({
+            'jsonrpc': '2.0', 'id': 3,
+            'method': 'Settings.GetSettingValue',
+            'params': {'setting': 'lookandfeel.skin'},
+        }))).get('result', {}).get('value')
+        if cur != 'skin.stream':
+            xbmc.executeJSONRPC(json.dumps({
+                'jsonrpc': '2.0', 'id': 4,
+                'method': 'Settings.SetSettingValue',
+                'params': {'setting': 'lookandfeel.skin', 'value': 'skin.stream'},
+            }))
+            xbmc.log('[script.stream] switched active skin from %s to skin.stream' % cur, xbmc.LOGINFO)
+            # Auto-accept Kodi's "Would you like to keep this change?" confirmation dialog
+            for _ in range(20):
+                if xbmc.getCondVisibility('Window.IsActive(yesnodialog)'):
+                    xbmc.executebuiltin('SendClick(11)')
+                    xbmc.sleep(300)
+                    break
+                xbmc.sleep(150)
+    except Exception as e:
+        xbmc.log('[script.stream] skin check skipped: %s' % e, xbmc.LOGINFO)
+
+
+def _tune_advanced_settings():
+    """Write RAM-saving texture & dirty-region settings to userdata/advancedsettings.xml once per device."""
+    try:
+        adv_path = xbmcvfs.translatePath('special://userdata/advancedsettings.xml')
+        if os.path.exists(adv_path):
+            with open(adv_path, 'r', encoding='utf-8') as f:
+                if 'imageres' in f.read():
+                    return
+        os.makedirs(os.path.dirname(adv_path), exist_ok=True)
+        with open(adv_path, 'w', encoding='utf-8') as f:
+            f.write(
+                '<advancedsettings>\n'
+                '  <splash>false</splash>\n'
+                '  <imageres>540</imageres>\n'
+                '  <fanartres>720</fanartres>\n'
+                '  <gui>\n'
+                '    <algorithmdirtyregions>3</algorithmdirtyregions>\n'
+                '  </gui>\n'
+                '</advancedsettings>\n'
+            )
+        xbmc.log('[script.stream] wrote RAM-optimized advancedsettings.xml', xbmc.LOGINFO)
+    except Exception as e:
+        xbmc.log('[script.stream] advancedsettings write skipped: %s' % e, xbmc.LOGINFO)
+
+
+_tune_advanced_settings()
 _tune_kodi_cache()
+_ensure_stream_skin()
 
 monitor = xbmc.Monitor()
+
+# Launch local native stream-core engine (Go binary) if bundled/installed on this device.
+_core_proc = None
+try:
+    import subprocess
+    _candidates = [
+        os.path.join(xbmcvfs.translatePath(ADDON.getAddonInfo('path')), 'bin', 'stream-core'),
+        os.path.expanduser('~/.local/bin/stream-core'),
+        '/Users/yeshvant/dev/kodi-stream/core/stream-core',
+    ]
+    _core_bin = next((p for p in _candidates if os.path.isfile(p) and os.access(p, os.X_OK)), None)
+    if _core_bin:
+        _profile_dir = xbmcvfs.translatePath(ADDON.getAddonInfo('profile'))
+        os.makedirs(_profile_dir, exist_ok=True)
+        _env = os.environ.copy()
+        # Bind on LAN on full-RAM hosts (Mac mini) so low-RAM TVs can use this Go core hub with zero TV RAM!
+        _env.setdefault('STREAM_CORE_ADDR', '127.0.0.1:8775' if _total_ram_mb() <= 2048 else '0.0.0.0:8775')
+        _env.setdefault('STREAM_CORE_DATA', _profile_dir)
+        if _total_ram_mb() <= 2048:
+            _env.setdefault('GOMEMLIMIT', '40MiB')
+        _core_proc = subprocess.Popen(
+            [_core_bin],
+            env=_env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        xbmc.log('[script.stream] started native stream-core (%s pid=%d)' % (_core_bin, _core_proc.pid), xbmc.LOGINFO)
+except Exception as _e:
+    xbmc.log('[script.stream] stream-core autostart skipped: %s' % _e, xbmc.LOGINFO)
+
 if ADDON.getSetting('autostart') != 'false':
-    # In the Stream Android app, service.stream.intro sets this property, plays the intro over a cover and
-    # opens Stream itself, so Kodi's own home screen is never seen; then there is nothing to do here.
+    # skin.stream's Home.xml launches script.stream directly on load (setting stream.launching).
+    # In the Stream Android app, service.stream.intro sets stream.intro. Only launch from here
+    # if neither has already started Stream (e.g. when running under another skin).
     intro = 'Window(Home).Property(stream.intro)'
-    for _ in range(60):
-        if xbmc.getCondVisibility('Window.IsVisible(home) | !String.IsEmpty(%s)' % intro):
+    launching = 'Window(Home).Property(stream.launching)'
+    running = 'Window(Home).Property(script.stream.running)'
+    for _ in range(40):
+        if xbmc.getCondVisibility('Window.IsVisible(home) | !String.IsEmpty(%s) | !String.IsEmpty(%s) | !String.IsEmpty(%s)' % (intro, launching, running)):
             break
-        if monitor.waitForAbort(0.5):
+        if monitor.waitForAbort(0.25):
             break
-    if not monitor.abortRequested() and xbmc.getCondVisibility('String.IsEmpty(%s)' % intro):
+    # Wait until no modal dialog (such as skin confirmation) is blocking window activation.
+    for _ in range(30):
+        if not xbmc.getCondVisibility('Window.IsActive(yesnodialog)'):
+            break
+        if monitor.waitForAbort(0.2):
+            break
+    if not monitor.abortRequested() and xbmc.getCondVisibility('String.IsEmpty(%s) + String.IsEmpty(%s) + String.IsEmpty(%s)' % (intro, launching, running)):
         xbmc.executebuiltin('RunScript(script.stream)')
 
 import downloads  # noqa: E402
@@ -104,6 +210,15 @@ while not monitor.abortRequested():
         xbmcgui.Dialog().notification('Stream', 'Download paused: ' + job['label'], ADDON.getAddonInfo('icon'), 4000)
     if result == 'stopped' or monitor.waitForAbort(waits.get(result, 3)):
         break
+if _core_proc is not None:
+    try:
+        _core_proc.terminate()
+        _core_proc.wait(timeout=3)
+    except Exception:
+        try:
+            _core_proc.kill()
+        except Exception:
+            pass
 if os.path.exists(audit.FLAG):
     audit.event('kodi_quit')
     audit.session_end()

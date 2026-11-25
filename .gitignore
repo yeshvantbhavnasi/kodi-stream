@@ -1,3 +1,6 @@
 __pycache__/
 .DS_Store
 .vercel
+
+core/stream-core
+core/stream-core-*

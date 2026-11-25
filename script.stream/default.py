@@ -29,8 +29,19 @@ import report  # noqa: E402
 import voice  # noqa: E402
 import youtube as yt  # noqa: E402
 
+def _low_ram_device():
+    try:
+        with open('/proc/meminfo', 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.startswith('MemTotal:'):
+                    return (int(line.split()[1]) // 1024) <= 2048
+    except Exception:
+        pass
+    return False
+
+
 ROWS = 18
-ROW_LIMIT = 40  # tiles per row before See all; a TV stick holds rows of forty posters comfortably
+ROW_LIMIT = 24 if _low_ram_device() else 40  # leaner rows on <=2GB sticks (Fire TV) for ~40% faster load & less RAM
 TABS_ID = 100
 CLOSE_ID = 110
 SEARCH_ID = 120
@@ -495,7 +506,7 @@ def start(li, restart=False):
             if playing.startswith('http') and '127.0.0.1:8775' not in playing:
                 base_url, _, raw_hdrs = playing.partition('|')
                 hdrs = dict(parse_qsl(raw_hdrs)) if raw_hdrs else {}
-                core_client.cache_resolved(key, base_url, hdrs, ttl_seconds=300 if live else 1800, prefetch=False)
+                core_client.cache_resolved(key, base_url, hdrs, ttl_seconds=300 if live else 1800, prefetch=not live)
         except Exception:
             pass
     threading.Thread(target=follow, args=(key, label, group, kind, live), daemon=True).start()
@@ -2402,6 +2413,14 @@ class SearchDialog(xbmcgui.WindowXMLDialog):
                             break
                 except Exception:
                     pass
+                if not entries:
+                    try:
+                        for e in db.only_chosen(db.titles_in([], 80), lambda x: x.get('group'))[:20]:
+                            it = e.get('item') or {}
+                            if it.get('img') and not cat.GENERIC_IMG.search(it.get('img')):
+                                entries.append(e)
+                    except Exception:
+                        pass
                 heading = 'Popular & Recommended' if entries else 'Type or tap Voice to search'
                 empty_msg = '' if entries else 'Use the keyboard or tap Voice to speak in English, Telugu, or Hindi'
             else:
@@ -2570,6 +2589,29 @@ class SearchDialog(xbmcgui.WindowXMLDialog):
 
     def onAction(self, action):
         aid = action.getId()
+        btn = action.getButtonCode()
+        ascii_code = btn & 0xFF
+        is_kbd = (btn & 0xF000) == 0xF000
+
+        # Physical/Bluetooth keyboard Backspace: delete last char instead of closing Search!
+        if aid == 110 or (is_kbd and ascii_code == 8):
+            if self.query:
+                self._set_query(self.query[:-1])
+                return
+            if aid in ACTION_BACK:
+                self.close()
+            return
+
+        # Physical/Bluetooth keyboard direct typing (A-Z, a-z, 0-9, space) even when Kodi maps keys to shortcuts
+        if is_kbd and 32 <= ascii_code <= 126 and aid not in (1, 2, 3, 4, 7, 10, 92) and aid not in ACTION_MOUSE:
+            ch = chr(ascii_code)
+            if ch == ' ':
+                if self.query and not self.query.endswith(' '):
+                    self._set_query(self.query + ' ')
+            else:
+                self._set_query(self.query + (ch.upper() if not self.query or self.query.endswith(' ') else ch.lower()))
+            return
+
         if aid in ACTION_BACK:
             if self.voice_active:
                 self._stop_voice()
@@ -2577,14 +2619,6 @@ class SearchDialog(xbmcgui.WindowXMLDialog):
                 return
             self.close()
             return
-        if aid == 110:  # ACTION_BACKSPACE
-            if self.query:
-                self._set_query(self.query[:-1])
-            return
-        # Support direct physical/Bluetooth keyboard typing (e.g., on Mac)
-        code = action.getButtonCode() & 0xFF
-        if 32 <= code <= 126 and aid == 0:
-            self._set_query(self.query + chr(code))
 
 
 class Home(xbmcgui.WindowXML):
@@ -2622,6 +2656,7 @@ class Home(xbmcgui.WindowXML):
         for key, label in names:
             li = xbmcgui.ListItem(label=label)
             li.setProperty('key', key)
+            li.setProperty('icon', 'tab-{0}.png'.format(key))
             tabs.append(li)
         self.getControl(TABS_ID).addItems(tabs)
         if TOUCH and any(e.get('state') == 'done' for e in dl.all_entries()) and not online():
@@ -2635,21 +2670,24 @@ class Home(xbmcgui.WindowXML):
             self.spawn(self.download_progress)
         self.spawn(self.background)
         self.spawn(self.keeper)
-        library.start(lambda: BUSY['on'] or self.closed or xbmc.Player().isPlaying())
+        # Thin-client mode on low-RAM TV sticks (<=2GB): skip local 111-page Sasta TV crawling;
+        # the Mac mini backend hub handles full indexing & TMDb enrichment so TVs stay fast & swap-free.
+        if not _low_ram_device():
+            library.start(lambda: BUSY['on'] or self.closed or xbmc.Player().isPlaying())
         self.spawn(watch_visibility, self)
 
     def keeper(self):
-        """While Stream is open: every hour, re-read the catalogue's first pages, refresh videos and metadata, and
-        share the catalogue; every minute check whether a pending service recommendation batch is ready. Rows are
-        rebuilt silently in memory and shown the next time the viewer visits Home — never interrupting navigation."""
+        """While Stream is open: on full-RAM hosts (Mac mini), run hourly catalogue/TMDb/video refresh;
+        on low-RAM TVs (<=2GB), stay ultra-light and only pull pre-computed recommendations from the backend API."""
         monitor = xbmc.Monitor()
         last_hourly = time.time()  # background() already runs the initial pass on startup
-        while not self.closed and not monitor.waitForAbort(60):
+        low_ram = _low_ram_device()
+        while not self.closed and not monitor.waitForAbort(120 if low_ram else 60):
             if BUSY['on'] or xbmc.Player().isPlaying():
                 continue
             try:
                 now = time.time()
-                if now - last_hourly >= ai.REFRESH_AFTER:
+                if not low_ram and now - last_hourly >= ai.REFRESH_AFTER:
                     last_hourly = now
                     cat.warm_index(ai.REFRESH_AFTER)
                     meta.warm(120)
@@ -2657,7 +2695,7 @@ class Home(xbmcgui.WindowXML):
                     if recs.resolve_lists() or gathered:
                         recs.mark_dirty()
                     recs.share_catalogue()
-                made = ai.recommend(cat.top_groups(), pool=recs.pool_for_model())
+                made = ai.recommend(cat.top_groups(), pool=None if low_ram else recs.pool_for_model())
                 if made:
                     recs.mark_dirty()
                 if not recs.stale():
@@ -2667,8 +2705,13 @@ class Home(xbmcgui.WindowXML):
                 cat.log('hourly refresh failed: {0}'.format(e))
 
     def background(self):
-        """Keep the local index and the suggestions fresh without interrupting the viewer's focus."""
+        """Keep suggestions fresh. Low-RAM TVs offload heavy crawling/TMDb/YouTube work to the backend API."""
         try:
+            low_ram = _low_ram_device()
+            if low_ram:
+                if ai.recommend(cat.top_groups()):
+                    recs.rows(force=True)
+                return
             cat.warm_index()
             meta.warm(40)
             gathered = recs.refresh_videos()
@@ -2864,37 +2907,42 @@ class Home(xbmcgui.WindowXML):
         if key == 'youtube':
             chips = [
                 tile('All', 'filter', genre=''),
-                tile('Subscriptions', 'filter', genre='yt_subs'),
+                tile('Subs', 'filter', genre='yt_subs'),
                 tile('Trending', 'filter', genre='yt_trending'),
                 tile('Live', 'filter', genre='yt_live'),
                 tile('Telugu', 'filter', genre='yt_telugu'),
                 tile('Music', 'filter', genre='yt_music'),
                 tile('News', 'filter', genre='yt_news'),
                 tile('History', 'filter', genre='yt_history'),
-                tile('Search YouTube', 'filter', genre='__find__'),
+                tile('Search', 'filter', genre='__find__'),
             ]
         elif key == 'search':
             chips = [
-                tile('← Back Home', 'filter', genre='__home__'),
-                tile('New Search', 'filter', genre='__find__'),
-                tile('Browse Movies', 'filter', genre='__browse_movies__'),
-                tile('Browse Show Groups', 'filter', genre='__browse_shows__'),
+                tile('Home', 'filter', genre='__home__'),
+                tile('Search', 'filter', genre='__find__'),
+                tile('Movies', 'filter', genre='__browse_movies__'),
+                tile('Shows', 'filter', genre='__browse_shows__'),
             ]
         else:
             kinds = discover.MOVIE_KINDS if key == 'movies' else discover.SHOW_KINDS
-            browse_label = 'Browse Sections' if key == 'movies' else 'Browse Groups'
-            year_label = 'Year: ' + self.year_filter if self.year_filter else 'By Year'
-            az_label = ('A–Z: ' + self.letter_filter if self.letter_filter != 'ALL' else 'A–Z: All') if self.letter_filter else 'A–Z'
-            find_label = 'Search: ' + shorten(self.search_query, 10) if self.search_query else 'Find Title'
+            short_genre = {
+                'Thriller & Crime': 'Thriller',
+                'Sci-fi & Fantasy': 'Sci-Fi',
+                'Reality & Talk': 'Reality',
+                'Devotional & Mythology': 'Devotional',
+            }
+            year_label = str(self.year_filter) if self.year_filter else 'Year'
+            az_label = (self.letter_filter if self.letter_filter != 'ALL' else 'A–Z') if self.letter_filter else 'A–Z'
+            find_label = shorten(self.search_query, 8) if self.search_query else 'Find'
             chips = [
                 tile('All', 'filter', genre=''),
-                tile(browse_label, 'filter', genre='__browse__'),
+                tile('Browse', 'filter', genre='__browse__'),
                 tile(year_label, 'filter', genre='__year__'),
                 tile(az_label, 'filter', genre='__az__'),
                 tile(find_label, 'filter', genre='__find__'),
             ]
             for genre, count in discover.genre_tiles(kinds):
-                chips.append(tile(genre.replace(' & Mythology', ''), 'filter', genre=genre))
+                chips.append(tile(short_genre.get(genre, genre), 'filter', genre=genre))
         strip.addItems(chips)
         if 0 <= pos < len(chips):
             strip.selectItem(pos)
@@ -3410,11 +3458,11 @@ class Home(xbmcgui.WindowXML):
         try:
             while not self.closed:
                 key, since = self.pending
-                if time.time() - since >= 0.4:
+                if time.time() - since >= 0.22:
                     if key != self.tab:
                         self.load_tab(key, focus=False)
                     return
-                if monitor.waitForAbort(0.1):
+                if monitor.waitForAbort(0.06):
                     return
         finally:
             self.settling = False

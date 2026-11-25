@@ -77,17 +77,17 @@
 				<onup>87</onup>
 				<control type="radiobutton" id="600">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/previous.png"/>
+						<param name="texture" value="stream_osd/buttons/previous.png"/>
 					</include>
 					<onclick>PlayerControl(Previous)</onclick>
 					<visible>!VideoPlayer.Content(livetv)</visible>
 				</control>
 				<control type="radiobutton" id="602">
-					<textureradioonfocus colordiffuse="white">osd/fullscreen/buttons/play.png</textureradioonfocus>
-					<textureradioonnofocus>osd/fullscreen/buttons/play.png</textureradioonnofocus>
-					<textureradioofffocus colordiffuse="white">osd/fullscreen/buttons/pause.png</textureradioofffocus>
-					<textureradiooffnofocus>osd/fullscreen/buttons/pause.png</textureradiooffnofocus>
-					<texturefocus colordiffuse="button_focus">osd/fullscreen/buttons/button-fo.png</texturefocus>
+					<textureradioonfocus colordiffuse="white">stream_osd/buttons/play.png</textureradioonfocus>
+					<textureradioonnofocus>stream_osd/buttons/play.png</textureradioonnofocus>
+					<textureradioofffocus colordiffuse="white">stream_osd/buttons/pause.png</textureradioofffocus>
+					<textureradiooffnofocus>stream_osd/buttons/pause.png</textureradiooffnofocus>
+					<texturefocus colordiffuse="button_focus">stream_osd/buttons/button-fo.png</texturefocus>
 					<width>76</width>
 					<animation center="38,38" effect="zoom" end="100" reversible="false" start="95" time="480" tween="back">Focus</animation>
 					<height>76</height>
@@ -103,13 +103,13 @@
 				</control>
 				<control type="radiobutton" id="603">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/stop.png"/>
+						<param name="texture" value="stream_osd/buttons/stop.png"/>
 					</include>
 					<onclick>PlayerControl(Stop)</onclick>
 				</control>
 				<control type="radiobutton" id="605">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/next.png"/>
+						<param name="texture" value="stream_osd/buttons/next.png"/>
 					</include>
 					<onclick>PlayerControl(Next)</onclick>
 					<visible>!VideoPlayer.Content(livetv) + [Integer.IsGreater(Playlist.Length(video),1) | Integer.IsGreater(Playlist.Length(music),1)]</visible>
@@ -125,7 +125,7 @@
 						<height>74</height>
 						<label></label>
 						<font></font>
-						<texturefocus colordiffuse="button_focus">osd/fullscreen/buttons/button-fo.png</texturefocus>
+						<texturefocus colordiffuse="button_focus">stream_osd/buttons/button-fo.png</texturefocus>
 						<texturenofocus />
 						<onleft>605</onleft>
 						<onright>607</onright>
@@ -143,13 +143,13 @@
 					</control>
 				</control>
 				<control type="radiobutton" id="607">
-					<textureradioonfocus colordiffuse="white">osd/fullscreen/buttons/random-on.png</textureradioonfocus>
-					<textureradioonnofocus>osd/fullscreen/buttons/random-on.png</textureradioonnofocus>
-					<textureradioofffocus colordiffuse="white">osd/fullscreen/buttons/random-off.png</textureradioofffocus>
-					<textureradiooffnofocus>osd/fullscreen/buttons/random-off.png</textureradiooffnofocus>
-					<textureradioondisabled colordiffuse="disabled">osd/fullscreen/buttons/random-on.png</textureradioondisabled>
-					<textureradiooffdisabled colordiffuse="disabled">osd/fullscreen/buttons/random-off.png</textureradiooffdisabled>
-					<texturefocus colordiffuse="button_focus">osd/fullscreen/buttons/button-fo.png</texturefocus>
+					<textureradioonfocus colordiffuse="white">stream_osd/buttons/random-on.png</textureradioonfocus>
+					<textureradioonnofocus>stream_osd/buttons/random-on.png</textureradioonnofocus>
+					<textureradioofffocus colordiffuse="white">stream_osd/buttons/random-off.png</textureradioofffocus>
+					<textureradiooffnofocus>stream_osd/buttons/random-off.png</textureradiooffnofocus>
+					<textureradioondisabled colordiffuse="disabled">stream_osd/buttons/random-on.png</textureradioondisabled>
+					<textureradiooffdisabled colordiffuse="disabled">stream_osd/buttons/random-off.png</textureradiooffdisabled>
+					<texturefocus colordiffuse="button_focus">stream_osd/buttons/button-fo.png</texturefocus>
 					<width>76</width>
 					<height>76</height>
 					<radiowidth>74</radiowidth>

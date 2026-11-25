@@ -196,18 +196,21 @@ def make_modern_icons():
         'mic-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 10.5a7 7 0 0 0 14 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>'),
         'backspace-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="m17 9-6 6"/><path d="m11 9 6 6"/></svg>'),
         'yt-badge.png': (120, 84, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 84"><rect x="2" y="2" width="116" height="80" rx="22" fill="#FF0000"/><path d="M48 25v34l30-17z" fill="#FFFFFF"/></svg>'),
+        'tab-youtube.png': (128, 128, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill-rule="evenodd" clip-rule="evenodd" d="M114.2 38.4c-1.2-4.6-4.8-8.2-9.4-9.4C96.4 26.8 64 26.8 64 26.8s-32.4 0-40.8 2.2c-4.6 1.2-8.2 4.8-9.4 9.4C11.6 46.8 11.6 64 11.6 64s0 17.2 2.2 25.6c1.2 4.6 4.8 8.2 9.4 9.4 8.4 2.2 40.8 2.2 40.8 2.2s32.4 0 40.8-2.2c4.6-1.2 8.2-4.8 9.4-9.4 2.2-8.4 2.2-25.6 2.2-25.6s0-17.2-2.2-25.6zM53.5 80.2V47.8L81.4 64 53.5 80.2z" fill="#FFFFFF"/></svg>'),
+        'chip_glass.png': (264, 72, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 72"><rect x="2" y="2" width="260" height="68" rx="34" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="2.5"/></svg>'),
+        'chip_active.png': (264, 72, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 72"><rect x="0" y="0" width="264" height="72" rx="36" fill="#E50914"/></svg>'),
+        'chip_focus.png': (264, 72, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 72"><rect x="0" y="0" width="264" height="72" rx="36" fill="#FFFFFF"/></svg>'),
+        'util_circle.png': (88, 88, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88"><circle cx="44" cy="44" r="42" fill="#FFFFFF"/></svg>'),
     }
     for name, (w, h, svg) in svgs.items():
         _render_svg_icon(svg, os.path.join(MEDIA, name), w, h)
 
 
 def make_images():
+    make_modern_icons()
     rounded(os.path.join(MEDIA, 'pill.png'), 48, 48, 24)                 # 9-slice with border="23"
     rounded(os.path.join(MEDIA, 'round.png'), 32, 32, 10)                # 9-slice with border="14": frames and badges
     rounded(os.path.join(MEDIA, 'key_bg.png'), 48, 48, 12)               # 9-slice with border="12": modern keyboard keys
-    make_mic_icon(os.path.join(MEDIA, 'mic-thin.png'))
-    make_backspace_icon(os.path.join(MEDIA, 'backspace-thin.png'))
-    make_yt_icon(os.path.join(MEDIA, 'yt-badge.png'))
     rounded(os.path.join(MEDIA, 'mask_poster.png'), 200, 300, 12)        # diffuse masks round the artwork's corners
     rounded(os.path.join(MEDIA, 'mask_wide.png'), 356, 200, 12)
     rounded(os.path.join(MEDIA, 'mask_card.png'), 200, 200, 12)
@@ -427,9 +430,9 @@ def billboard(n):
 def filter_strip():
     f = FILTER
     chosen, other = 'String.IsEqual(Window.Property(filter),ListItem.Property(genre))', '!String.IsEqual(Window.Property(filter),ListItem.Property(genre))'
-    return '''        <!-- Genre strip under the top bar on Movies and Shows: OK on a chip filters the rows, All clears it -->
+    return '''        <!-- Modern Apple TV / Netflix frosted-glass filter chip strip under the top bar -->
         <control type="list" id="{f}">
-            <left>50</left><top>92</top><width>1870</width><height>40</height>
+            <left>56</left><top>94</top><width>1810</width><height>42</height>
             <orientation>horizontal</orientation>
             <scrolltime tween="quadratic">150</scrolltime>
             <onup>{tabs}</onup>
@@ -437,117 +440,96 @@ def filter_strip():
             <onleft>noop</onleft>
             <onright>noop</onright>
             <visible>!String.IsEmpty(Window.Property(filters))</visible>
-            <itemlayout width="186" height="40">
-                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>{other}</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>{chosen}</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
+            <itemlayout width="144" height="42">
+                <control type="image"><left>0</left><top>2</top><width>132</width><height>36</height><texture>chip_glass.png</texture><visible>{other}</visible></control>
+                <control type="image"><left>0</left><top>2</top><width>132</width><height>36</height><texture>chip_active.png</texture><visible>{chosen}</visible></control>
+                <control type="label"><left>10</left><top>2</top><width>112</width><height>36</height><font>font10</font><align>center</align><aligny>center</aligny><scroll>false</scroll><textcolor>FFE2E2EA</textcolor><label>$INFO[ListItem.Label]</label><visible>{other}</visible></control>
+                <control type="label"><left>10</left><top>2</top><width>112</width><height>36</height><font>font10</font><align>center</align><aligny>center</aligny><scroll>false</scroll><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>{chosen}</visible></control>
             </itemlayout>
-            <focusedlayout width="186" height="40">
-                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="2EFFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus({f}) + {other}</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="80FFFFFF" border="17">pill.png</texture><visible>!Control.HasFocus({f}) + {chosen}</visible></control>
-                <control type="image"><left>10</left><top>3</top><width>172</width><height>34</height><texture colordiffuse="FFFFFFFF" border="17">pill.png</texture><visible>Control.HasFocus({f})</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label><visible>!Control.HasFocus({f})</visible></control>
-                <control type="label"><left>10</left><top>3</top><width>172</width><height>34</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({f})</visible></control>
+            <focusedlayout width="144" height="42">
+                <control type="group">
+                    <animation effect="zoom" start="100" end="105" center="66,20" time="120" reversible="true" condition="Control.HasFocus({f})">Conditional</animation>
+                    <control type="image"><left>0</left><top>2</top><width>132</width><height>36</height><texture>chip_glass.png</texture><visible>!Control.HasFocus({f}) + {other}</visible></control>
+                    <control type="image"><left>0</left><top>2</top><width>132</width><height>36</height><texture>chip_active.png</texture><visible>!Control.HasFocus({f}) + {chosen}</visible></control>
+                    <control type="image"><left>0</left><top>2</top><width>132</width><height>36</height><texture>chip_focus.png</texture><visible>Control.HasFocus({f})</visible></control>
+                    <control type="label"><left>10</left><top>2</top><width>112</width><height>36</height><font>font10</font><align>center</align><aligny>center</aligny><scroll>false</scroll><textcolor>FFE2E2EA</textcolor><label>$INFO[ListItem.Label]</label><visible>!Control.HasFocus({f}) + {other}</visible></control>
+                    <control type="label"><left>10</left><top>2</top><width>112</width><height>36</height><font>font10</font><align>center</align><aligny>center</aligny><scroll>false</scroll><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>!Control.HasFocus({f}) + {chosen}</visible></control>
+                    <control type="label"><left>10</left><top>2</top><width>112</width><height>36</height><font>font10</font><align>center</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({f})</visible></control>
+                </control>
             </focusedlayout>
         </control>
 '''.format(f=f, tabs=TABS, first=FIRST, chosen=chosen, other=other)
 
 
 def top_bar():
-    # Touch layouts make room for seven roomy tabs and 60px icons a finger can hit: search becomes an icon.
+    # Pixel-aligned Apple TV / tvOS top bar: all elements share a strict Y=52px optical centerline
+    # with symmetrical 56px left & right screen margins.
     if TOUCH['on']:
-        bar = dict(tabs_w=1290, tab_w=180, pill_w=168, search_l=1636, search_w=60, search_i=1650, search_label='', search_t=22, search_h=60, search_it=36, profile_l=1706,
-                   gear_l=1776, close_l=1846, icon=60, icon_t=22, search_mic='')
+        bar = dict(tabs_l=290, tabs_w=1310, tab_w=186, pill_w=174, search_l=1624, profile_l=1690,
+                   gear_l=1756, close_l=1822, btn=56, btn_t=24, ico=28, ico_off=14)
     else:
-        search_mic = (
-            '        <control type="image"><left>1686</left><top>38</top><width>28</width><height>28</height><texture colordiffuse="99FFFFFF">mic-thin.png</texture><visible>!Control.HasFocus({s}) + String.IsEmpty(Window.Property(kids))</visible></control>\n'
-            '        <control type="image"><left>1686</left><top>38</top><width>28</width><height>28</height><texture colordiffuse="FFE50914">mic-thin.png</texture><visible>Control.HasFocus({s}) + String.IsEmpty(Window.Property(kids))</visible></control>'
-        ).format(s=SEARCH)
-        bar = dict(tabs_w=1140, tab_w=160, pill_w=148, search_l=1490, search_w=240, search_i=1506, search_label='Search', search_t=28, search_h=48, search_it=36, profile_l=1746,
-                   gear_l=1800, close_l=1856, icon=44, icon_t=30, search_mic=search_mic)
+        bar = dict(tabs_l=292, tabs_w=1326, tab_w=188, pill_w=176, search_l=1652, profile_l=1708,
+                   gear_l=1764, close_l=1820, btn=44, btn_t=30, ico=24, ico_off=10)
     downs = '<ondown condition="Control.IsVisible({flt})">{flt}</ondown>\n            <ondown>{first}</ondown>'.format(flt=FILTER, first=FIRST)
+
+    def util_btn(cid, left, icon_png, onleft, onright):
+        ix = left + bar['ico_off']
+        iy = bar['btn_t'] + bar['ico_off']
+        return '''        <control type="image"><left>{l}</left><top>{t}</top><width>{b}</width><height>{b}</height><texture colordiffuse="1FFFFFFF">util_circle.png</texture><visible>!Control.HasFocus({id})</visible></control>
+        <control type="image"><left>{l}</left><top>{t}</top><width>{b}</width><height>{b}</height><texture colordiffuse="FFFFFFFF">util_circle.png</texture><visible>Control.HasFocus({id})</visible></control>
+        <control type="image"><left>{ix}</left><top>{iy}</top><width>{ico}</width><height>{ico}</height><aspectratio>keep</aspectratio><texture colordiffuse="FFD8D8E0">{png}</texture><visible>!Control.HasFocus({id})</visible></control>
+        <control type="image"><left>{ix}</left><top>{iy}</top><width>{ico}</width><height>{ico}</height><aspectratio>keep</aspectratio><texture colordiffuse="FF141414">{png}</texture><visible>Control.HasFocus({id})</visible></control>
+        <control type="button" id="{id}">
+            <left>{l}</left><top>{t}</top><width>{b}</width><height>{b}</height>
+            <texturefocus>-</texturefocus><texturenofocus>-</texturenofocus>
+            <label></label>
+            <onleft>{ol}</onleft><onright>{or_}</onright><onup>noop</onup>
+            {downs}
+        </control>'''.format(id=cid, l=left, t=bar['btn_t'], b=bar['btn'], ix=ix, iy=iy, ico=bar['ico'], png=icon_png, ol=onleft, or_=onright, downs=downs)
+
+    utils = '\n'.join([
+        util_btn(SEARCH, bar['search_l'], 'search-thin.png', TABS, PROFILE),
+        util_btn(PROFILE, bar['profile_l'], 'person-thin.png', SEARCH, GEAR),
+        util_btn(GEAR, bar['gear_l'], 'gear-thin.png', PROFILE, CLOSE),
+        util_btn(CLOSE, bar['close_l'], 'close-thin.png', GEAR, 'noop'),
+    ])
     return '''        <!-- top bar: a dark fade keeps it readable over the billboard -->
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>150</height><texture>top_fade.png</texture></control>
-        <control type="image"><left>56</left><top>22</top><width>236</width><height>58</height><aspectratio>keep</aspectratio><texture>logo.png</texture><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(youtube_tab))</visible></control>
-        <control type="image"><left>58</left><top>30</top><width>60</width><height>42</height><aspectratio>keep</aspectratio><texture>yt-badge.png</texture><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Window.Property(youtube_tab))</visible></control>
-        <control type="label"><left>128</left><top>26</top><width>180</width><height>50</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><label>[B]YouTube[/B]</label><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Window.Property(youtube_tab))</visible></control>
-        <control type="label"><left>60</left><top>26</top><width>230</width><height>50</height><font>font36_title</font><textcolor>FFFFD640</textcolor><label>[B]KIDS[/B]</label><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
+        <control type="image"><left>56</left><top>26</top><width>200</width><height>52</height><aspectratio>keep</aspectratio><texture>logo.png</texture><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(youtube_tab))</visible></control>
+        <control type="image"><left>56</left><top>32</top><width>56</width><height>40</height><aspectratio>keep</aspectratio><texture>yt-badge.png</texture><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Window.Property(youtube_tab))</visible></control>
+        <control type="label"><left>122</left><top>26</top><width>160</width><height>52</height><font>font36_title</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]YouTube[/B]</label><visible>String.IsEmpty(Window.Property(kids)) + !String.IsEmpty(Window.Property(youtube_tab))</visible></control>
+        <control type="label"><left>56</left><top>26</top><width>210</width><height>52</height><font>font36_title</font><aligny>center</aligny><textcolor>FFFFD640</textcolor><label>[B]KIDS[/B]</label><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="list" id="{tabs}">
-            <left>330</left><top>24</top><width>{tabs_w}</width><height>56</height>
+            <left>{tabs_l}</left><top>26</top><width>{tabs_w}</width><height>52</height>
             <orientation>horizontal</orientation>
             {downs}
             <onright>{search}</onright>
             <onleft>noop</onleft>
             <onup>noop</onup>
-            <!-- seven tabs with generous breathing room; the highlighted tab sits in a white pill, the open tab is bold white -->
-            <itemlayout width="{tab_w}" height="56" condition="String.IsEmpty(Window.Property(kids))">
-                <control type="label"><left>0</left><top>0</top><width>{pill_w}</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FFB3B3B3</textcolor><label>$INFO[ListItem.Label]</label></control>
+            <!-- seven tabs aligned on the Y=52px optical centerline with Apple SF Symbols & authentic YouTube icon -->
+            <itemlayout width="{tab_w}" height="52" condition="String.IsEmpty(Window.Property(kids))">
+                <control type="image"><left>16</left><top>14</top><width>24</width><height>24</height><aspectratio>keep</aspectratio><texture colordiffuse="FFA8A8B2">$INFO[ListItem.Property(icon)]</texture></control>
+                <control type="label"><left>48</left><top>0</top><width>124</width><height>52</height><font>font12</font><align>left</align><aligny>center</aligny><scroll>false</scroll><textcolor>FFA8A8B2</textcolor><label>$INFO[ListItem.Label]</label></control>
             </itemlayout>
-            <focusedlayout width="{tab_w}" height="56" condition="String.IsEmpty(Window.Property(kids))">
-                <control type="image"><left>0</left><top>6</top><width>{pill_w}</width><height>44</height><texture colordiffuse="FFFFFFFF" border="22">pill.png</texture><visible>Control.HasFocus({tabs})</visible><animation effect="zoom" start="90" end="100" time="120" center="auto">Visible</animation></control>
-                <control type="image"><left>34</left><top>48</top><width>80</width><height>4</height><texture colordiffuse="FFE50914" border="2">round.png</texture><visible>!Control.HasFocus({tabs})</visible></control>
-                <control type="label"><left>0</left><top>0</top><width>{pill_w}</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({tabs})</visible></control>
-                <control type="label"><left>0</left><top>0</top><width>{pill_w}</width><height>56</height><font>font13</font><align>center</align><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>!Control.HasFocus({tabs})</visible></control>
+            <focusedlayout width="{tab_w}" height="52" condition="String.IsEmpty(Window.Property(kids))">
+                <control type="image"><left>0</left><top>4</top><width>{pill_w}</width><height>44</height><texture colordiffuse="FFFFFFFF" border="22">pill.png</texture><visible>Control.HasFocus({tabs})</visible><animation effect="zoom" start="94" end="100" time="120" center="auto">Visible</animation></control>
+                <control type="image"><left>44</left><top>48</top><width>76</width><height>3</height><texture colordiffuse="FFE50914" border="1">round.png</texture><visible>!Control.HasFocus({tabs})</visible></control>
+                <control type="image"><left>16</left><top>14</top><width>24</width><height>24</height><aspectratio>keep</aspectratio><texture colordiffuse="FF141414">$INFO[ListItem.Property(icon)]</texture><visible>Control.HasFocus({tabs})</visible></control>
+                <control type="image"><left>16</left><top>14</top><width>24</width><height>24</height><aspectratio>keep</aspectratio><texture colordiffuse="FFFFFFFF">$INFO[ListItem.Property(icon)]</texture><visible>!Control.HasFocus({tabs}) + !String.IsEqual(ListItem.Property(key),youtube)</visible></control>
+                <control type="image"><left>16</left><top>14</top><width>24</width><height>24</height><aspectratio>keep</aspectratio><texture colordiffuse="FFFF1A1A">$INFO[ListItem.Property(icon)]</texture><visible>!Control.HasFocus({tabs}) + String.IsEqual(ListItem.Property(key),youtube)</visible></control>
+                <control type="label"><left>48</left><top>0</top><width>124</width><height>52</height><font>font12</font><align>left</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF141414</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>Control.HasFocus({tabs})</visible></control>
+                <control type="label"><left>48</left><top>0</top><width>124</width><height>52</height><font>font12</font><align>left</align><aligny>center</aligny><scroll>false</scroll><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>!Control.HasFocus({tabs})</visible></control>
             </focusedlayout>
-            <itemlayout width="230" height="56" condition="!String.IsEmpty(Window.Property(kids))">
-                <control type="label"><left>0</left><top>0</top><width>290</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>
+            <itemlayout width="230" height="52" condition="!String.IsEmpty(Window.Property(kids))">
+                <control type="label"><left>0</left><top>0</top><width>220</width><height>52</height><font>font13</font><aligny>center</aligny><textcolor>FFD6D6D6</textcolor><label>$INFO[ListItem.Label]</label></control>
             </itemlayout>
-            <focusedlayout width="230" height="56" condition="!String.IsEmpty(Window.Property(kids))">
-                <control type="image"><left>0</left><top>48</top><width>130</width><height>6</height><texture colordiffuse="FFFFD640" border="3">round.png</texture></control>
-                <control type="label"><left>0</left><top>0</top><width>290</width><height>56</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
+            <focusedlayout width="230" height="52" condition="!String.IsEmpty(Window.Property(kids))">
+                <control type="image"><left>0</left><top>46</top><width>130</width><height>5</height><texture colordiffuse="FFFFD640" border="2">round.png</texture></control>
+                <control type="label"><left>0</left><top>0</top><width>220</width><height>52</height><font>font13</font><aligny>center</aligny><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label></control>
             </focusedlayout>
         </control>
-        <control type="image"><left>{search_l}</left><top>{search_t}</top><width>{search_w}</width><height>{search_h}</height><texture colordiffuse="33FFFFFF" border="23">pill.png</texture><visible>!Control.HasFocus({search})</visible></control>
-        <control type="image"><left>{search_l}</left><top>{search_t}</top><width>{search_w}</width><height>{search_h}</height><texture colordiffuse="FFFFFFFF" border="23">pill.png</texture><visible>Control.HasFocus({search})</visible></control>
-        <control type="image"><left>{search_i}</left><top>{search_it}</top><width>32</width><height>32</height><texture colordiffuse="FFD6D6D6">search-thin.png</texture><visible>!Control.HasFocus({search})</visible></control>
-        <control type="image"><left>{search_i}</left><top>{search_it}</top><width>32</width><height>32</height><texture colordiffuse="FF141414">search-thin.png</texture><visible>Control.HasFocus({search})</visible></control>
-{search_mic}
-        <control type="button" id="{search}">
-            <left>{search_l}</left><top>{search_t}</top><width>{search_w}</width><height>{search_h}</height>
-            <texturefocus>-</texturefocus>
-            <texturenofocus>-</texturenofocus>
-            <label>{search_label}</label>
-            <font>font13</font>
-            <textoffsetx>58</textoffsetx>
-            <aligny>center</aligny>
-            <textcolor>FFB3B3B3</textcolor>
-            <focusedcolor>FF141414</focusedcolor>
-            <onleft>{tabs}</onleft>
-            <onright>{profile}</onright>
-            {downs}
-            <onup>noop</onup>
-        </control>
-        <control type="button" id="{profile}">
-            <left>{profile_l}</left><top>{icon_t}</top><width>{icon}</width><height>{icon}</height>
-            <texturefocus colordiffuse="FFE50914">person-thin.png</texturefocus>
-            <texturenofocus colordiffuse="CCFFFFFF">person-thin.png</texturenofocus>
-            <label></label>
-            <onleft>{search}</onleft>
-            <onright>{gear}</onright>
-            <onup>noop</onup>
-            {downs}
-        </control>
-        <control type="button" id="{gear}">
-            <left>{gear_l}</left><top>{icon_t}</top><width>{icon}</width><height>{icon}</height>
-            <texturefocus colordiffuse="FFE50914">gear-thin.png</texturefocus>
-            <texturenofocus colordiffuse="CCFFFFFF">gear-thin.png</texturenofocus>
-            <label></label>
-            <onleft>{profile}</onleft>
-            <onright>{close}</onright>
-            <onup>noop</onup>
-            {downs}
-        </control>
-        <control type="button" id="{close}">
-            <left>{close_l}</left><top>{icon_t}</top><width>{icon}</width><height>{icon}</height>
-            <texturefocus colordiffuse="FFE50914">close-thin.png</texturefocus>
-            <texturenofocus colordiffuse="CCFFFFFF">close-thin.png</texturenofocus>
-            <label></label>
-            <onleft>{gear}</onleft>
-            <onright>noop</onright>
-            <onup>noop</onup>
-            {downs}
-        </control>
-'''.format(tabs=TABS, downs=downs, search=SEARCH, profile=PROFILE, gear=GEAR, close=CLOSE, **bar)
+{utils}
+'''.format(tabs=TABS, downs=downs, search=SEARCH, utils=utils, **bar)
 
 
 def home_xml():

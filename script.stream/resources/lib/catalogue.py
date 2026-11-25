@@ -9,8 +9,10 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import xbmc
 import xbmcaddon
+import xbmcgui
 import xbmcvfs
 
+import core_client
 import db
 import youtube as yt
 
@@ -604,10 +606,26 @@ def play(parent, item, group=None, series=None, label=None):
         state['affinity'][key] = state['affinity'].get(key, 0) + 1
     save_state()
 
+    # Fast path: if Go stream-core already has a fresh resolved URL cached for this item,
+    # hand the local HTTP/2 prefetched proxy URL straight to Kodi's C++ player (skips Sasta TV Python spawn).
+    play_key = db.play_key(item)
+    fast_proxy = None if yt.is_youtube(target) else core_client.get_resolved(play_key)
+
     # Opening the link as a folder is what a click inside the Sasta TV addon does; it then starts the player.
     def run():
         try:
-            if yt.is_youtube(target):
+            if fast_proxy:
+                li = xbmcgui.ListItem(label or item['name'])
+                info = {'title': item['name']}
+                if series:
+                    info['tvshowtitle'] = series
+                if item.get('plot'):
+                    info['plot'] = item['plot']
+                li.setInfo('video', info)
+                if item.get('img'):
+                    li.setArt({'thumb': item['img'], 'poster': item['img']})
+                xbmc.Player().play(fast_proxy, li)
+            elif yt.is_youtube(target):
                 rpc('Player.Open', {'item': {'file': target}})
             else:
                 rpc('Files.GetDirectory', {'directory': target})

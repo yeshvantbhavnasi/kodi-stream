@@ -567,13 +567,13 @@
 		<value condition="Control.HasFocus(105)">$LOCALIZE[137]</value>
 	</variable>
 	<variable name="PlayerControlsPlayImageVar">
-		<value condition="Player.Playing">osd/fullscreen/buttons/pause.png</value>
-		<value>osd/fullscreen/buttons/play.png</value>
+		<value condition="Player.Playing">stream_osd/buttons/pause.png</value>
+		<value>stream_osd/buttons/play.png</value>
 	</variable>
 	<variable name="PlayerControlsRepeatImageVar">
-		<value condition="Playlist.IsRepeatOne">osd/fullscreen/buttons/repeat-one.png</value>
-		<value condition="Playlist.IsRepeat">osd/fullscreen/buttons/repeat-all.png</value>
-		<value>osd/fullscreen/buttons/repeat-off.png</value>
+		<value condition="Playlist.IsRepeatOne">stream_osd/buttons/repeat-one.png</value>
+		<value condition="Playlist.IsRepeat">stream_osd/buttons/repeat-all.png</value>
+		<value>stream_osd/buttons/repeat-off.png</value>
 	</variable>
 	<variable name="PlayerLabel1">
 		<value condition="Player.HasVideo">$INFO[VideoPlayer.Title]</value>

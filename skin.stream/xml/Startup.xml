@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <window>
-	<onload>ReplaceWindow($INFO[System.StartupWindow])</onload>
-	<controls />
+	<backgroundcolor>FF0B0B0B</backgroundcolor>
+	<onload>ReplaceWindow(Home)</onload>
+	<controls>
+		<control type="image">
+			<left>0</left><top>0</top><width>1920</width><height>1080</height>
+			<texture>colors/black.png</texture>
+			<colordiffuse>FF0B0B0B</colordiffuse>
+		</control>
+	</controls>
 </window>

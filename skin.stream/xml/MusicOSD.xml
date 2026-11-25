@@ -43,14 +43,14 @@
 				<onright>70040</onright>
 				<control type="radiobutton" id="600">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/previous.png"/>
+						<param name="texture" value="stream_osd/buttons/previous.png"/>
 					</include>
 					<onclick>PlayerControl(Previous)</onclick>
 					<visible>Player.ChapterCount | MusicPlayer.HasPrevious | [Player.SeekEnabled + MusicPlayer.Content(livetv)]</visible>
 				</control>
 				<control type="radiobutton" id="601">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/rewind.png"/>
+						<param name="texture" value="stream_osd/buttons/rewind.png"/>
 					</include>
 					<onclick condition="Player.Paused">PlayerControl(Play)</onclick>
 					<onclick condition="!Player.Paused">PlayerControl(Rewind)</onclick>
@@ -67,7 +67,7 @@
 						<height>74</height>
 						<label></label>
 						<font></font>
-						<texturefocus colordiffuse="button_focus">osd/fullscreen/buttons/button-fo.png</texturefocus>
+						<texturefocus colordiffuse="button_focus">stream_osd/buttons/button-fo.png</texturefocus>
 						<texturenofocus />
 						<onleft>601</onleft>
 						<onright>603</onright>
@@ -86,13 +86,13 @@
 				</control>
 				<control type="radiobutton" id="603">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/stop.png"/>
+						<param name="texture" value="stream_osd/buttons/stop.png"/>
 					</include>
 					<onclick>PlayerControl(Stop)</onclick>
 				</control>
 				<control type="radiobutton" id="606">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/forward.png"/>
+						<param name="texture" value="stream_osd/buttons/forward.png"/>
 					</include>
 					<onclick condition="Player.Paused">PlayerControl(Play)</onclick>
 					<onclick condition="!Player.Paused">PlayerControl(Forward)</onclick>
@@ -100,17 +100,17 @@
 				</control>
 				<control type="radiobutton" id="607">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/next.png"/>
+						<param name="texture" value="stream_osd/buttons/next.png"/>
 					</include>
 					<onclick>PlayerControl(Next)</onclick>
 					<visible>Player.ChapterCount | MusicPlayer.HasNext | PVR.IsTimeShift</visible>
 				</control>
 				<control type="radiobutton" id="608">
-					<textureradioonfocus colordiffuse="white">osd/fullscreen/buttons/record-white.png</textureradioonfocus>
-					<textureradioonnofocus>osd/fullscreen/buttons/record-white.png</textureradioonnofocus>
-					<textureradioofffocus colordiffuse="white">osd/fullscreen/buttons/record.png</textureradioofffocus>
-					<textureradiooffnofocus>osd/fullscreen/buttons/record.png</textureradiooffnofocus>
-					<texturefocus colordiffuse="button_focus">osd/fullscreen/buttons/button-fo.png</texturefocus>
+					<textureradioonfocus colordiffuse="white">stream_osd/buttons/record-white.png</textureradioonfocus>
+					<textureradioonnofocus>stream_osd/buttons/record-white.png</textureradioonnofocus>
+					<textureradioofffocus colordiffuse="white">stream_osd/buttons/record.png</textureradioofffocus>
+					<textureradiooffnofocus>stream_osd/buttons/record.png</textureradiooffnofocus>
+					<texturefocus colordiffuse="button_focus">stream_osd/buttons/button-fo.png</texturefocus>
 					<width>76</width>
 					<animation center="38,38" effect="zoom" end="100" reversible="false" start="95" time="480" tween="back">Focus</animation>
 					<height>76</height>
@@ -141,7 +141,7 @@
 				<onright>600</onright>
 				<control type="radiobutton" id="70040">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/channels.png"/>
+						<param name="texture" value="stream_osd/buttons/channels.png"/>
 					</include>
 					<onclick>Dialog.Close(MusicOSD)</onclick>
 					<onclick>ActivateWindow(PVROSDChannels)</onclick>
@@ -149,7 +149,7 @@
 				</control>
 				<control type="radiobutton" id="70041">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/guide.png"/>
+						<param name="texture" value="stream_osd/buttons/guide.png"/>
 					</include>
 					<onclick>Dialog.Close(MusicOSD)</onclick>
 					<onclick>ActivateWindow(PVRChannelGuide)</onclick>
@@ -157,7 +157,7 @@
 				</control>
 				<control type="radiobutton" id="70050">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/rds.png"/>
+						<param name="texture" value="stream_osd/buttons/rds.png"/>
 					</include>
 					<onclick>Dialog.Close(MusicOSD)</onclick>
 					<onclick>ActivateWindow(PVRRadioRDSInfo)</onclick>
@@ -165,7 +165,7 @@
 				</control>
 				<control type="radiobutton" id="70051">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/playlist.png"/>
+						<param name="texture" value="stream_osd/buttons/playlist.png"/>
 					</include>
 					<onclick>Dialog.Close(all, true)</onclick>
 					<onclick>ActivateWindow(musicplaylist)</onclick>
@@ -173,7 +173,7 @@
 				</control>
 				<control type="radiobutton" id="70052">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/rating.png"/>
+						<param name="texture" value="stream_osd/buttons/rating.png"/>
 					</include>
 					<onclick>SetRating</onclick>
 				</control>
@@ -188,7 +188,7 @@
 						<height>74</height>
 						<label></label>
 						<font></font>
-						<texturefocus colordiffuse="button_focus">osd/fullscreen/buttons/button-fo.png</texturefocus>
+						<texturefocus colordiffuse="button_focus">stream_osd/buttons/button-fo.png</texturefocus>
 						<texturenofocus />
 						<onleft>70052</onleft>
 						<onright>70054</onright>
@@ -206,13 +206,13 @@
 					</control>
 				</control>
 				<control type="radiobutton" id="70054">
-					<textureradioonfocus colordiffuse="white">osd/fullscreen/buttons/random-on.png</textureradioonfocus>
-					<textureradioonnofocus>osd/fullscreen/buttons/random-on.png</textureradioonnofocus>
-					<textureradioofffocus colordiffuse="white">osd/fullscreen/buttons/random-off.png</textureradioofffocus>
-					<textureradiooffnofocus>osd/fullscreen/buttons/random-off.png</textureradiooffnofocus>
-					<textureradioondisabled colordiffuse="disabled">osd/fullscreen/buttons/random-on.png</textureradioondisabled>
-					<textureradiooffdisabled colordiffuse="disabled">osd/fullscreen/buttons/random-off.png</textureradiooffdisabled>
-					<texturefocus colordiffuse="button_focus">osd/fullscreen/buttons/button-fo.png</texturefocus>
+					<textureradioonfocus colordiffuse="white">stream_osd/buttons/random-on.png</textureradioonfocus>
+					<textureradioonnofocus>stream_osd/buttons/random-on.png</textureradioonnofocus>
+					<textureradioofffocus colordiffuse="white">stream_osd/buttons/random-off.png</textureradioofffocus>
+					<textureradiooffnofocus>stream_osd/buttons/random-off.png</textureradiooffnofocus>
+					<textureradioondisabled colordiffuse="disabled">stream_osd/buttons/random-on.png</textureradioondisabled>
+					<textureradiooffdisabled colordiffuse="disabled">stream_osd/buttons/random-off.png</textureradiooffdisabled>
+					<texturefocus colordiffuse="button_focus">stream_osd/buttons/button-fo.png</texturefocus>
 					<width>76</width>
 					<animation center="38,38" effect="zoom" end="100" reversible="false" start="95" time="480" tween="back">Focus</animation>
 					<height>76</height>
@@ -228,7 +228,7 @@
 				</control>
 				<control type="radiobutton" id="70055">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/settings-subtitle.png"/>
+						<param name="texture" value="stream_osd/buttons/settings-subtitle.png"/>
 					</include>
 					<onclick>Close</onclick>
 					<onclick condition="!String.IsEmpty(Skin.String(LyricScript_Path))">RunScript($INFO[Skin.String(LyricScript_Path)])</onclick>
@@ -238,7 +238,7 @@
 				</control>
 				<control type="radiobutton" id="70048">
 					<include content="OSDButton">
-						<param name="texture" value="osd/fullscreen/buttons/settings.png"/>
+						<param name="texture" value="stream_osd/buttons/settings.png"/>
 					</include>
 					<onclick>ActivateWindow(1105)</onclick>
 				</control>

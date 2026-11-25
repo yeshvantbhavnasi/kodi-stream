@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fonts>
 	<fontset id="Default" idloc="15109">
-		<!-- Modern Inter Typography -->
-		<font><name>font10</name><filename>Inter-Medium.ttf</filename><size>22</size></font>
-		<font><name>font12</name><filename>Inter-Regular.ttf</filename><size>25</size></font>
-		<font><name>font13</name><filename>Inter-Medium.ttf</filename><size>29</size></font>
-		<font><name>font14</name><filename>Inter-Medium.ttf</filename><size>33</size></font>
-		<font><name>font23_narrow</name><filename>Inter-Regular.ttf</filename><size>23</size><linespacing>0.85</linespacing></font>
-		<font><name>font25_narrow</name><filename>Inter-Regular.ttf</filename><size>25</size><linespacing>0.85</linespacing></font>
-		<font><name>font27</name><filename>Inter-Medium.ttf</filename><size>27</size></font>
-		<font><name>font27_narrow</name><filename>Inter-Regular.ttf</filename><size>27</size><linespacing>0.85</linespacing></font>
-		<font><name>font32</name><filename>Inter-Medium.ttf</filename><size>32</size></font>
-		<font><name>font37</name><filename>Inter-SemiBold.ttf</filename><size>37</size></font>
-		<font><name>font45</name><filename>Inter-Bold.ttf</filename><size>45</size></font>
-		<font><name>font60</name><filename>Inter-Black.ttf</filename><size>62</size></font>
-		<font><name>font_clock</name><filename>Inter-SemiBold.ttf</filename><size>56</size></font>
+		<!-- Apple TV / Netflix Sans-inspired geometric typography (Plus Jakarta Sans) -->
+		<font><name>font10</name><filename>PlusJakartaSans-Medium.ttf</filename><size>22</size></font>
+		<font><name>font12</name><filename>PlusJakartaSans-Regular.ttf</filename><size>25</size></font>
+		<font><name>font13</name><filename>PlusJakartaSans-Medium.ttf</filename><size>29</size></font>
+		<font><name>font14</name><filename>PlusJakartaSans-SemiBold.ttf</filename><size>33</size></font>
+		<font><name>font23_narrow</name><filename>PlusJakartaSans-Regular.ttf</filename><size>23</size><linespacing>0.88</linespacing></font>
+		<font><name>font25_narrow</name><filename>PlusJakartaSans-Regular.ttf</filename><size>25</size><linespacing>0.88</linespacing></font>
+		<font><name>font27</name><filename>PlusJakartaSans-Medium.ttf</filename><size>27</size></font>
+		<font><name>font27_narrow</name><filename>PlusJakartaSans-Regular.ttf</filename><size>27</size><linespacing>0.88</linespacing></font>
+		<font><name>font32</name><filename>PlusJakartaSans-Medium.ttf</filename><size>32</size></font>
+		<font><name>font37</name><filename>PlusJakartaSans-SemiBold.ttf</filename><size>37</size></font>
+		<font><name>font45</name><filename>PlusJakartaSans-Bold.ttf</filename><size>45</size></font>
+		<font><name>font60</name><filename>PlusJakartaSans-ExtraBold.ttf</filename><size>62</size></font>
+		<font><name>font_clock</name><filename>PlusJakartaSans-SemiBold.ttf</filename><size>56</size></font>
 		<!-- Title & Heading Fonts -->
-		<font><name>font_flag</name><filename>Inter-Bold.ttf</filename><size>18</size></font>
-		<font><name>font20_title</name><filename>Inter-SemiBold.ttf</filename><size>21</size></font>
-		<font><name>font25_title</name><filename>Inter-SemiBold.ttf</filename><size>26</size></font>
-		<font><name>font30_title</name><filename>Inter-Bold.ttf</filename><size>31</size></font>
-		<font><name>font32_title</name><filename>Inter-Bold.ttf</filename><size>33</size></font>
-		<font><name>font36_title</name><filename>Inter-Bold.ttf</filename><size>38</size></font>
-		<font><name>font40_title</name><filename>Inter-Bold.ttf</filename><size>42</size></font>
-		<font><name>font45_title</name><filename>Inter-ExtraBold.ttf</filename><size>46</size></font>
-		<font><name>font52_title</name><filename>Inter-ExtraBold.ttf</filename><size>54</size></font>
-		<font><name>font_MainMenu</name><filename>Inter-Bold.ttf</filename><size>56</size></font>
-		<font><name>WeatherTemp</name><aspect>0.88</aspect><filename>Inter-Bold.ttf</filename><size>112</size></font>
-		<font><name>Mono26</name><filename>Inter-Medium.ttf</filename><size>26</size></font>
+		<font><name>font_flag</name><filename>PlusJakartaSans-Bold.ttf</filename><size>18</size></font>
+		<font><name>font20_title</name><filename>PlusJakartaSans-SemiBold.ttf</filename><size>21</size></font>
+		<font><name>font25_title</name><filename>PlusJakartaSans-SemiBold.ttf</filename><size>26</size></font>
+		<font><name>font30_title</name><filename>PlusJakartaSans-Bold.ttf</filename><size>31</size></font>
+		<font><name>font32_title</name><filename>PlusJakartaSans-Bold.ttf</filename><size>33</size></font>
+		<font><name>font36_title</name><filename>PlusJakartaSans-Bold.ttf</filename><size>38</size></font>
+		<font><name>font40_title</name><filename>PlusJakartaSans-Bold.ttf</filename><size>42</size></font>
+		<font><name>font45_title</name><filename>PlusJakartaSans-ExtraBold.ttf</filename><size>46</size></font>
+		<font><name>font52_title</name><filename>PlusJakartaSans-ExtraBold.ttf</filename><size>54</size></font>
+		<font><name>font_MainMenu</name><filename>PlusJakartaSans-Bold.ttf</filename><size>56</size></font>
+		<font><name>WeatherTemp</name><aspect>0.88</aspect><filename>PlusJakartaSans-Bold.ttf</filename><size>112</size></font>
+		<font><name>Mono26</name><filename>PlusJakartaSans-Medium.ttf</filename><size>26</size></font>
 	</fontset>
 </fonts>
