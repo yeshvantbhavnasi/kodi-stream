@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.join(ADDON_PATH, 'resources', 'lib'))
 import ai  # noqa: E402
 import audit  # noqa: E402
 import catalogue as cat  # noqa: E402
+import core_client  # noqa: E402
 import db  # noqa: E402
 import discover  # noqa: E402
 import downloads as dl  # noqa: E402
@@ -354,8 +355,8 @@ def follow(key, name, group, kind, live):
             PLAY['ended'] = 'stopped'
     audit.event('play_ended', title=name, position=int(position), duration=int(duration), ended=PLAY['ended'])
     home = HOME['window']
-    if home is not None and not home.closed and home.tab == 'home' and not live:
-        home.load_tab('home')  # so Continue Watching and Recently Played show what was just played
+    if home is not None and not home.closed and home.tab == 'home' and not live and not OPEN['grids'] and xbmcgui.getCurrentWindowDialogId() == 9999:
+        home.load_tab('home', focus=False)  # refresh Continue Watching silently without stealing focus
     if not live and duration > 0:
         percent = int(100 * position / duration)
         db.log_event('finished' if percent >= 90 else 'stopped', name, group, kind, 'watched {0}%'.format(percent))
@@ -429,39 +430,44 @@ def start(li, restart=False):
         item['season'] = li.getProperty('season')  # kept with the history entry, so its tile can say S2 · E5
         db.set_meta('last:' + series, {'season': li.getProperty('season'), 'episode': item['name']})
     if not cat.play(parent, item, group, series, label):
-        xbmcgui.Dialog().ok('Stream', 'This title can only be opened from the Sasta TV addon itself.')
+        xbmcgui.Dialog().ok('Stream', 'This title is temporarily unavailable.')
         return
     PLAY['since'], PLAY['cancel'] = time.time(), False
     kind = 'Live TV' if live else 'YouTube' if yt.is_youtube(item.get('url')) else cat.section_of(parent)[0]
     db.log_event('played', label, group, kind)
     audit.event('play_request', title=label, kind=kind, free_memory=audit.memory())
 
-    # Wait for the stream with a dialog the Back button can cancel.
+    # Wait for the stream with a clean Stream progress card that Back can cancel.
+    # Poll every 150ms for near-instant handoff to fullscreen video.
+    home_win = xbmcgui.Window(10000)
+    home_win.setProperty('stream.starting', '1')
     text = '{0} {1}…\nPress Back to cancel.'.format(
         'Resuming' if resume else 'Starting', label + (' from ' + clock(resume) if resume else ''))
     progress = xbmcgui.DialogProgress()
     progress.create('Stream', text)
     started = cancelled = False
     grace = time.time() + CANCEL_GRACE
-    for step in range(START_TIMEOUT * 2):
-        if progress.iscanceled():
-            if time.time() < grace:
-                # The OK press that chose the title can repeat (a held key on a TV remote) and land on the
-                # dialog's Cancel button. A cancel this early is not meant, so the dialog is simply put back.
-                progress.close()
-                progress = xbmcgui.DialogProgress()
-                progress.create('Stream', text)
-                audit.event('play_cancel_ignored', title=label)
-            else:
-                cancelled = True
+    steps = START_TIMEOUT * 7
+    try:
+        for step in range(steps):
+            if progress.iscanceled():
+                if time.time() < grace:
+                    progress.close()
+                    progress = xbmcgui.DialogProgress()
+                    progress.create('Stream', text)
+                    audit.event('play_cancel_ignored', title=label)
+                else:
+                    cancelled = True
+                    break
+            if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
+                started = True
                 break
-        if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
-            started = True
-            break
-        progress.update(min(95, int(100 * step / (START_TIMEOUT * 2))))
-        if monitor.waitForAbort(0.5):
-            break
-    progress.close()
+            progress.update(min(95, int(100 * step / steps)))
+            if monitor.waitForAbort(0.15):
+                break
+    finally:
+        progress.close()
+        home_win.clearProperty('stream.starting')
     if cancelled or progress.iscanceled():
         PLAY['cancel'], PLAY['since'] = True, 0
         if player.isPlaying():
@@ -482,6 +488,16 @@ def start(li, restart=False):
         except Exception:
             pass
     audit.event('play_started', title=label, kind=kind, startup_ms=int((time.time() - PLAY['since']) * 1000) if PLAY['since'] else 0)
+    # Cache the resolved upstream URL in Go stream-core so resuming/replaying skips Sasta TV Python spawn.
+    if not yt.is_youtube(item.get('url')):
+        try:
+            playing = player.getPlayingFile() or ''
+            if playing.startswith('http') and '127.0.0.1:8775' not in playing:
+                base_url, _, raw_hdrs = playing.partition('|')
+                hdrs = dict(parse_qsl(raw_hdrs)) if raw_hdrs else {}
+                core_client.cache_resolved(key, base_url, hdrs, ttl_seconds=300 if live else 1800, prefetch=False)
+        except Exception:
+            pass
     threading.Thread(target=follow, args=(key, label, group, kind, live), daemon=True).start()
 
 
@@ -2620,13 +2636,12 @@ class Home(xbmcgui.WindowXML):
         self.spawn(self.background)
         self.spawn(self.keeper)
         library.start(lambda: BUSY['on'] or self.closed or xbmc.Player().isPlaying())
-        self.spawn(self.billboard)
         self.spawn(watch_visibility, self)
 
     def keeper(self):
         """While Stream is open: every hour, re-read the catalogue's first pages, refresh videos and metadata, and
-        share the catalogue; every minute check whether a pending service recommendation batch is ready. Home's rows
-        are redrawn straight away when nobody is using the remote; otherwise the next visit to Home shows them."""
+        share the catalogue; every minute check whether a pending service recommendation batch is ready. Rows are
+        rebuilt silently in memory and shown the next time the viewer visits Home — never interrupting navigation."""
         monitor = xbmc.Monitor()
         last_hourly = time.time()  # background() already runs the initial pass on startup
         while not self.closed and not monitor.waitForAbort(60):
@@ -2645,29 +2660,22 @@ class Home(xbmcgui.WindowXML):
                 made = ai.recommend(cat.top_groups(), pool=recs.pool_for_model())
                 if made:
                     recs.mark_dirty()
-                    notify('Recommendations updated' + ai.engine_note().replace('  \u00b7  ', ' \u00b7 '), 4000)
                 if not recs.stale():
                     continue
                 recs.rows(force=True)
-                idle = xbmc.getGlobalIdleTime() >= IDLE_AFTER and not OPEN['grids'] and xbmcgui.getCurrentWindowDialogId() == 9999
-                if self.tab == 'home' and idle and not self.closed:
-                    self.load_tab('home')
             except Exception as e:
                 cat.log('hourly refresh failed: {0}'.format(e))
 
     def background(self):
-        """Keep the local index and the suggestions fresh without holding up the screen."""
+        """Keep the local index and the suggestions fresh without interrupting the viewer's focus."""
         try:
             cat.warm_index()
             meta.warm(40)
             gathered = recs.refresh_videos()
             gathered = recs.resolve_lists() or gathered  # both run; either makes the rows stale
             recs.share_catalogue()
-            # Show the new rows straight away only if the viewer has not started navigating; otherwise they appear next time Home loads.
             if ai.recommend(cat.top_groups(), pool=recs.pool_for_model()) or gathered:
                 recs.rows(force=True)
-                if not self.touched and not self.closed and self.tab == 'home':
-                    self.load_tab('home')
         except Exception as e:
             cat.log('background refresh failed: {0}'.format(e))
             audit.error('home.background')
@@ -3863,12 +3871,17 @@ def run():
             db.use_profile(profile)
             cat.load_state()
             window = Home(skin('home'), ADDON_PATH, 'Default', '1080i')
-            xbmcgui.Window(10000).setProperty('script.stream.running', str(time.time()))
+            _hw = xbmcgui.Window(10000)
+            _hw.setProperty('script.stream.running', str(time.time()))
+            _hw.setProperty('stream.running', '1')
+            _hw.clearProperty('stream.launching')
+            _hw.clearProperty('stream.exited')
             audit.event('window_open')
             try:
                 window.doModal()
             finally:
-                xbmcgui.Window(10000).clearProperty('script.stream.running')
+                _hw.clearProperty('script.stream.running')
+                _hw.clearProperty('stream.running')
             audit.event('window_closed')
             again = getattr(window, 'switch', False)
             fresh = getattr(window, 'reset', False)
@@ -3878,6 +3891,7 @@ def run():
                 current, remembered = None, None  # everything was erased: pick up as a new installation
                 continue
             if not again:
+                _hw.setProperty('stream.exited', '1')
                 break
             continue
         # Leaving a kids profile can be protected by a PIN.
@@ -3901,13 +3915,18 @@ def run():
         if not profile.get('kids') and db.meta('profile') is None:
             onboarding(True)
         window = Home(skin('home'), ADDON_PATH, 'Default', '1080i')
-        xbmcgui.Window(10000).setProperty('script.stream.running', str(time.time()))
+        _hw = xbmcgui.Window(10000)
+        _hw.setProperty('script.stream.running', str(time.time()))
+        _hw.setProperty('stream.running', '1')
+        _hw.clearProperty('stream.launching')
+        _hw.clearProperty('stream.exited')
         audit.event('window_open')
         try:
             window.doModal()
         finally:
             # Only an open home screen blocks a second launch; a slow shutdown must not.
-            xbmcgui.Window(10000).clearProperty('script.stream.running')
+            _hw.clearProperty('script.stream.running')
+            _hw.clearProperty('stream.running')
         audit.event('window_closed')
         again = getattr(window, 'switch', False)
         fresh = getattr(window, 'reset', False)
@@ -3918,6 +3937,7 @@ def run():
             current, remembered = None, None
             continue
         if not again:
+            _hw.setProperty('stream.exited', '1')
             break
     cat.flush()
     audit.session_end()
