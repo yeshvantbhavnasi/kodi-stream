@@ -137,9 +137,39 @@ def _tune_advanced_settings():
         xbmc.log('[script.stream] advancedsettings write skipped: %s' % e, xbmc.LOGINFO)
 
 
+def _apply_staged_yt_keys():
+    """Apply locally staged YouTube API keys from /sdcard/Download/yt_keys.json (never committed to git) and delete the file."""
+    staged = '/storage/emulated/0/Download/yt_keys.json'
+    if not os.path.exists(staged):
+        return
+    try:
+        data = json.load(open(staged, 'r', encoding='utf-8'))
+        yt = xbmcaddon.Addon('plugin.video.youtube')
+        if data.get('api_key'):
+            yt.setSetting('youtube.api.key', data['api_key'])
+        if data.get('client_id'):
+            yt.setSetting('youtube.api.id', data['client_id'])
+        if data.get('client_secret'):
+            yt.setSetting('youtube.api.secret', data['client_secret'])
+        yt_profile = xbmcvfs.translatePath(yt.getAddonInfo('profile'))
+        ak_path = os.path.join(yt_profile, 'api_keys.json')
+        ak = json.load(open(ak_path, 'r', encoding='utf-8')) if os.path.exists(ak_path) else {'keys': {'developer': {}, 'user': {}}}
+        user_keys = ak.setdefault('keys', {}).setdefault('user', {})
+        for k in ('api_key', 'client_id', 'client_secret'):
+            if data.get(k):
+                user_keys[k] = data[k]
+        os.makedirs(yt_profile, exist_ok=True)
+        json.dump(ak, open(ak_path, 'w', encoding='utf-8'), indent=4)
+        os.remove(staged)
+        xbmc.log('[script.stream] applied staged YouTube API keys and cleaned up', xbmc.LOGINFO)
+    except Exception as e:
+        xbmc.log('[script.stream] staged YouTube keys skipped: %s' % e, xbmc.LOGINFO)
+
+
 _tune_advanced_settings()
 _tune_kodi_cache()
 _ensure_stream_skin()
+_apply_staged_yt_keys()
 
 monitor = xbmc.Monitor()
 
