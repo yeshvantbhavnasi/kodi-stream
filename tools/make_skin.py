@@ -317,24 +317,26 @@ def layouts(n, rid):
 {poster_focus}
                         </control>
                     </focusedlayout>
-                    <!-- Top 10: a big numeral beside each poster -->
-                    <itemlayout width="306" height="330" condition="!String.IsEmpty({top10})">
+                    <!-- Top 10: a big numeral beside each poster (tighter scale for 2-digit "10" so it never clips or overflows) -->
+                    <itemlayout width="312" height="330" condition="!String.IsEmpty({top10})">
                         <control type="group"><left>10</left><top>14</top>
-                            <control type="label"><left>0</left><top>120</top><width>110</width><height>80</height><font>font60</font><align>right</align><aligny>center</aligny><textcolor>FF5A5A5A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><animation effect="zoom" start="100" end="240" center="110,160" time="0" condition="true">Conditional</animation></control>
+                            <control type="label"><left>0</left><top>145</top><width>104</width><height>90</height><font>font60</font><align>right</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF5A5A5A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><visible>!String.IsEqual(ListItem.Property(rank),10)</visible><animation effect="zoom" start="100" end="220" center="104,205" time="0" condition="true">Conditional</animation></control>
+                            <control type="label"><left>-6</left><top>155</top><width>110</width><height>90</height><font>font60</font><align>right</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF5A5A5A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><visible>String.IsEqual(ListItem.Property(rank),10)</visible><animation effect="zoom" start="100" end="165" center="104,212" time="0" condition="true">Conditional</animation></control>
 {top10_item}
                         </control>
                     </itemlayout>
-                    <focusedlayout width="306" height="330" condition="!String.IsEmpty({top10})">
+                    <focusedlayout width="312" height="330" condition="!String.IsEmpty({top10})">
                         <control type="group"><left>10</left><top>14</top>
                             {zoom}
-                            <control type="label"><left>0</left><top>120</top><width>110</width><height>80</height><font>font60</font><align>right</align><aligny>center</aligny><textcolor>FF8A8A8A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><animation effect="zoom" start="100" end="240" center="110,160" time="0" condition="true">Conditional</animation></control>
+                            <control type="label"><left>0</left><top>145</top><width>104</width><height>90</height><font>font60</font><align>right</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF8A8A8A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><visible>!String.IsEqual(ListItem.Property(rank),10)</visible><animation effect="zoom" start="100" end="220" center="104,205" time="0" condition="true">Conditional</animation></control>
+                            <control type="label"><left>-6</left><top>155</top><width>110</width><height>90</height><font>font60</font><align>right</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF8A8A8A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><visible>String.IsEqual(ListItem.Property(rank),10)</visible><animation effect="zoom" start="100" end="165" center="104,212" time="0" condition="true">Conditional</animation></control>
 {top10_focus}
                         </control>
                     </focusedlayout>'''.format(
         wide=wide, top10=top10, poster_if=poster_if, zoom=zoom(rid),
         wide_item=indent(wide_tile(rid, False), 28), wide_focus=indent(wide_tile(rid, True), 28),
         poster_item=indent(poster_tile(rid, False), 28), poster_focus=indent(poster_tile(rid, True), 28),
-        top10_item=indent(poster_tile(rid, False, 90), 28), top10_focus=indent(poster_tile(rid, True, 90), 28))
+        top10_item=indent(poster_tile(rid, False, 96), 28), top10_focus=indent(poster_tile(rid, True, 96), 28))
 
 
 def scaled(text):
