@@ -342,7 +342,7 @@ def follow(key, name, group, kind, live):
     """While a title plays: save the position every 5 seconds, and stop the stream when the viewer backs out of the video."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
     position = duration = 0
-    seen_fullscreen, away, tick, applied_sub = False, 0, 0, False
+    seen_fullscreen, away, tick, applied_prefs = False, 0, 0, False
     PLAY['ended'] = ''
     for _ in range(40):
         if player.isPlayingVideo() or PLAY['cancel'] or monitor.waitForAbort(0.5):
@@ -352,15 +352,31 @@ def follow(key, name, group, kind, live):
             PLAY['ended'] = 'user'
             player.stop()
             break
-        if xbmc.getCondVisibility('Window.IsActive(fullscreenvideo)'):
+        if xbmc.getCondVisibility('Window.IsActive(fullscreenvideo) | !String.IsEmpty(Window(Home).Property(stream.guide))'):
             seen_fullscreen, away = True, 0
             PLAY['since'] = 0  # on screen now: Back is handled by the rule below
-            if not live and not applied_sub:
-                applied_sub = True
-                pref = db.meta('subtitles_on')
-                if pref is not None:
+            if not live and not applied_prefs:
+                applied_prefs = True
+                # Restore saved subtitle on/off preference
+                pref_sub = db.meta('subtitles_on')
+                if pref_sub is not None:
                     try:
-                        player.showSubtitles(bool(pref))
+                        player.showSubtitles(bool(pref_sub))
+                    except Exception:
+                        pass
+                # Restore saved preferred audio language on multi-audio streams (e.g. Telugu vs Hindi)
+                pref_audio = (db.meta('audio_lang') or '').lower()
+                if pref_audio:
+                    try:
+                        props = cat.rpc('Player.GetProperties', {
+                            'playerid': 1, 'properties': ['audiostreams', 'currentaudiostream']
+                        }) or {}
+                        cur_lang = ((props.get('currentaudiostream') or {}).get('language') or '').lower()
+                        streams = props.get('audiostreams') or []
+                        if len(streams) > 1 and cur_lang != pref_audio:
+                            match = next((s for s in streams if (s.get('language') or '').lower() == pref_audio), None)
+                            if match is not None:
+                                cat.rpc('Player.SetAudioStream', {'playerid': 1, 'stream': match['index']})
                     except Exception:
                         pass
         else:
@@ -379,6 +395,14 @@ def follow(key, name, group, kind, live):
                     sub_now = bool(xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled'))
                     if db.meta('subtitles_on') != sub_now:
                         db.set_meta('subtitles_on', sub_now)
+                    if tick % 15 == 0:
+                        props = cat.rpc('Player.GetProperties', {
+                            'playerid': 1, 'properties': ['audiostreams', 'currentaudiostream']
+                        }) or {}
+                        if len(props.get('audiostreams') or []) > 1:
+                            cur_lang = ((props.get('currentaudiostream') or {}).get('language') or '').lower()
+                            if cur_lang and cur_lang != 'und' and db.meta('audio_lang') != cur_lang:
+                                db.set_meta('audio_lang', cur_lang)
             except Exception:
                 break
         tick += 1
@@ -1435,12 +1459,8 @@ class TitlePage(xbmcgui.WindowXML):
             thread.join(3)
 
     def _auto_trailer_enabled(self):
-        choice = ADDON.getSetting('auto_trailer') or '0'
-        if choice == '1':
-            return True
-        if choice == '2':
-            return False
-        return not _low_ram_device()
+        choice = ADDON.getSetting('auto_trailer') or '1'
+        return choice != '2'
 
     def _stop_preview(self):
         if getattr(self, '_previewing', False):
@@ -1884,6 +1904,18 @@ class TitlePage(xbmcgui.WindowXML):
         if first_page and items:
             self.setProperty('play_label', '{0} {1}'.format('Resume' if items[upnext].getProperty('progress') else 'Play',
                                                            'E{0}'.format(items[upnext].getProperty('number'))))
+            # Pre-warm the next-up episode in Go stream-core for sub-second Play start
+            def _prewarm_ep(ep_li):
+                try:
+                    cached = core_client.get_resolved(db.play_key(item_of(ep_li)))
+                    if cached and 'url=' in cached:
+                        from urllib.parse import parse_qs, urlparse
+                        raw = parse_qs(urlparse(cached).query).get('url', [''])[0]
+                        if raw:
+                            core_client.prefetch_url(raw)
+                except Exception:
+                    pass
+            self.spawn(_prewarm_ep, items[upnext])
 
     def load_more_episodes(self, token):
         if self.loading_more or not self.next_episodes_url or self.closed or token != self.loading:
@@ -4216,9 +4248,16 @@ class LiveGuideDialog(xbmcgui.WindowXMLDialog):
 def open_live_guide():
     db.use_profile(db.last_profile() or {'name': 'Default', 'slug': 'default'})
     cat.load_state()
+    if not sync._epg_cache.get('data'):
+        sync._fetch_epg()
+    hw = xbmcgui.Window(10000)
+    hw.setProperty('stream.guide', '1')
     dlg = LiveGuideDialog('script-stream-guide.xml', ADDON_PATH, 'Default', '1080i')
-    dlg.doModal()
-    del dlg
+    try:
+        dlg.doModal()
+    finally:
+        hw.clearProperty('stream.guide')
+        del dlg
 
 
 if __name__ == '__main__':
