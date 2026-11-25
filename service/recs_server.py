@@ -1543,18 +1543,16 @@ def run_index_refresh(trigger='schedule'):
                             conn.execute('INSERT OR REPLACE INTO page_cache (url, at, items) VALUES (?, ?, ?)', (url, at or time.time(), items))
                             pages_added += 1
             if t_rows:
+                hub_titles = [
+                    {'name': name, 'lang': lang or '', 'kind': kind or '', 'first_seen': first_seen or time.time()}
+                    for name, lang, kind, first_seen in t_rows if name
+                ]
                 with connect() as conn:
-                    for name, lang, kind, first_seen in t_rows:
-                        key = (name or '').strip().lower()
-                        if not key:
-                            continue
-                        cur = conn.execute('SELECT first_seen FROM catalogue WHERE key=?', (key,)).fetchone()
-                        if cur is None:
-                            conn.execute(
-                                'INSERT OR REPLACE INTO catalogue (key, name, lang, kind, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?)',
-                                (key, name, lang or '', kind or '', first_seen or time.time(), time.time()),
-                            )
-                            titles_synced += 1
+                    conn.execute(
+                        'INSERT OR REPLACE INTO catalogue (profile, at, titles) VALUES (?, ?, ?)',
+                        ('mac-mini-hub', time.time(), json.dumps(hub_titles)),
+                    )
+                titles_synced = len(hub_titles)
         str_db = os.path.join(base, 'stream.db')
         if os.path.exists(str_db):
             src = sqlite3.connect('file:' + str_db + '?mode=ro', uri=True, timeout=5)
