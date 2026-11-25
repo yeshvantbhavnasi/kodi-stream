@@ -26,6 +26,7 @@ import library  # noqa: E402
 import meta  # noqa: E402
 import recs  # noqa: E402
 import report  # noqa: E402
+import sync  # noqa: E402
 import voice  # noqa: E402
 import youtube as yt  # noqa: E402
 
@@ -330,7 +331,7 @@ def follow(key, name, group, kind, live):
     """While a title plays: save the position every 5 seconds, and stop the stream when the viewer backs out of the video."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
     position = duration = 0
-    seen_fullscreen, away, tick = False, 0, 0
+    seen_fullscreen, away, tick, applied_sub = False, 0, 0, False
     PLAY['ended'] = ''
     for _ in range(40):
         if player.isPlayingVideo() or PLAY['cancel'] or monitor.waitForAbort(0.5):
@@ -343,6 +344,14 @@ def follow(key, name, group, kind, live):
         if xbmc.getCondVisibility('Window.IsActive(fullscreenvideo)'):
             seen_fullscreen, away = True, 0
             PLAY['since'] = 0  # on screen now: Back is handled by the rule below
+            if not live and not applied_sub:
+                applied_sub = True
+                pref = db.meta('subtitles_on')
+                if pref is not None:
+                    try:
+                        player.showSubtitles(bool(pref))
+                    except Exception:
+                        pass
         else:
             # Not on screen: either Back was pressed on the video, or it never came to the front
             # (Back pressed in the first instant). Either way, end the stream so browsing continues in silence.
@@ -355,6 +364,10 @@ def follow(key, name, group, kind, live):
             try:
                 position, duration = player.getTime(), player.getTotalTime()
                 db.update_progress(key, position, duration)
+                if seen_fullscreen and tick >= 10:
+                    sub_now = bool(xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled'))
+                    if db.meta('subtitles_on') != sub_now:
+                        db.set_meta('subtitles_on', sub_now)
             except Exception:
                 break
         tick += 1
@@ -371,6 +384,7 @@ def follow(key, name, group, kind, live):
         else:
             PLAY['ended'] = 'stopped'
     audit.event('play_ended', title=name, position=int(position), duration=int(duration), ended=PLAY['ended'])
+    sync.sync_async(force=True)
     home = HOME['window']
     if home is not None and not home.closed and home.tab == 'home' and not live and not OPEN['grids'] and xbmcgui.getCurrentWindowDialogId() == 9999:
         home.load_tab('home', focus=False)  # refresh Continue Watching silently without stealing focus
@@ -1424,6 +1438,19 @@ class TitlePage(xbmcgui.WindowXML):
         self.setProperty('status', 'Loading…' if self.show else '')
         self.spawn(self.load)
         self.spawn(watch_visibility, self)
+        # Pre-warm 2 MB VOD buffer in Go stream-core while viewer reads the title page for sub-second Play start
+        if not self.show:
+            def _prewarm():
+                try:
+                    cached = core_client.get_resolved(db.play_key(item_of(self.li)))
+                    if cached and 'url=' in cached:
+                        from urllib.parse import parse_qs, urlparse
+                        raw = parse_qs(urlparse(cached).query).get('url', [''])[0]
+                        if raw:
+                            core_client.prefetch_url(raw)
+                except Exception:
+                    pass
+            self.spawn(_prewarm)
 
     def describe(self):
         """Title, facts, synopsis, cast and artwork from what the tile already knows, then from TMDb."""
@@ -2676,6 +2703,7 @@ class Home(xbmcgui.WindowXML):
             self.spawn(self.download_progress)
         self.spawn(self.background)
         self.spawn(self.keeper)
+        sync.sync_async(force=True)
         # Thin-client mode on low-RAM TV sticks (<=2GB): skip local 111-page Sasta TV crawling;
         # the Mac mini backend hub handles full indexing & TMDb enrichment so TVs stay fast & swap-free.
         if not _low_ram_device():
@@ -3307,6 +3335,19 @@ class Home(xbmcgui.WindowXML):
         if key == 'settings':
             return [('items', 'Settings', self.settings_tiles())]
         if key == 'live':
+            fav_rows = []
+            try:
+                live_hist = [e for e in db.recent(60) if cat.is_live(e.get('item') or {})]
+                if live_hist:
+                    fav_tiles = []
+                    for e in live_hist[:12]:
+                        li = entry_item(e, meta=e.get('group') or 'Live TV')
+                        li.setProperty('card', '1')
+                        li.setProperty('logo', '1')
+                        fav_tiles.append(li)
+                    fav_rows.append(('items', 'Favorite Channels', fav_tiles))
+            except Exception:
+                pass
             langs = [f for f in cat.get_dir(u['live']) if f['t'] == 'folder' and f['name'].lower() != 'sports']
             # Kids channels stay available whatever languages were chosen; sports has its own tab.
             chosen = db.chosen_languages()
@@ -3318,11 +3359,11 @@ class Home(xbmcgui.WindowXML):
             saved = cat.state.get('live_lang')
             current = next((l for l in langs if l['name'] == saved), langs[0] if langs else None)
             tiles = [tile(cat.title_case(lang['name']), 'lang', lang=lang['name']) for lang in langs]
-            out = [('items', 'Language', tiles)]
+            out = fav_rows + [('items', 'Language', tiles)]
             if current:
                 folders = [f for f in cat.get_dir(current['url']) if f['t'] == 'folder']
                 out += [('dir', '{0} · {1}'.format(cat.title_case(current['name']), cat.title_case(f['name'])), f['url'], f['name'], None)
-                        for f in folders[:ROWS - 1]]
+                        for f in folders[:ROWS - len(out)]]
             return out
         return []
 

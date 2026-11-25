@@ -114,6 +114,7 @@ CREATE INDEX IF NOT EXISTS telemetry_at ON telemetry (at);
 CREATE INDEX IF NOT EXISTS telemetry_profile ON telemetry (profile, at);
 CREATE TABLE IF NOT EXISTS page_cache (url TEXT PRIMARY KEY, at REAL, items TEXT);
 CREATE TABLE IF NOT EXISTS meta_cache (key TEXT PRIMARY KEY, at REAL, data TEXT);
+CREATE TABLE IF NOT EXISTS profile_sync (profile TEXT PRIMARY KEY, at REAL, watched TEXT, mylist TEXT, ratings TEXT);
 '''
 JSON_COLUMNS = ('candidates', 'picks')
 
@@ -1165,6 +1166,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, cache_get_meta(name))
         if self.path.startswith('/cache/stats'):
             return self._send(200, cache_stats())
+        if self.path.startswith('/api/sync/state'):
+            return self._send(200, sync_get(q.get('profile', 'default')))
         if self.path.startswith('/api/endpoints'):
             return self._send(200, api_endpoints_directory())
         if self.path.startswith('/api/status'):
@@ -1211,6 +1214,17 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {'error': 'not found'})
 
     def do_POST(self):
+        if self.path.startswith('/api/sync/state'):
+            if not self.allowed():
+                return
+            try:
+                length = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(min(length, 2 * 1024 * 1024)) or b'{}')
+            except Exception:
+                return self._send(400, {'error': 'bad json'})
+            prof = (body.get('profile') or 'default').strip() or 'default'
+            merged = sync_merge(prof, body.get('watched') or [], body.get('mylist') or [], body.get('ratings') or [])
+            return self._send(200, merged)
         if self.path.startswith('/api/index/refresh'):
             if not self.allowed():
                 return
@@ -1728,6 +1742,71 @@ def api_overall_status():
     }
 
 
+def sync_get(profile='default'):
+    prof = (profile or 'default').strip().lower() or 'default'
+    with connect() as conn:
+        row = conn.execute('SELECT at, watched, mylist, ratings FROM profile_sync WHERE profile=?', (prof,)).fetchone()
+    if not row:
+        return {'ok': True, 'profile': prof, 'at': 0, 'watched': [], 'mylist': [], 'ratings': []}
+    return {
+        'ok': True,
+        'profile': prof,
+        'at': row['at'] or 0,
+        'watched': json.loads(row['watched'] or '[]'),
+        'mylist': json.loads(row['mylist'] or '[]'),
+        'ratings': json.loads(row['ratings'] or '[]'),
+    }
+
+
+def sync_merge(profile, watched, mylist, ratings):
+    """Merge Continue Watching, My List, and Likes across devices (newest timestamp wins)."""
+    prof = (profile or 'default').strip().lower() or 'default'
+    cur = sync_get(prof)
+
+    # Merge watched by key (newest last_played wins)
+    w_map = {w['key']: w for w in cur['watched'] if isinstance(w, dict) and w.get('key')}
+    for w in watched:
+        if not isinstance(w, dict) or not w.get('key'):
+            continue
+        k = w['key']
+        old = w_map.get(k)
+        if not old or (w.get('last_played') or 0) > (old.get('last_played') or 0):
+            w_map[k] = w
+        elif (w.get('last_played') or 0) == (old.get('last_played') or 0) and (w.get('position') or 0) > (old.get('position') or 0):
+            w_map[k] = w
+    merged_w = sorted(w_map.values(), key=lambda x: x.get('last_played') or 0, reverse=True)[:150]
+
+    # Merge mylist by name (newest added_at wins)
+    m_map = {m['name'].lower(): m for m in cur['mylist'] if isinstance(m, dict) and m.get('name')}
+    for m in mylist:
+        if not isinstance(m, dict) or not m.get('name'):
+            continue
+        k = m['name'].lower()
+        old = m_map.get(k)
+        if not old or (m.get('added_at') or 0) >= (old.get('added_at') or 0):
+            m_map[k] = m
+    merged_m = sorted(m_map.values(), key=lambda x: x.get('added_at') or 0, reverse=True)[:200]
+
+    # Merge ratings by name (newest rated_at wins)
+    r_map = {r['name'].lower(): r for r in cur['ratings'] if isinstance(r, dict) and r.get('name')}
+    for r in ratings:
+        if not isinstance(r, dict) or not r.get('name'):
+            continue
+        k = r['name'].lower()
+        old = r_map.get(k)
+        if not old or (r.get('rated_at') or 0) >= (old.get('rated_at') or 0):
+            r_map[k] = r
+    merged_r = sorted(r_map.values(), key=lambda x: x.get('rated_at') or 0, reverse=True)[:300]
+
+    now = time.time()
+    with connect() as conn:
+        conn.execute(
+            'INSERT OR REPLACE INTO profile_sync (profile, at, watched, mylist, ratings) VALUES (?, ?, ?, ?, ?)',
+            (prof, now, json.dumps(merged_w), json.dumps(merged_m), json.dumps(merged_r)),
+        )
+    return {'ok': True, 'profile': prof, 'at': now, 'watched': merged_w, 'mylist': merged_m, 'ratings': merged_r}
+
+
 def api_endpoints_directory():
     return {
         'ok': True,
@@ -1735,6 +1814,8 @@ def api_endpoints_directory():
         'endpoints': [
             {'method': 'GET', 'path': '/api/endpoints', 'desc': 'List all backend API endpoints'},
             {'method': 'GET', 'path': '/api/status', 'desc': 'Unified status across index, search, recs, listings, and stream-core'},
+            {'method': 'GET', 'path': '/api/sync/state?profile=', 'desc': 'Fetch cross-device Continue Watching, My List, and Likes for a profile'},
+            {'method': 'POST', 'path': '/api/sync/state', 'desc': 'Merge & sync Continue Watching, My List, and Likes across devices'},
             {'method': 'GET', 'path': '/api/index/status', 'desc': 'Hourly index schedule, last run telemetry, and indexed counts'},
             {'method': 'POST', 'path': '/api/index/refresh', 'desc': 'Trigger an immediate background index & cache hub refresh'},
             {'method': 'GET', 'path': '/api/search?q=&lang=&kind=&limit=', 'desc': 'Search indexed catalogue titles'},
