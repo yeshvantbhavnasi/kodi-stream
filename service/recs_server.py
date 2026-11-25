@@ -1165,6 +1165,35 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, cache_get_meta(name))
         if self.path.startswith('/cache/stats'):
             return self._send(200, cache_stats())
+        if self.path.startswith('/api/endpoints'):
+            return self._send(200, api_endpoints_directory())
+        if self.path.startswith('/api/status'):
+            return self._send(200, api_overall_status())
+        if self.path.startswith('/api/index/status'):
+            return self._send(200, api_index_status())
+        if self.path.startswith('/api/search/status'):
+            return self._send(200, api_search_status())
+        if self.path.startswith('/api/search'):
+            try:
+                limit = min(int(q.get('limit') or 60), 500)
+            except ValueError:
+                limit = 60
+            return self._send(200, api_search(q.get('q', ''), q.get('lang', ''), q.get('kind', ''), limit))
+        if self.path.startswith('/api/recs/status'):
+            return self._send(200, api_recs_status())
+        if self.path.startswith('/api/listings/status'):
+            return self._send(200, api_listings_status())
+        if self.path.startswith('/api/listings/page'):
+            url = q.get('url', '').strip()
+            if not url:
+                return self._send(400, {'error': 'url needed'})
+            return self._send(200, cache_get_page(url))
+        if self.path.startswith('/api/listings'):
+            try:
+                limit = min(int(q.get('limit') or 200), 1000)
+            except ValueError:
+                limit = 200
+            return self._send(200, api_listings_index(q.get('q', ''), limit))
         if self.path.startswith('/history'):
             with connect() as conn:
                 rows = conn.execute('SELECT key, at, model, took, picks FROM history ORDER BY at DESC LIMIT 500').fetchall()
@@ -1182,6 +1211,11 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {'error': 'not found'})
 
     def do_POST(self):
+        if self.path.startswith('/api/index/refresh'):
+            if not self.allowed():
+                return
+            started = trigger_index_refresh(trigger='api')
+            return self._send(200, {'ok': True, 'started': started, 'status': api_index_status()})
         if self.path.startswith('/voice/session'):
             if not self.allowed():
                 return
@@ -1419,44 +1453,311 @@ def cache_stats():
     return {'pages': pages, 'meta': meta_n}
 
 
-def seed_cache_from_kodi():
-    """Periodically mirror local Mac Kodi's library.db pages & stream.db TMDb metadata into the shared cache hub."""
+INDEX_REFRESH_INTERVAL = int(os.environ.get('INDEX_REFRESH_SECONDS') or 3600)
+STREAM_CORE_URL = os.environ.get('STREAM_CORE_URL') or 'http://127.0.0.1:8775'
+_index_lock = threading.Lock()
+INDEX_STATE = {
+    'running': False,
+    'interval_seconds': INDEX_REFRESH_INTERVAL,
+    'last_run': 0.0,
+    'next_run': 0.0,
+    'last_trigger': '',
+    'last_duration_ms': 0,
+    'pages_added': 0,
+    'meta_added': 0,
+    'titles_synced': 0,
+    'core_synced': 0,
+    'runs': 0,
+    'last_error': '',
+}
+
+
+def _stream_core_stats():
+    try:
+        req = urllib.request.Request(STREAM_CORE_URL + '/stats', headers={'User-Agent': 'StreamRecs/2.0'})
+        with urllib.request.urlopen(req, timeout=0.6) as r:
+            return json.loads(r.read().decode('utf-8'))
+    except Exception:
+        return None
+
+
+def _sync_titles_to_core():
+    """Push indexed catalogue titles to Go stream-core for sub-millisecond ranked search."""
+    try:
+        titles = catalogue_titles('', '', 0, 5000, '')
+        if not titles:
+            return 0
+        payload = json.dumps({
+            'titles': [
+                {
+                    'name': t.get('name') or '',
+                    'group': t.get('lang') or '',
+                    'url': t.get('url') or '',
+                    'parent': t.get('parent') or '',
+                    't': t.get('kind') or '',
+                }
+                for t in titles if t.get('name')
+            ]
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            STREAM_CORE_URL + '/index/sync',
+            data=payload,
+            headers={'Content-Type': 'application/json', 'User-Agent': 'StreamRecs/2.0'},
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=3.0) as r:
+            res = json.loads(r.read().decode('utf-8'))
+            return int(res.get('indexed') or 0)
+    except Exception:
+        return 0
+
+
+def run_index_refresh(trigger='schedule'):
+    """Mirror local Mac Kodi's library.db pages, titles & stream.db metadata into the backend hub and Go core."""
+    with _index_lock:
+        if INDEX_STATE['running']:
+            return False
+        INDEX_STATE['running'] = True
+        INDEX_STATE['last_trigger'] = trigger
+        INDEX_STATE['last_error'] = ''
+
+    started = time.time()
     base = os.path.expanduser('~/Library/Application Support/Kodi/userdata/addon_data/script.stream')
+    pages_added = meta_added = titles_synced = core_synced = 0
+    err_msg = ''
+    try:
+        lib_db = os.path.join(base, 'library.db')
+        if os.path.exists(lib_db):
+            src = sqlite3.connect('file:' + lib_db + '?mode=ro', uri=True, timeout=5)
+            rows = src.execute('SELECT url, items, fetched_at FROM pages WHERE items IS NOT NULL').fetchall()
+            try:
+                t_rows = src.execute('SELECT name, grp, kind, first_seen FROM library WHERE name IS NOT NULL').fetchall()
+            except Exception:
+                t_rows = []
+            src.close()
+            if rows:
+                with connect() as conn:
+                    for url, items, at in rows:
+                        cur = conn.execute('SELECT at FROM page_cache WHERE url=?', (url,)).fetchone()
+                        if cur is None or (at or 0) > (cur['at'] or 0):
+                            conn.execute('INSERT OR REPLACE INTO page_cache (url, at, items) VALUES (?, ?, ?)', (url, at or time.time(), items))
+                            pages_added += 1
+            if t_rows:
+                with connect() as conn:
+                    for name, lang, kind, first_seen in t_rows:
+                        key = (name or '').strip().lower()
+                        if not key:
+                            continue
+                        cur = conn.execute('SELECT first_seen FROM catalogue WHERE key=?', (key,)).fetchone()
+                        if cur is None:
+                            conn.execute(
+                                'INSERT OR REPLACE INTO catalogue (key, name, lang, kind, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?)',
+                                (key, name, lang or '', kind or '', first_seen or time.time(), time.time()),
+                            )
+                            titles_synced += 1
+        str_db = os.path.join(base, 'stream.db')
+        if os.path.exists(str_db):
+            src = sqlite3.connect('file:' + str_db + '?mode=ro', uri=True, timeout=5)
+            rows = src.execute('SELECT name, data, fetched_at FROM metadata WHERE data IS NOT NULL AND data != "{}"').fetchall()
+            src.close()
+            if rows:
+                with connect() as conn:
+                    for name, data, at in rows:
+                        key = (name or '').strip().lower()
+                        if not key:
+                            continue
+                        cur = conn.execute('SELECT at FROM meta_cache WHERE key=?', (key,)).fetchone()
+                        if cur is None or (at or 0) > (cur['at'] or 0):
+                            conn.execute('INSERT OR REPLACE INTO meta_cache (key, at, data) VALUES (?, ?, ?)', (key, at or time.time(), data))
+                            meta_added += 1
+        core_synced = _sync_titles_to_core()
+        if pages_added or meta_added or titles_synced or core_synced:
+            log('index refresh ({0}): +{1} pages, +{2} metadata, +{3} titles, core={4}'.format(
+                trigger, pages_added, meta_added, titles_synced, core_synced))
+    except Exception as e:
+        err_msg = str(e)
+        log('index refresh ({0}) note: {1}'.format(trigger, e))
+    finally:
+        now = time.time()
+        with _index_lock:
+            INDEX_STATE['running'] = False
+            INDEX_STATE['last_run'] = now
+            INDEX_STATE['next_run'] = now + INDEX_REFRESH_INTERVAL
+            INDEX_STATE['last_duration_ms'] = int((now - started) * 1000)
+            INDEX_STATE['pages_added'] = pages_added
+            INDEX_STATE['meta_added'] = meta_added
+            INDEX_STATE['titles_synced'] = titles_synced
+            INDEX_STATE['core_synced'] = core_synced
+            INDEX_STATE['runs'] += 1
+            INDEX_STATE['last_error'] = err_msg
+    return True
+
+
+def trigger_index_refresh(trigger='api'):
+    with _index_lock:
+        if INDEX_STATE['running']:
+            return False
+    threading.Thread(target=run_index_refresh, args=(trigger,), daemon=True).start()
+    return True
+
+
+def index_scheduler():
+    """Run index refresh once every hour on schedule."""
     while True:
-        pages_added = meta_added = 0
+        run_index_refresh(trigger='schedule')
+        time.sleep(INDEX_REFRESH_INTERVAL)
+
+
+def api_index_status():
+    stats = cache_stats()
+    with connect() as conn:
+        cat_count = conn.execute('SELECT COUNT(*) FROM catalogue').fetchone()[0]
+    with _index_lock:
+        state = dict(INDEX_STATE)
+    state['counts'] = {'pages': stats['pages'], 'meta': stats['meta'], 'titles': cat_count}
+    return state
+
+
+def api_search_status():
+    with connect() as conn:
+        cat_count = conn.execute('SELECT COUNT(*) FROM catalogue').fetchone()[0]
+    core = _stream_core_stats()
+    return {
+        'ok': True,
+        'backend_titles': cat_count,
+        'stream_core_online': bool(core),
+        'stream_core_indexed': (core or {}).get('engine', {}).get('indexed_titles', 0),
+    }
+
+
+def api_search(query, lang='', kind='', limit=60):
+    q = (query or '').strip()
+    if not q:
+        return {'query': '', 'results': [], 'total': 0, 'source': 'backend'}
+    titles = catalogue_titles(lang, kind, 0, limit, q)
+    return {'query': q, 'results': titles, 'total': len(titles), 'source': 'backend'}
+
+
+def api_recs_status():
+    with LOCK:
+        profiles = [
+            {
+                'key': k,
+                'model': b.get('model', ''),
+                'at': b.get('at', 0),
+                'picks': len(b.get('picks') or []),
+            }
+            for k, b in BATCHES.items()
+        ]
+    return {
+        'ok': True,
+        'model': MODEL,
+        'ollama': OLLAMA,
+        'batches': len(profiles),
+        'profiles': profiles,
+        'top10_at': TOP10.get('at', 0) if isinstance(TOP10, dict) else 0,
+        'cricket_at': CRICKET.get('at', 0) if isinstance(CRICKET, dict) else 0,
+    }
+
+
+def api_listings_status():
+    now = time.time()
+    buckets = {}
+    freshest, oldest, total = 0.0, 0.0, 0
+    with connect() as conn:
+        rows = conn.execute('SELECT url, at FROM page_cache').fetchall()
+    for r in rows:
+        total += 1
+        at = r['at'] or 0.0
+        if at > freshest:
+            freshest = at
+        if oldest == 0.0 or (at > 0 and at < oldest):
+            oldest = at
+        u = (r['url'] or '').lower()
+        if 'desimovies' in u or 'host=movies' in u:
+            b = 'movies'
+        elif 'desiwebseries' in u:
+            b = 'web_series'
+        elif 'desitvshows' in u or 'cGx1cy12b2Q'.lower() in u:
+            b = 'tv_shows'
+        elif 'live' in u or 'sports' in u:
+            b = 'live_sports'
+        elif 'kids' in u or 'cGx1cy1raWRz'.lower() in u:
+            b = 'kids'
+        elif 'youtube' in u:
+            b = 'youtube'
+        else:
+            b = 'other'
+        buckets[b] = buckets.get(b, 0) + 1
+    return {
+        'ok': True,
+        'total_pages': total,
+        'buckets': buckets,
+        'freshest_age_s': int(now - freshest) if freshest else None,
+        'oldest_age_s': int(now - oldest) if oldest else None,
+    }
+
+
+def api_listings_index(query='', limit=200):
+    now = time.time()
+    ql = (query or '').strip().lower()
+    out = []
+    with connect() as conn:
+        rows = conn.execute('SELECT url, at, items FROM page_cache ORDER BY at DESC').fetchall()
+    for r in rows:
+        url = r['url'] or ''
+        if ql and ql not in url.lower():
+            continue
         try:
-            lib_db = os.path.join(base, 'library.db')
-            if os.path.exists(lib_db):
-                src = sqlite3.connect('file:' + lib_db + '?mode=ro', uri=True, timeout=5)
-                rows = src.execute('SELECT url, items, fetched_at FROM pages WHERE items IS NOT NULL').fetchall()
-                src.close()
-                if rows:
-                    with connect() as conn:
-                        for url, items, at in rows:
-                            cur = conn.execute('SELECT at FROM page_cache WHERE url=?', (url,)).fetchone()
-                            if cur is None or (at or 0) > (cur['at'] or 0):
-                                conn.execute('INSERT OR REPLACE INTO page_cache (url, at, items) VALUES (?, ?, ?)', (url, at or time.time(), items))
-                                pages_added += 1
-            str_db = os.path.join(base, 'stream.db')
-            if os.path.exists(str_db):
-                src = sqlite3.connect('file:' + str_db + '?mode=ro', uri=True, timeout=5)
-                rows = src.execute('SELECT name, data, fetched_at FROM metadata WHERE data IS NOT NULL AND data != "{}"').fetchall()
-                src.close()
-                if rows:
-                    with connect() as conn:
-                        for name, data, at in rows:
-                            key = (name or '').strip().lower()
-                            if not key:
-                                continue
-                            cur = conn.execute('SELECT at FROM meta_cache WHERE key=?', (key,)).fetchone()
-                            if cur is None or (at or 0) > (cur['at'] or 0):
-                                conn.execute('INSERT OR REPLACE INTO meta_cache (key, at, data) VALUES (?, ?, ?)', (key, at or time.time(), data))
-                                meta_added += 1
-            if pages_added or meta_added:
-                log('cache hub seeded from local Kodi: +{0} pages, +{1} metadata'.format(pages_added, meta_added))
-        except Exception as e:
-            log('cache hub seed note: {0}'.format(e))
-        time.sleep(1800)
+            items = json.loads(r['items'] or '[]')
+            cnt = len(items) if isinstance(items, list) else 0
+        except Exception:
+            cnt = 0
+        out.append({'url': url, 'items': cnt, 'at': r['at'] or 0, 'age_s': int(now - (r['at'] or now))})
+        if len(out) >= limit:
+            break
+    return {'ok': True, 'total': len(out), 'listings': out}
+
+
+def api_overall_status():
+    return {
+        'ok': True,
+        'index': api_index_status(),
+        'search': api_search_status(),
+        'recs': api_recs_status(),
+        'listings': api_listings_status(),
+        'stream_core': _stream_core_stats(),
+    }
+
+
+def api_endpoints_directory():
+    return {
+        'ok': True,
+        'schedule': {'index_refresh_seconds': INDEX_REFRESH_INTERVAL},
+        'endpoints': [
+            {'method': 'GET', 'path': '/api/endpoints', 'desc': 'List all backend API endpoints'},
+            {'method': 'GET', 'path': '/api/status', 'desc': 'Unified status across index, search, recs, listings, and stream-core'},
+            {'method': 'GET', 'path': '/api/index/status', 'desc': 'Hourly index schedule, last run telemetry, and indexed counts'},
+            {'method': 'POST', 'path': '/api/index/refresh', 'desc': 'Trigger an immediate background index & cache hub refresh'},
+            {'method': 'GET', 'path': '/api/search?q=&lang=&kind=&limit=', 'desc': 'Search indexed catalogue titles'},
+            {'method': 'GET', 'path': '/api/search/status', 'desc': 'Search index and Go stream-core status'},
+            {'method': 'GET', 'path': '/api/recs/status', 'desc': 'Recommendations engine, model, batches, Top 10, and cricket status'},
+            {'method': 'GET', 'path': '/api/listings', 'desc': 'List cached VOD/Live/YouTube listing URLs with item counts and age'},
+            {'method': 'GET', 'path': '/api/listings/status', 'desc': 'Summary of cached listings by bucket and freshness'},
+            {'method': 'GET', 'path': '/api/listings/page?url=', 'desc': 'Fetch cached items for a specific listing URL'},
+            {'method': 'GET', 'path': '/titles?q=&lang=&kind=&days=&limit=', 'desc': 'Raw catalogue titles endpoint'},
+            {'method': 'GET', 'path': '/top10', 'desc': 'India Top 10 streaming charts'},
+            {'method': 'GET', 'path': '/cricket', 'desc': 'Live and upcoming cricket fixtures'},
+            {'method': 'GET', 'path': '/rows?profile=', 'desc': 'Current Home rows per profile'},
+            {'method': 'GET', 'path': '/batches', 'desc': 'Latest recommendation batches'},
+            {'method': 'GET', 'path': '/cache/stats', 'desc': 'Shared page & metadata cache counts'},
+            {'method': 'GET', 'path': '/cache/page?url=', 'desc': 'Fetch cached listing page'},
+            {'method': 'GET', 'path': '/cache/meta?name=', 'desc': 'Fetch cached TMDb metadata'},
+            {'method': 'GET', 'path': '/telemetry?hours=24', 'desc': 'Box interaction telemetry'},
+            {'method': 'GET', 'path': '/hiccups?hours=24', 'desc': 'Playback/network hiccup summary'},
+            {'method': 'GET', 'path': '/health', 'desc': 'Service health probe'},
+        ],
+    }
 
 
 if __name__ == '__main__':
@@ -1470,10 +1771,11 @@ if __name__ == '__main__':
             log('could not bind {0}:{1}: {2}'.format(host, PORT, e))
     if not servers:
         raise SystemExit('no bind address available from BIND={0}'.format(BIND))
-    log('serving on {0} port {1}, model {2} at {3}, {4} batches remembered'.format(', '.join(bound), PORT, MODEL, OLLAMA, len(BATCHES)))
+    log('serving on {0} port {1}, model {2} at {3}, {4} batches remembered, hourly index refresh={5}s'.format(
+        ', '.join(bound), PORT, MODEL, OLLAMA, len(BATCHES), INDEX_REFRESH_INTERVAL))
     threading.Thread(target=refresh_top10, daemon=True).start()
     threading.Thread(target=refresh_cricket, daemon=True).start()
-    threading.Thread(target=seed_cache_from_kodi, daemon=True).start()
+    threading.Thread(target=index_scheduler, daemon=True).start()
     for server in servers[1:]:
         threading.Thread(target=server.serve_forever, daemon=True).start()
     servers[0].serve_forever()
