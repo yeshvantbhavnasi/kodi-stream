@@ -70,7 +70,7 @@ SWIPE_DOWN = range(541, 551)
 IDLE_AFTER = 60  # seconds without a key press before the home screen starts showing off recommended titles
 NEXT_IN = 10  # seconds the next episode waits before it starts by itself
 NEXT_AT = 90  # seconds before an episode ends (its end titles, mostly) that the Next episode button appears
-START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
+START_TIMEOUT = 15  # seconds to wait for a stream before aborting cleanly (never hang the UI)
 CANCEL_GRACE = 1.5  # seconds after a play request during which a cancel is taken as a repeated OK press
 
 TABS = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'), ('sports', 'Sports'),
@@ -545,6 +545,33 @@ def stop_late_arrival():
         PLAY['cancel'] = False
 
 
+class LoadingOverlay(xbmcgui.WindowXMLDialog):
+    """Centered Stream crimson spinner + 1-line status caption; pressing Back cancels immediately."""
+    def onInit(self):
+        self.cancelled = False
+
+    def onAction(self, action):
+        if action.getId() in ACTION_BACK:
+            self.cancelled = True
+            self.close()
+
+
+def _kill_stuck_playback(player):
+    """Immediately stop any stalled/late-arriving playback and dismiss stuck Kodi/addon dialogs."""
+    PLAY['cancel'], PLAY['since'] = True, 0
+    try:
+        if player.isPlaying():
+            player.stop()
+    except Exception:
+        pass
+    try:
+        xbmc.executebuiltin('Dialog.Close(busydialog,true)')
+        xbmc.executebuiltin('Dialog.Close(busydialognocancel,true)')
+    except Exception:
+        pass
+    threading.Thread(target=stop_late_arrival, daemon=True).start()
+
+
 def start(li, restart=False):
     item = item_of(li)
     parent, group = li.getProperty('parent'), li.getProperty('group') or None
@@ -578,16 +605,19 @@ def start(li, restart=False):
     db.log_event('played', label, group, kind)
     audit.event('play_request', title=label, kind=kind, free_memory=audit.memory())
 
-    # Wait for the stream with ONLY the clean Stream loading spinner — no text box or progress bar.
-    # Poll every 150ms for near-instant handoff to fullscreen video.
+    # Wait for the stream with our dedicated Stream loading spinner (Back cancels immediately).
     home_win = xbmcgui.Window(10000)
     home_win.setProperty('stream.starting', '1')
-    xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
-    started = False
+    busy = LoadingOverlay('script-stream-busy.xml', ADDON_PATH, 'Default', '1080i')
+    busy.cancelled = False
+    busy.setProperty('status', 'Resuming…' if resume else 'Starting…')
+    busy.show()
+    started = was_cancelled = False
     steps = START_TIMEOUT * 7
     try:
         for _ in range(steps):
-            if PLAY['cancel']:
+            if busy.cancelled or PLAY['cancel']:
+                was_cancelled = True
                 break
             if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
                 started = True
@@ -595,20 +625,18 @@ def start(li, restart=False):
             if monitor.waitForAbort(0.15):
                 break
     finally:
-        xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
+        was_cancelled = was_cancelled or busy.cancelled
+        busy.close()
+        del busy
         home_win.clearProperty('stream.starting')
-    if PLAY['cancel']:
-        PLAY['cancel'], PLAY['since'] = True, 0
-        if player.isPlaying():
-            player.stop()
-        threading.Thread(target=stop_late_arrival, daemon=True).start()
+    if was_cancelled or PLAY['cancel'] or monitor.abortRequested():
+        _kill_stuck_playback(player)
         audit.event('play_cancelled', title=label)
         return
     if not started:
-        PLAY['cancel'], PLAY['since'] = True, 0
-        threading.Thread(target=stop_late_arrival, daemon=True).start()
+        _kill_stuck_playback(player)
         audit.event('play_timeout', title=label, seconds=START_TIMEOUT)
-        notify('This stream did not start. Try another title or channel.', 5000)
+        notify('Unable to play right now. Try another title.', 3500)
         return
     if resume > 30:
         try:
@@ -897,47 +925,99 @@ def enrich(control, still_wanted, limit, lock, start=0):
         cat.log('enrich stopped: {0}'.format(e))
 
 
-def play_trailer(video_id, title):
+def play_trailer(video_id, title, busy=None):
     if not yt.ensure_installed('play trailers'):
         return
+    player, monitor = xbmc.Player(), xbmc.Monitor()
+    home_win = xbmcgui.Window(10000)
+    home_win.setProperty('stream.starting', '1')
+    own_busy = busy is None
+    if own_busy:
+        busy = LoadingOverlay('script-stream-busy.xml', ADDON_PATH, 'Default', '1080i')
+        busy.cancelled = False
+        busy.show()
+    busy.setProperty('status', 'Starting trailer…')
     PLAY['since'], PLAY['cancel'] = time.time(), False
-    xbmc.Player().play('plugin://plugin.video.youtube/play/?video_id=' + video_id)
+    player.play('plugin://plugin.video.youtube/play/?video_id=' + video_id)
+    started = was_cancelled = False
+    try:
+        for _ in range(80):  # 12 seconds max for YouTube trailer start
+            if busy.cancelled or PLAY['cancel']:
+                was_cancelled = True
+                break
+            if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
+                started = True
+                break
+            if monitor.waitForAbort(0.15):
+                break
+    finally:
+        was_cancelled = was_cancelled or busy.cancelled
+        if own_busy:
+            busy.close()
+            del busy
+        home_win.clearProperty('stream.starting')
+    if was_cancelled or PLAY['cancel']:
+        _kill_stuck_playback(player)
+        return
+    if not started:
+        _kill_stuck_playback(player)
+        notify('Trailer unavailable right now.', 3000)
+        return
     threading.Thread(target=follow, args=(None, title + ' (trailer)', None, 'Trailer', True), daemon=True).start()
 
 
 def watch_trailer(li):
-    """Play the trailer of a movie or show: TMDb's pick when available, otherwise the best match from a YouTube search."""
-    name = li.getProperty('show') or li.getProperty('name') or li.getLabel()  # a season plays its show's trailer
+    """Play the trailer of a movie or show with a visible spinner, 8s lookup cap, and instant Back cancel."""
+    name = li.getProperty('show') or li.getProperty('name') or li.getLabel()
     show = li.getProperty('t') == 'folder'
-    busy = xbmcgui.DialogProgressBG()
-    busy.create('Stream', 'Finding the trailer for ' + name + '…')
-    key, title = '', name
-    known = li.getProperty('trailer')
-    if known and known != 'find':
-        key, title = known, meta.split_title(name)[0] or name  # TMDb's pick, already looked up for this tile
+    home_win = xbmcgui.Window(10000)
+    home_win.setProperty('stream.starting', '1')
+    busy = LoadingOverlay('script-stream-busy.xml', ADDON_PATH, 'Default', '1080i')
+    busy.cancelled = False
+    busy.setProperty('status', 'Finding trailer…')
+    busy.show()
+    result = {'key': '', 'title': name, 'done': False}
+
+    def _lookup():
+        key, title = '', name
+        known = li.getProperty('trailer')
+        if known and known != 'find':
+            key, title = known, meta.split_title(name)[0] or name
+        try:
+            if not key and meta.enabled():
+                data = meta.lookup(name, show, lang=li.getProperty('group'))
+                if data:
+                    key, title = data.get('trailer') or '', data.get('title') or name
+                    apply_details(li, data)
+            if not key:
+                key = db.meta('trailer:' + name) or ''
+            if not key:
+                short, year = meta.split_title(name)
+                title = short or name
+                key = yt.trailer(short, year, show) or ''
+                if key:
+                    db.set_meta('trailer:' + name, key)
+        except Exception as e:
+            cat.log('trailer lookup failed: {0}'.format(e))
+        result['key'], result['title'], result['done'] = key, title, True
+
+    threading.Thread(target=_lookup, daemon=True).start()
+    monitor = xbmc.Monitor()
     try:
-        if not key and meta.enabled():
-            data = meta.lookup(name, show, lang=li.getProperty('group'))
-            if data:
-                key, title = data.get('trailer') or '', data.get('title') or name
-                apply_details(li, data)
-        if not key:
-            key = db.meta('trailer:' + name) or ''
-        if not key:
-            short, year = meta.split_title(name)
-            title = short or name
-            key = yt.trailer(short, year, show) or ''
-            if key:
-                db.set_meta('trailer:' + name, key)
-    except Exception as e:
-        cat.log('trailer lookup failed: {0}'.format(e))
+        for _ in range(54):  # 8 seconds max lookup so a slow network never freezes the screen
+            if result['done'] or busy.cancelled or monitor.waitForAbort(0.15):
+                break
+        if busy.cancelled:
+            return
+        if not result['key']:
+            notify('No trailer found for ' + name, 2500)
+            return
+        db.log_event('trailer', name, li.getProperty('group') or None, 'Trailer')
+        play_trailer(result['key'], result['title'], busy=busy)
     finally:
         busy.close()
-    if not key:
-        notify('No trailer found for ' + name)
-        return
-    db.log_event('trailer', name, li.getProperty('group') or None, 'Trailer')
-    play_trailer(key, title)
+        del busy
+        home_win.clearProperty('stream.starting')
 
 
 def details(li):
@@ -1573,8 +1653,11 @@ class TitlePage(xbmcgui.WindowXML):
     def finish(self):
         self.closed = True
         self._stop_preview()
+        deadline = time.time() + 0.15
         for thread in self.workers:
-            thread.join(3)
+            rem = deadline - time.time()
+            if rem > 0:
+                thread.join(rem)
 
     def _auto_trailer_enabled(self):
         choice = ADDON.getSetting('auto_trailer') or '1'
@@ -2196,20 +2279,33 @@ def follow_until_done(window):
 
 
 def open_grid(title, url=None, entries=None, group=None, trail=(), plot=''):
-    """Show a full-screen grid. Returns True when the viewer chose Home, so callers can close too."""
-    audit.event('open', screen=title)
-    win = Grid(skin('grid'), ADDON_PATH, 'Default', '1080i')
-    win.setup(title, url, entries, group, trail, plot)
-    # The click that opened this screen is still "in progress" underneath; let the new screen take key presses.
-    was_busy, BUSY['on'] = BUSY['on'], False
-    OPEN['grids'] += 1
-    try:
-        win.doModal()
-    finally:
-        BUSY['on'] = was_busy
-        OPEN['grids'] -= 1
-    win.finish()
-    del win
+    """Show a full-screen grid in a flat loop (zero window stacking in memory).
+    Opening a title or subfolder closes & frees the current Grid first; Back returns straight to Home."""
+    cur = (title, url, entries, group, trail, plot)
+    while cur is not None:
+        title, url, entries, group, trail, plot = cur
+        audit.event('open', screen=title)
+        win = Grid(skin('grid'), ADDON_PATH, 'Default', '1080i')
+        win.setup(title, url, entries, group, trail, plot)
+        was_busy, BUSY['on'] = BUSY['on'], False
+        OPEN['grids'] += 1
+        try:
+            win.doModal()
+        finally:
+            BUSY['on'] = was_busy
+            OPEN['grids'] -= 1
+        win.finish()
+        nxt = getattr(win, 'next_action', None)
+        del win
+        if not nxt or NAV['home']:
+            break
+        kind = nxt[0]
+        if kind == 'grid':
+            cur = nxt[1]
+            continue
+        if kind == 'title':
+            return open_title(nxt[1])
+        break
     return NAV['home']
 
 
@@ -2250,10 +2346,13 @@ class Grid(xbmcgui.WindowXML):
                 self.load(url)
 
     def finish(self):
-        """Mark the window closed and give its background work a moment to stop before the window is dropped."""
+        """Mark the window closed without blocking the UI thread on background daemon workers."""
         self.closed = True
+        deadline = time.time() + 0.15
         for thread in self.workers:
-            thread.join(3)
+            rem = deadline - time.time()
+            if rem > 0:
+                thread.join(rem)
 
     def home_tile(self):
         return list_item({'t': 'home', 'name': '⌂ Home'}, '', meta='Back to the home screen')
@@ -2486,12 +2585,15 @@ class Grid(xbmcgui.WindowXML):
             query = xbmcgui.Dialog().input('Search in ' + self.title)
             if query:
                 db.log_event('searched', query, self.group)
-                self.leave_if_home(open_grid('“{0}” in {1}'.format(query, self.title),
-                                             url=li.getProperty('url') + cat.quote(query, safe=''), group=self.group))
+                self.next_action = ('grid', ('“{0}” in {1}'.format(query, self.title),
+                                             li.getProperty('url') + cat.quote(query, safe=''), None, self.group, (), ''))
+                self.close()
         elif kind == 'filter':
-            self.leave_if_home(open_grid(li.getLabel(), url=li.getProperty('url'), group=self.group))
+            self.next_action = ('grid', (li.getLabel(), li.getProperty('url'), None, self.group, (), ''))
+            self.close()
         elif is_title(li):
-            self.leave_if_home(open_title(li))
+            self.next_action = ('title', li)
+            self.close()
         elif kind == 'play':
             start(li)
             if xbmc.Player().isPlaying():
