@@ -186,7 +186,7 @@ def populate_top_tabs(win):
     except Exception:
         return
     names = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'),
-             ('sports', 'Sports'), ('youtube', 'YouTube'), ('mylist', 'My List')]
+             ('sports', 'Sports'), ('youtube', 'YouTube'), ('mylist', 'My Stuff')]
     if db.KIDS:
         names = [('home', 'Home'), ('movies', 'Movies'), ('live', 'Channels'), ('youtube', 'YouTube')]
     if TOUCH:
@@ -1509,22 +1509,29 @@ SEASON_LIKE = re.compile(
 
 
 def open_title(li, trail=()):
-    """Show a movie's or show's page. Returns True when the viewer chose Home, so callers can close too."""
-    audit.event('open', screen=li.getProperty('name') or li.getLabel())
-    win = TitlePage(skin('title'), ADDON_PATH, 'Default', '1080i')
-    win.setup(li)
-    was_busy, BUSY['on'] = BUSY['on'], False
-    OPEN['grids'] += 1
-    try:
-        win.doModal()
-    finally:
-        BUSY['on'] = was_busy
-        OPEN['grids'] -= 1
-    win.finish()
-    fallback = win.fallback
-    del win
-    if fallback:
-        return activate(li, (), category=True)  # not a show after all (a channel or category): open it as a listing
+    """Show a movie's or show's page in a flat loop (zero window stacking in memory).
+    Clicking 'More like this' frees the current page before opening the next; Back returns straight to Home."""
+    while li is not None:
+        audit.event('open', screen=li.getProperty('name') or li.getLabel())
+        win = TitlePage(skin('title'), ADDON_PATH, 'Default', '1080i')
+        win.setup(li)
+        was_busy, BUSY['on'] = BUSY['on'], False
+        OPEN['grids'] += 1
+        try:
+            win.doModal()
+        finally:
+            BUSY['on'] = was_busy
+            OPEN['grids'] -= 1
+        win.finish()
+        fallback = win.fallback
+        nxt = getattr(win, 'next_title', None)
+        del win
+        if fallback:
+            return activate(li, (), category=True)  # not a show after all (a channel or category): open it as a listing
+        if nxt is not None and not NAV['home']:
+            li = nxt
+            continue
+        break
     return NAV['home']
 
 
@@ -2129,8 +2136,8 @@ class TitlePage(xbmcgui.WindowXML):
         elif control_id == ALIKE_ID:
             li = self.getControl(ALIKE_ID).getSelectedItem()
             if li is not None and is_title(li):
-                if open_title(li):
-                    self.close()
+                self.next_title = li  # flat replacement: free this page before opening the next
+                self.close()
 
     def onAction(self, action):
         if self.closed or BUSY['on']:
@@ -2138,6 +2145,7 @@ class TitlePage(xbmcgui.WindowXML):
         code = action.getId()
         if code in ACTION_BACK:
             if not stop_if_playing_behind():
+                NAV['home'] = True  # Back always returns straight to Home (no deep page history stack)
                 self.close()
             return
         focus = self.getFocusId()
@@ -2506,6 +2514,7 @@ class Grid(xbmcgui.WindowXML):
             return
         if action.getId() in ACTION_BACK:
             if not stop_if_playing_behind():
+                NAV['home'] = True  # Back from any Grid returns straight to Home (no page stack)
                 self.close()
             return
         if not self.ready or self.loading:

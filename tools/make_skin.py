@@ -397,7 +397,7 @@ def row(n):
                     <onleft condition="{has_browse}">{bid}</onleft>
                     <onleft>noop</onleft>
                     <ondown>{down}</ondown>
-                    <left>50</left><top>48</top><width>1870</width><height>{tiles}</height>
+                    <left>50</left><top>56</top><width>1870</width><height>{tiles}</height>
                     <orientation>horizontal</orientation>
                     <scrolltime tween="quadratic">200</scrolltime>{layouts}
                 </control>
