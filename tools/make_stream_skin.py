@@ -248,7 +248,7 @@ def make_osd_assets(media_dir):
 
 
 ADDON_XML = '''<?xml version="1.0" encoding="UTF-8"?>
-<addon id="skin.stream" version="1.1.1" name="Stream" provider-name="yeshvantbhavnasi">
+<addon id="skin.stream" version="1.1.2" name="Stream" provider-name="yeshvantbhavnasi">
 	<requires>
 		<import addon="xbmc.gui" version="5.17.0"/>
 	</requires>

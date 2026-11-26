@@ -339,14 +339,15 @@ def item_of(li):
 # ---------- playback ----------
 
 def follow(key, name, group, kind, live):
-    """While a title plays: save the position every 5 seconds, and stop the stream when the viewer backs out of the video."""
+    """While a title plays: save the position every 5 seconds, offer Skip Intro on opening titles,
+    and stop the stream when the viewer backs out of the video."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
     hw = xbmcgui.Window(10000)
     live_tok = str(time.time()) if live else ''
     if live_tok:
         hw.setProperty('stream.live', live_tok)
     position = duration = 0
-    seen_fullscreen, away, tick, applied_prefs = False, 0, 0, False
+    seen_fullscreen, away, tick, applied_prefs, offered_intro = False, 0, 0, False, False
     PLAY['ended'] = ''
     try:
         for _ in range(40):
@@ -384,6 +385,18 @@ def follow(key, name, group, kind, live):
                                     cat.rpc('Player.SetAudioStream', {'playerid': 1, 'stream': match['index']})
                         except Exception:
                             pass
+                # Offer Netflix-style 'Skip Intro' pill during opening credits (5s–180s) for both movies and episodes
+                if not live and not offered_intro and seen_fullscreen:
+                    try:
+                        pos, total = player.getTime(), player.getTotalTime()
+                        if total > 600 and 5 <= pos <= 180:
+                            offered_intro = True
+                            jump = 90 if total > 4500 else 75  # +90s for movies, +75s for episodes
+                            threading.Thread(target=offer_skip_intro, args=(jump,), daemon=True).start()
+                        elif pos > 180:
+                            offered_intro = True
+                    except Exception:
+                        pass
             else:
                 # Not on screen: either Back was pressed on the video, or it never came to the front
                 # (Back pressed in the first instant). Either way, end the stream so browsing continues in silence.
@@ -703,7 +716,7 @@ class SkipIntroDialog(xbmcgui.WindowXMLDialog):
 
 
 def offer_skip_intro(jump_seconds=75):
-    """Show the floating 'Skip Intro' pill for 14 seconds; OK seeks forward past the opening credits."""
+    """Show the floating 'Skip Intro' pill for 18 seconds; OK seeks forward past the opening credits."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
     hw = xbmcgui.Window(10000)
     hw.setProperty('stream.guide', '1')
@@ -712,7 +725,7 @@ def offer_skip_intro(jump_seconds=75):
     dialog.dismissed = False
     dialog.show()
     try:
-        for _ in range(56):  # 14 seconds
+        for _ in range(72):  # 18 seconds
             if dialog.skipped or dialog.dismissed or not player.isPlayingVideo():
                 break
             if monitor.waitForAbort(0.25):
@@ -733,23 +746,13 @@ def offer_skip_intro(jump_seconds=75):
 
 def autoplay_after(li, window=None):
     """Follow an episode to its end, and keep going episode after episode until the viewer stops or the season
-    ends. Shows 'Skip Intro' during opening titles and 'Next episode' during end credits."""
+    ends. Shows 'Next episode' during end credits."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
     while True:
         if monitor.waitForAbort(3):
             return
-        nxt, looked, skip, offered_intro = None, False, False, False
+        nxt, looked, skip = None, False, False
         while player.isPlayingVideo() and not (window is not None and window.closed):
-            if not offered_intro:
-                try:
-                    pos, total = player.getTime(), player.getTotalTime()
-                    if total > 600 and 12 <= pos <= 95:
-                        offered_intro = True
-                        offer_skip_intro(75)
-                    elif pos > 95:
-                        offered_intro = True
-                except Exception:
-                    pass
             left = time_left(player) if not looked else None
             if left is not None and 0 < left <= NEXT_AT:
                 looked, nxt = True, next_episode(li)
