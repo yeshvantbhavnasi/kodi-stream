@@ -3429,6 +3429,23 @@ class Home(xbmcgui.WindowXML):
         rows += [('dir', cat.title_case(f['name']), f['url'], 'Sports', None) for f in kept[:limit]]
         return rows
 
+    def settings_rows(self):
+        """Lay out Settings in clean multi-column rows (Profile & Playback + Library & System) so nothing scrolls off-screen."""
+        all_tiles = self.settings_tiles()
+        by_act = {li.getProperty('action'): li for li in all_tiles}
+        row1_keys = ('open_mylist', 'open_history', 'switch', 'profile', 'ratings', 'keys', 'youtube', 'pin')
+        row2_keys = ('refresh', 'library', 'clear_recs', 'clear_history', 'log', 'send_log', 'reset')
+        row1 = [by_act[k] for k in row1_keys if k in by_act]
+        row2 = [by_act[k] for k in row2_keys if k in by_act]
+        used = set(row1_keys) | set(row2_keys)
+        extra = [li for li in all_tiles if li.getProperty('action') not in used]
+        rows = []
+        if row1:
+            rows.append(('items', 'Profile & Playback', row1))
+        if row2 or extra:
+            rows.append(('items', 'Library & System', row2 + extra))
+        return rows
+
     def settings_tiles(self):
         tiles = []
         if TOUCH:
@@ -3770,7 +3787,7 @@ class Home(xbmcgui.WindowXML):
         if key == 'mylist':
             return self.mystuff_rows()
         if key == 'settings':
-            return [('items', 'Settings', self.settings_tiles())]
+            return self.settings_rows()
         if key == 'live':
             fav_rows = []
             try:
