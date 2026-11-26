@@ -550,7 +550,13 @@ def home_xml():
            '        <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>',
            '        <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture colordiffuse="FF0F0F0F">white.png</texture><visible>!String.IsEmpty(Window.Property(youtube_tab)) + String.IsEmpty(Window.Property(kids))</visible></control>',
            '        <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>',
-           '        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor>{0}<label>$INFO[Window.Property(status)]</label><visible>{1}</visible></control>'.format(SLIDE, TOP_BAR)]
+           '        <!-- Centered Stream loading spinner whenever a tab is loading -->',
+           '        <control type="group">',
+           '            <visible>String.Contains(Window.Property(status),Loading)</visible>',
+           '            <control type="image"><left>924</left><top>490</top><width>72</width><height>72</height><aspectratio>keep</aspectratio><texture>spinner_ring.png</texture><animation effect="rotate" start="0" end="-360" center="auto" time="900" loop="true" reversible="false" condition="true">Conditional</animation></control>',
+           '            <control type="label"><left>660</left><top>576</top><width>600</width><height>36</height><font>font13</font><align>center</align><textcolor>FFD0D0DA</textcolor><label>$INFO[Window.Property(status)]</label></control>',
+           '        </control>',
+           '        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor>{0}<label>$INFO[Window.Property(status)]</label><visible>[{1}] + !String.Contains(Window.Property(status),Loading)</visible></control>'.format(SLIDE, TOP_BAR)]
     out += [billboard(n).rstrip('\n') for n in range(ROWS)]
     out.append(filter_strip().rstrip('\n'))
     # Dedicated 30% hero details zone sits cleanly above Y=418; rows start below with zero overlap.
@@ -626,7 +632,12 @@ def grid_xml():
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>180</height><texture>top_fade.png</texture></control>
 {top_nav}
         <control type="label"><left>60</left><top>98</top><width>1100</width><height>46</height><font>font32_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
-        <control type="label"><left>1180</left><top>98</top><width>680</width><height>46</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        <control type="label"><left>1180</left><top>98</top><width>680</width><height>46</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label><visible>!String.Contains(Window.Property(status),Loading)</visible></control>
+        <control type="group">
+            <visible>String.Contains(Window.Property(status),Loading)</visible>
+            <control type="image"><left>924</left><top>540</top><width>72</width><height>72</height><aspectratio>keep</aspectratio><texture>spinner_ring.png</texture><animation effect="rotate" start="0" end="-360" center="auto" time="900" loop="true" reversible="false" condition="true">Conditional</animation></control>
+            <control type="label"><left>660</left><top>626</top><width>600</width><height>36</height><font>font13</font><align>center</align><textcolor>FFD0D0DA</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        </control>
         <!-- Dedicated selected-tile details zone (Y=148..324) with zero overlap from the grid below -->
         <control type="label"><left>60</left><top>148</top><width>1100</width><height>44</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(50).ListItem.Label][/B]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
         <control type="label"><left>60</left><top>194</top><width>1100</width><height>32</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(50).ListItem.Property(meta)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
@@ -809,7 +820,12 @@ def title_xml():
         <control type="label"><left>60</left><top>182</top><width>1180</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Window.Property(meta)]</label></control>
         <control type="textbox"><left>60</left><top>226</top><width>900</width><height>130</height><font>font12</font><textcolor>FFE5E5E5</textcolor><autoscroll time="3000" delay="4000" repeat="8000">true</autoscroll><label>$INFO[Window.Property(plot)]</label></control>
         <control type="label"><left>60</left><top>366</top><width>1180</width><height>32</height><font>font10</font><textcolor>FFB3B3B3</textcolor><label>$INFO[Window.Property(cast)]</label></control>
-        <control type="label"><left>60</left><top>396</top><width>1180</width><height>30</height><font>font10</font><textcolor>FF8C8C8C</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        <control type="label"><left>60</left><top>396</top><width>1180</width><height>30</height><font>font10</font><textcolor>FF8C8C8C</textcolor><label>$INFO[Window.Property(status)]</label><visible>!String.Contains(Window.Property(status),Loading)</visible></control>
+        <control type="group">
+            <visible>String.Contains(Window.Property(status),Loading)</visible>
+            <control type="image"><left>928</left><top>650</top><width>64</width><height>64</height><aspectratio>keep</aspectratio><texture>spinner_ring.png</texture><animation effect="rotate" start="0" end="-360" center="auto" time="900" loop="true" reversible="false" condition="true">Conditional</animation></control>
+            <control type="label"><left>660</left><top>724</top><width>600</width><height>34</height><font>font12</font><align>center</align><textcolor>FFD0D0DA</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        </control>
 {buttons}
         <!-- language chips, only when this film is listed in more than one language; Down from Play lands here -->
         <control type="list" id="{langs}">
@@ -1106,11 +1122,16 @@ def search_xml():
             <font>font14</font><textcolor>FFFFFFFF</textcolor>
             <label>[B]$INFO[Window.Property(results_heading)][/B]</label>
         </control>
+        <control type="group">
+            <visible>String.Contains(Window.Property(results_empty),Searching)</visible>
+            <control type="image"><left>1228</left><top>440</top><width>64</width><height>64</height><aspectratio>keep</aspectratio><texture>spinner_ring.png</texture><animation effect="rotate" start="0" end="-360" center="auto" time="900" loop="true" reversible="false" condition="true">Conditional</animation></control>
+            <control type="label"><left>960</left><top>516</top><width>600</width><height>36</height><font>font13</font><align>center</align><textcolor>FFD0D0DA</textcolor><label>$INFO[Window.Property(results_empty)]</label></control>
+        </control>
         <control type="label">
             <left>684</left><top>240</top><width>1100</width><height>80</height>
             <font>font13</font><textcolor>FF8E8E98</textcolor>
             <label>$INFO[Window.Property(results_empty)]</label>
-            <visible>!String.IsEmpty(Window.Property(results_empty))</visible>
+            <visible>!String.IsEmpty(Window.Property(results_empty)) + !String.Contains(Window.Property(results_empty),Searching)</visible>
         </control>
         <control type="panel" id="{res}">
             <left>674</left><top>190</top><width>1180</width><height>680</height>

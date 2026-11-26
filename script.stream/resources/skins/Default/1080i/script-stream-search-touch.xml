@@ -149,11 +149,16 @@
             <font>font14</font><textcolor>FFFFFFFF</textcolor>
             <label>[B]$INFO[Window.Property(results_heading)][/B]</label>
         </control>
+        <control type="group">
+            <visible>String.Contains(Window.Property(results_empty),Searching)</visible>
+            <control type="image"><left>1228</left><top>440</top><width>64</width><height>64</height><aspectratio>keep</aspectratio><texture>spinner_ring.png</texture><animation effect="rotate" start="0" end="-360" center="auto" time="900" loop="true" reversible="false" condition="true">Conditional</animation></control>
+            <control type="label"><left>960</left><top>516</top><width>600</width><height>36</height><font>font13</font><align>center</align><textcolor>FFD0D0DA</textcolor><label>$INFO[Window.Property(results_empty)]</label></control>
+        </control>
         <control type="label">
             <left>684</left><top>240</top><width>1100</width><height>80</height>
             <font>font13</font><textcolor>FF8E8E98</textcolor>
             <label>$INFO[Window.Property(results_empty)]</label>
-            <visible>!String.IsEmpty(Window.Property(results_empty))</visible>
+            <visible>!String.IsEmpty(Window.Property(results_empty)) + !String.Contains(Window.Property(results_empty),Searching)</visible>
         </control>
         <control type="panel" id="540">
             <left>674</left><top>190</top><width>1180</width><height>680</height>

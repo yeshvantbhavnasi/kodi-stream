@@ -92,7 +92,12 @@
         </control>
 
         <control type="label"><left>60</left><top>98</top><width>1100</width><height>46</height><font>font32_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
-        <control type="label"><left>1180</left><top>98</top><width>680</width><height>46</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        <control type="label"><left>1180</left><top>98</top><width>680</width><height>46</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label><visible>!String.Contains(Window.Property(status),Loading)</visible></control>
+        <control type="group">
+            <visible>String.Contains(Window.Property(status),Loading)</visible>
+            <control type="image"><left>924</left><top>540</top><width>72</width><height>72</height><aspectratio>keep</aspectratio><texture>spinner_ring.png</texture><animation effect="rotate" start="0" end="-360" center="auto" time="900" loop="true" reversible="false" condition="true">Conditional</animation></control>
+            <control type="label"><left>660</left><top>626</top><width>600</width><height>36</height><font>font13</font><align>center</align><textcolor>FFD0D0DA</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        </control>
         <!-- Dedicated selected-tile details zone (Y=148..324) with zero overlap from the grid below -->
         <control type="label"><left>60</left><top>148</top><width>1100</width><height>44</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(50).ListItem.Label][/B]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
         <control type="label"><left>60</left><top>194</top><width>1100</width><height>32</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(50).ListItem.Property(meta)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>

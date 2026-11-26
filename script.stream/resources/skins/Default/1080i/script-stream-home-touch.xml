@@ -6,7 +6,13 @@
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture colordiffuse="FF0F0F0F">white.png</texture><visible>!String.IsEmpty(Window.Property(youtube_tab)) + String.IsEmpty(Window.Property(kids))</visible></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
-        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor><animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation><label>$INFO[Window.Property(status)]</label><visible>Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)</visible></control>
+        <!-- Centered Stream loading spinner whenever a tab is loading -->
+        <control type="group">
+            <visible>String.Contains(Window.Property(status),Loading)</visible>
+            <control type="image"><left>924</left><top>490</top><width>72</width><height>72</height><aspectratio>keep</aspectratio><texture>spinner_ring.png</texture><animation effect="rotate" start="0" end="-360" center="auto" time="900" loop="true" reversible="false" condition="true">Conditional</animation></control>
+            <control type="label"><left>660</left><top>576</top><width>600</width><height>36</height><font>font13</font><align>center</align><textcolor>FFD0D0DA</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        </control>
+        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor><animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation><label>$INFO[Window.Property(status)]</label><visible>[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)] + !String.Contains(Window.Property(status),Loading)</visible></control>
         <control type="group">
             <animation effect="slide" end="0,44" time="0" condition="!String.IsEmpty(Window.Property(filters))">Conditional</animation>
             <visible>Control.HasFocus(200) | Control.HasFocus(400) | [[Control.HasFocus(100) | Control.HasFocus(110) | Control.HasFocus(120) | Control.HasFocus(130) | Control.HasFocus(140) | Control.HasFocus(160)] + String.IsEmpty(Window.Property(status))]</visible>
