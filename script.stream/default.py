@@ -606,35 +606,40 @@ def start(li, restart=False):
     db.log_event('played', label, group, kind)
     audit.event('play_request', title=label, kind=kind, free_memory=audit.memory())
 
-    # Wait for the stream with our dedicated Stream loading spinner (Back cancels immediately).
+    # Wait for the stream with our modal Stream loading spinner so Back cancels in <1ms!
     home_win = xbmcgui.Window(10000)
     home_win.setProperty('stream.starting', '1')
     busy = LoadingOverlay('script-stream-busy.xml', ADDON_PATH, 'Default', '1080i')
     busy.cancelled = False
     busy.setProperty('status', 'Resuming…' if resume else 'Starting…')
-    busy.show()
-    started = was_cancelled = False
-    steps = START_TIMEOUT * 7
+    state = {'started': False}
+
+    def _wait_stream():
+        steps = START_TIMEOUT * 7
+        try:
+            for _ in range(steps):
+                if busy.cancelled or PLAY['cancel']:
+                    break
+                if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
+                    state['started'] = True
+                    break
+                if monitor.waitForAbort(0.15):
+                    break
+        finally:
+            busy.close()
+
+    threading.Thread(target=_wait_stream, daemon=True).start()
     try:
-        for _ in range(steps):
-            if busy.cancelled or PLAY['cancel']:
-                was_cancelled = True
-                break
-            if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
-                started = True
-                break
-            if monitor.waitForAbort(0.15):
-                break
+        busy.doModal()
     finally:
-        was_cancelled = was_cancelled or busy.cancelled
-        busy.close()
+        was_cancelled = busy.cancelled
         del busy
         home_win.clearProperty('stream.starting')
     if was_cancelled or PLAY['cancel'] or monitor.abortRequested():
         _kill_stuck_playback(player)
         audit.event('play_cancelled', title=label)
         return
-    if not started:
+    if not state['started']:
         _kill_stuck_playback(player)
         audit.event('play_timeout', title=label, seconds=START_TIMEOUT)
         notify('Unable to play right now. Try another title.', 3500)
@@ -926,41 +931,43 @@ def enrich(control, still_wanted, limit, lock, start=0):
         cat.log('enrich stopped: {0}'.format(e))
 
 
-def play_trailer(video_id, title, busy=None):
+def play_trailer(video_id, title):
     if not yt.ensure_installed('play trailers'):
         return
     player, monitor = xbmc.Player(), xbmc.Monitor()
     home_win = xbmcgui.Window(10000)
     home_win.setProperty('stream.starting', '1')
-    own_busy = busy is None
-    if own_busy:
-        busy = LoadingOverlay('script-stream-busy.xml', ADDON_PATH, 'Default', '1080i')
-        busy.cancelled = False
-        busy.show()
+    busy = LoadingOverlay('script-stream-busy.xml', ADDON_PATH, 'Default', '1080i')
+    busy.cancelled = False
     busy.setProperty('status', 'Starting trailer…')
     PLAY['since'], PLAY['cancel'] = time.time(), False
     player.play('plugin://plugin.video.youtube/play/?video_id=' + video_id)
-    started = was_cancelled = False
-    try:
-        for _ in range(80):  # 12 seconds max for YouTube trailer start
-            if busy.cancelled or PLAY['cancel']:
-                was_cancelled = True
-                break
-            if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
-                started = True
-                break
-            if monitor.waitForAbort(0.15):
-                break
-    finally:
-        was_cancelled = was_cancelled or busy.cancelled
-        if own_busy:
+    state = {'started': False}
+
+    def _wait_trailer():
+        try:
+            for _ in range(80):  # 12 seconds max
+                if busy.cancelled or PLAY['cancel']:
+                    break
+                if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
+                    state['started'] = True
+                    break
+                if monitor.waitForAbort(0.15):
+                    break
+        finally:
             busy.close()
-            del busy
+
+    threading.Thread(target=_wait_trailer, daemon=True).start()
+    try:
+        busy.doModal()
+    finally:
+        was_cancelled = busy.cancelled
+        del busy
         home_win.clearProperty('stream.starting')
     if was_cancelled or PLAY['cancel']:
         _kill_stuck_playback(player)
         return
-    if not started:
+    if not state['started']:
         _kill_stuck_playback(player)
         notify('Trailer unavailable right now.', 3000)
         return
@@ -968,7 +975,7 @@ def play_trailer(video_id, title, busy=None):
 
 
 def watch_trailer(li):
-    """Play the trailer of a movie or show with a visible spinner, 8s lookup cap, and instant Back cancel."""
+    """Play the trailer of a movie or show with a modal spinner (instant Back cancel) and hard timeouts."""
     name = li.getProperty('show') or li.getProperty('name') or li.getLabel()
     show = li.getProperty('t') == 'folder'
     home_win = xbmcgui.Window(10000)
@@ -976,23 +983,24 @@ def watch_trailer(li):
     busy = LoadingOverlay('script-stream-busy.xml', ADDON_PATH, 'Default', '1080i')
     busy.cancelled = False
     busy.setProperty('status', 'Finding trailer…')
-    busy.show()
-    result = {'key': '', 'title': name, 'done': False}
+    PLAY['cancel'] = False
+    result = {'key': '', 'title': name, 'started': False, 'error': ''}
 
-    def _lookup():
+    def _work():
+        player, monitor = xbmc.Player(), xbmc.Monitor()
         key, title = '', name
         known = li.getProperty('trailer')
         if known and known != 'find':
             key, title = known, meta.split_title(name)[0] or name
         try:
-            if not key and meta.enabled():
+            if not key and meta.enabled() and not busy.cancelled:
                 data = meta.lookup(name, show, lang=li.getProperty('group'))
                 if data:
                     key, title = data.get('trailer') or '', data.get('title') or name
                     apply_details(li, data)
-            if not key:
+            if not key and not busy.cancelled:
                 key = db.meta('trailer:' + name) or ''
-            if not key:
+            if not key and not busy.cancelled:
                 short, year = meta.split_title(name)
                 title = short or name
                 key = yt.trailer(short, year, show) or ''
@@ -1000,26 +1008,49 @@ def watch_trailer(li):
                     db.set_meta('trailer:' + name, key)
         except Exception as e:
             cat.log('trailer lookup failed: {0}'.format(e))
-        result['key'], result['title'], result['done'] = key, title, True
-
-    threading.Thread(target=_lookup, daemon=True).start()
-    monitor = xbmc.Monitor()
-    try:
-        for _ in range(54):  # 8 seconds max lookup so a slow network never freezes the screen
-            if result['done'] or busy.cancelled or PLAY['cancel'] or monitor.waitForAbort(0.15):
-                break
+        result['key'], result['title'] = key, title
         if busy.cancelled or PLAY['cancel']:
-            PLAY['cancel'] = False
+            busy.close()
             return
-        if not result['key']:
-            notify('No trailer found for ' + name, 2500)
+        if not key:
+            result['error'] = 'No trailer found for ' + name
+            busy.close()
+            return
+        if not yt.ensure_installed('play trailers'):
+            busy.close()
             return
         db.log_event('trailer', name, li.getProperty('group') or None, 'Trailer')
-        play_trailer(result['key'], result['title'], busy=busy)
-    finally:
+        busy.setProperty('status', 'Starting trailer…')
+        PLAY['since'], PLAY['cancel'] = time.time(), False
+        player.play('plugin://plugin.video.youtube/play/?video_id=' + key)
+        for _ in range(80):  # 12s max
+            if busy.cancelled or PLAY['cancel']:
+                break
+            if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
+                result['started'] = True
+                break
+            if monitor.waitForAbort(0.15):
+                break
         busy.close()
+
+    threading.Thread(target=_work, daemon=True).start()
+    try:
+        busy.doModal()
+    finally:
+        was_cancelled = busy.cancelled
         del busy
         home_win.clearProperty('stream.starting')
+    if was_cancelled or PLAY['cancel']:
+        _kill_stuck_playback(xbmc.Player())
+        return
+    if result['error']:
+        notify(result['error'], 2500)
+        return
+    if not result['started']:
+        _kill_stuck_playback(xbmc.Player())
+        notify('Trailer unavailable right now.', 3000)
+        return
+    threading.Thread(target=follow, args=(None, result['title'] + ' (trailer)', None, 'Trailer', True), daemon=True).start()
 
 
 def details(li):
