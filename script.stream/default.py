@@ -69,7 +69,7 @@ SWIPE_UP = range(531, 541)
 SWIPE_DOWN = range(541, 551)
 IDLE_AFTER = 60  # seconds without a key press before the home screen starts showing off recommended titles
 NEXT_IN = 10  # seconds the next episode waits before it starts by itself
-NEXT_AT = 60  # seconds before an episode ends (its end titles, mostly) that the Next episode button appears
+NEXT_AT = 90  # seconds before an episode ends (its end titles, mostly) that the Next episode button appears
 START_TIMEOUT = 45  # seconds to wait for the Sasta TV addon to deliver a stream
 CANCEL_GRACE = 1.5  # seconds after a play request during which a cancel is taken as a repeated OK press
 
@@ -636,9 +636,11 @@ class NextUp(xbmcgui.WindowXMLDialog):
 
 
 def offer_next(nxt):
-    """In an episode's last minute, show Next episode over the video with its countdown filling the button.
+    """In an episode's last 90 seconds, show Next episode over the video with its countdown filling the button.
     True to skip to it now (OK pressed, or the countdown ran out); False to let this episode play out."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
+    hw = xbmcgui.Window(10000)
+    hw.setProperty('stream.guide', '1')
     dialog = NextUp(skin('next'), ADDON_PATH, 'Default', '1080i')
     dialog.choice = None
     dialog.setProperty('next', nxt.getLabel())
@@ -661,6 +663,7 @@ def offer_next(nxt):
                 return False
     finally:
         dialog.close()
+        hw.clearProperty('stream.guide')
     return dialog.choice != 'credits' and player.isPlayingVideo()
 
 
@@ -673,16 +676,72 @@ def time_left(player):
         return None
 
 
+class SkipIntroDialog(xbmcgui.WindowXMLDialog):
+    """Netflix-style floating 'Skip Intro' pill shown during an episode's opening titles."""
+    def onInit(self):
+        self.skipped = False
+        self.dismissed = False
+        self.setFocusId(310)
+
+    def onClick(self, control_id):
+        if control_id == 310:
+            self.skipped = True
+            self.close()
+
+    def onAction(self, action):
+        if action.getId() in ACTION_BACK:
+            self.dismissed = True
+            self.close()
+
+
+def offer_skip_intro(jump_seconds=75):
+    """Show the floating 'Skip Intro' pill for 14 seconds; OK seeks forward past the opening credits."""
+    player, monitor = xbmc.Player(), xbmc.Monitor()
+    hw = xbmcgui.Window(10000)
+    hw.setProperty('stream.guide', '1')
+    dialog = SkipIntroDialog('script-stream-skip.xml', ADDON_PATH, 'Default', '1080i')
+    dialog.skipped = False
+    dialog.dismissed = False
+    dialog.show()
+    try:
+        for _ in range(56):  # 14 seconds
+            if dialog.skipped or dialog.dismissed or not player.isPlayingVideo():
+                break
+            if monitor.waitForAbort(0.25):
+                return
+    finally:
+        dialog.close()
+        hw.clearProperty('stream.guide')
+    if dialog.skipped and player.isPlayingVideo():
+        try:
+            pos = player.getTime()
+            total = player.getTotalTime()
+            if total > pos + 20:
+                player.seekTime(min(total - 10, pos + jump_seconds))
+                audit.event('skip_intro', jumped=jump_seconds)
+        except Exception:
+            pass
+
+
 def autoplay_after(li, window=None):
     """Follow an episode to its end, and keep going episode after episode until the viewer stops or the season
-    ends. In the last minute a Next episode button skips the end titles; when the episode ends on its own
-    instead (not by Back), a countdown plays the next one."""
+    ends. Shows 'Skip Intro' during opening titles and 'Next episode' during end credits."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
     while True:
         if monitor.waitForAbort(3):
             return
-        nxt, looked, skip = None, False, False
+        nxt, looked, skip, offered_intro = None, False, False, False
         while player.isPlayingVideo() and not (window is not None and window.closed):
+            if not offered_intro:
+                try:
+                    pos, total = player.getTime(), player.getTotalTime()
+                    if total > 600 and 12 <= pos <= 95:
+                        offered_intro = True
+                        offer_skip_intro(75)
+                    elif pos > 95:
+                        offered_intro = True
+                except Exception:
+                    pass
             left = time_left(player) if not looked else None
             if left is not None and 0 < left <= NEXT_AT:
                 looked, nxt = True, next_episode(li)
@@ -1954,8 +2013,8 @@ class TitlePage(xbmcgui.WindowXML):
             self.spawn(self.after_playback, li)
 
     def after_playback(self, li):
-        if li.getProperty('series'):
-            autoplay_after(li, self)  # returns once the viewer stops watching, or the season runs out
+        if not li.getProperty('live'):
+            autoplay_after(li, self)  # shows Skip Intro on titles/episodes and Next Episode on series
         else:
             follow_until_done(self)
         self.refresh()
@@ -4016,8 +4075,8 @@ class Home(xbmcgui.WindowXML):
                     self.go_home()
             elif activate(li):
                 self.go_home()
-            elif kind == 'play' and li.getProperty('series') and xbmc.Player().isPlaying():
-                self.spawn(autoplay_after, li, self)  # an episode from Continue Watching carries on to the next
+            elif kind == 'play' and not li.getProperty('live') and xbmc.Player().isPlaying():
+                self.spawn(autoplay_after, li, self)  # Skip Intro on titles/episodes + Next Episode on Continue Watching series
             NAV['home'] = False  # a "go Home" request has been dealt with once control is back here
 
     def onAction(self, action):

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addons>
-<addon id="script.stream" name="Stream" version="2.4.0" provider-name="yeshvantbhavnasi">
+<addon id="script.stream" name="Stream" version="2.5.0" provider-name="yeshvantbhavnasi">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
         <import addon="script.module.requests"/>
