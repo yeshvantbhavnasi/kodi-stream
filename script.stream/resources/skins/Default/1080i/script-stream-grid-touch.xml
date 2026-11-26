@@ -91,30 +91,19 @@
             <ondown>50</ondown>
         </control>
 
-        <control type="label"><left>60</left><top>98</top><width>1100</width><height>52</height><font>font32_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
-        <control type="label"><left>1180</left><top>98</top><width>680</width><height>52</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
-        <control type="image"><left>40</left><top>31</top><width>150</width><height>48</height><texture colordiffuse="4DFFFFFF" border="23">pill.png</texture></control>
-        <control type="button" id="170">
-            <left>40</left><top>31</top><width>150</width><height>48</height>
-            <texturefocus>-</texturefocus>
-            <texturenofocus>-</texturenofocus>
-            <label>‹  Back</label>
-            <font>font13</font>
-            <align>center</align>
-            <aligny>center</aligny>
-            <textcolor>FFFFFFFF</textcolor>
-            <focusedcolor>FFFFFFFF</focusedcolor>
-            <onleft>noop</onleft><onright>noop</onright><onup>noop</onup><ondown>50</ondown>
-        </control>
-        <!-- the highlighted title's name, facts and synopsis -->
-        <control type="textbox"><left>60</left><top>152</top><width>1340</width><height>80</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[B][COLOR FFFFFFFF]$INFO[Container(50).ListItem.Label][/COLOR][/B]  [COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR][CR]$INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
+        <control type="label"><left>60</left><top>98</top><width>1100</width><height>46</height><font>font32_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
+        <control type="label"><left>1180</left><top>98</top><width>680</width><height>46</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        <!-- Dedicated selected-tile details zone (Y=148..324) with zero overlap from the grid below -->
+        <control type="label"><left>60</left><top>148</top><width>1100</width><height>44</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(50).ListItem.Label][/B]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
+        <control type="label"><left>60</left><top>194</top><width>1100</width><height>32</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(50).ListItem.Property(meta)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
+        <control type="textbox"><left>60</left><top>228</top><width>1100</width><height>92</height><font>font12</font><textcolor>FFE0E0E6</textcolor><label>$INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
         <control type="panel" id="50">
             <visible>String.IsEmpty(Window.Property(mode))</visible>
             <onleft>noop</onleft>
             <onright>noop</onright>
             <onup>100</onup>
             <ondown>noop</ondown>
-            <left>60</left><top>238</top><width>1810</width><height>842</height>
+            <left>60</left><top>332</top><width>1810</width><height>748</height>
             <orientation>vertical</orientation>
             <scrolltime tween="quadratic">200</scrolltime>
             <!-- wide tiles: a listing of YouTube videos (Window.Property(wide) is set by the script) -->

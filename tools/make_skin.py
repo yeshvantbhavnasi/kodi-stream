@@ -426,10 +426,11 @@ def billboard(n):
             <control type="image"><left>440</left><top>0</top><width>820</width><height>760</height><texture>fade_left.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>440</left><top>320</top><width>1480</width><height>440</height><texture>fade_bottom.png</texture><visible>String.IsEmpty(Window.Property(kids))</visible></control>
             <control type="image"><left>1540</left><top>92</top><width>200</width><height>290</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[{c}.Art(thumb)]</texture><visible>String.IsEmpty(Window.Property(youtube_tab)) + [{no_art} | !String.IsEmpty(Window.Property(kids))]</visible></control>
-            <control type="label"><left>60</left><top>124</top><width>1100</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[{c}.Label][/B]</label></control>
-            <control type="label"><left>60</left><top>198</top><width>1100</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[{c}.Property(meta)]</label></control>
-            <!-- a three-line synopsis: the title's own page has the rest, with the cast and episodes -->
-            <control type="textbox"><left>60</left><top>238</top><width>880</width><height>90</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[{c}.Property(plot)]</label></control>
+            <!-- Dedicated 30% hero details zone (Y=116..396) with zero overlap from rows below -->
+            <control type="label"><left>60</left><top>116</top><width>1120</width><height>66</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[{c}.Label][/B]</label></control>
+            <control type="label"><left>60</left><top>188</top><width>1120</width><height>34</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[{c}.Property(meta)]</label></control>
+            <control type="textbox"><left>60</left><top>228</top><width>920</width><height>112</height><font>font12</font><textcolor>FFE5E5E5</textcolor><label>$INFO[{c}.Property(plot)]</label></control>
+            <control type="label"><left>60</left><top>346</top><width>920</width><height>30</height><font>font10</font><textcolor>FFA8A8B3</textcolor><label>$INFO[{c}.Property(cast)]</label></control>
         </control>
 '''.format(slide=SLIDE, shown=shown, c=c, has_art=has_art, no_art=no_art)
 
@@ -552,9 +553,8 @@ def home_xml():
            '        <control type="label"><left>60</left><top>240</top><width>1380</width><height>60</height><font>font13</font><textcolor>FFA3A3A3</textcolor>{0}<label>$INFO[Window.Property(status)]</label><visible>{1}</visible></control>'.format(SLIDE, TOP_BAR)]
     out += [billboard(n).rstrip('\n') for n in range(ROWS)]
     out.append(filter_strip().rstrip('\n'))
-    # Rows start at 400 and run to the bottom of the 1080p frame so the active row sits prominently and the next
-    # row's heading and poster tops peek in below, making the home screen scannable without wasted vertical gap.
-    top, height = (430, 650) if TOUCH['on'] else (400, 680)
+    # Dedicated 30% hero details zone sits cleanly above Y=418; rows start below with zero overlap.
+    top, height = (440, 640) if TOUCH['on'] else (418, 662)
     out.append('''        <control type="grouplist" id="9000">
             <left>0</left><top>{top}</top><width>1920</width><height>{height}</height>
             {slide}
@@ -625,17 +625,19 @@ def grid_xml():
         <control type="image"><left>700</left><top>180</top><width>1220</width><height>280</height><texture>fade_bottom.png</texture><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(mode)) + !String.IsEmpty(Container(50).ListItem.Art(fanart))</visible></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>180</height><texture>top_fade.png</texture></control>
 {top_nav}
-        <control type="label"><left>60</left><top>98</top><width>1100</width><height>52</height><font>font32_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
-        <control type="label"><left>1180</left><top>98</top><width>680</width><height>52</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
-        <!-- the highlighted title's name, facts and synopsis -->
-        <control type="textbox"><left>60</left><top>152</top><width>1340</width><height>80</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[B][COLOR FFFFFFFF]$INFO[Container(50).ListItem.Label][/COLOR][/B]  [COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR][CR]$INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
+        <control type="label"><left>60</left><top>98</top><width>1100</width><height>46</height><font>font32_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
+        <control type="label"><left>1180</left><top>98</top><width>680</width><height>46</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
+        <!-- Dedicated selected-tile details zone (Y=148..324) with zero overlap from the grid below -->
+        <control type="label"><left>60</left><top>148</top><width>1100</width><height>44</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Container(50).ListItem.Label][/B]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
+        <control type="label"><left>60</left><top>194</top><width>1100</width><height>32</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Container(50).ListItem.Property(meta)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
+        <control type="textbox"><left>60</left><top>228</top><width>1100</width><height>92</height><font>font12</font><textcolor>FFE0E0E6</textcolor><label>$INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
         <control type="panel" id="50">
             <visible>String.IsEmpty(Window.Property(mode))</visible>
             <onleft>noop</onleft>
             <onright>noop</onright>
             <onup>100</onup>
             <ondown>noop</ondown>
-            <left>60</left><top>238</top><width>1810</width><height>842</height>
+            <left>60</left><top>332</top><width>1810</width><height>748</height>
             <orientation>vertical</orientation>
             <scrolltime tween="quadratic">200</scrolltime>
             <!-- wide tiles: a listing of YouTube videos (Window.Property(wide) is set by the script) -->

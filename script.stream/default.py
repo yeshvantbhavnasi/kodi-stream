@@ -128,7 +128,7 @@ def quality_of(name):
     if not found:
         return name, '', ''
     tag = found.group(1)
-    note = 'Cinema recording, lower picture and sound quality' if tag.lower() in CINEMA_COPY else tag + ' copy'
+    note = 'PreDVD' if tag.lower() in CINEMA_COPY else tag + ' copy'
     return QUALITY.sub('', name).strip() or name, tag.upper() if len(tag) <= 4 else tag, note
 
 
@@ -3224,12 +3224,10 @@ class Home(xbmcgui.WindowXML):
             find_label = shorten(self.search_query, 8) if self.search_query else 'Find'
             chips = [
                 tile('All', 'filter', genre=''),
-                tile('Browse', 'filter', genre='__browse__'),
                 tile(year_label, 'filter', genre='__year__'),
                 tile(az_label, 'filter', genre='__az__'),
-                tile(find_label, 'filter', genre='__find__'),
             ]
-            for genre, count in discover.genre_tiles(kinds):
+            for genre, count in discover.genre_tiles(kinds)[:6]:
                 chips.append(tile(short_genre.get(genre, genre), 'filter', genre=genre))
         strip.addItems(chips)
         if 0 <= pos < len(chips):
