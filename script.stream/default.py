@@ -445,8 +445,7 @@ def follow(key, name, group, kind, live):
                         pos, total = player.getTime(), player.getTotalTime()
                         if total > 600 and 5 <= pos <= 180:
                             offered_intro = True
-                            jump = 90 if total > 4500 else 75  # +90s for movies, +75s for episodes
-                            threading.Thread(target=offer_skip_intro, args=(jump,), daemon=True).start()
+                            threading.Thread(target=offer_skip_intro, args=(90,), daemon=True).start()  # +1:30 for both movies & episodes
                         elif pos > 180:
                             offered_intro = True
                     except Exception:
@@ -790,7 +789,7 @@ class SkipIntroDialog(xbmcgui.WindowXMLDialog):
             self.close()
 
 
-def offer_skip_intro(jump_seconds=75):
+def offer_skip_intro(jump_seconds=90):
     """Show the floating 'Skip Intro' pill for 18 seconds; OK seeks forward past the opening credits."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
     hw = xbmcgui.Window(10000)
@@ -3539,14 +3538,43 @@ class Home(xbmcgui.WindowXML):
         if key == 'live':
             return self.kids_live_rows()
         if key == 'mylist':
-            saved = db.mylist()
-            rows = [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
-            return rows + self.history_rows()
+            return self.mystuff_rows()
         if key == 'settings':
             return [('items', 'Settings', [tile('Switch profile', 'setting', action='switch',
                                                  meta='Now: ' + (CURRENT['profile'] or {}).get('name', ''),
                                                  plot='Choose who is watching.')])]
         return []
+
+    def mystuff_rows(self):
+        """My Stuff laid out in clean 8-column multi-row grids so every saved/watched item is visible without endless scrolling."""
+        COLS = 8
+        rows = []
+
+        def _add_chunked(heading, tiles, max_rows=3):
+            for idx in range(0, min(len(tiles), COLS * max_rows), COLS):
+                label = heading if idx == 0 else '{0} ({1}–{2})'.format(heading, idx + 1, min(idx + COLS, len(tiles)))
+                rows.append(('items', label, tiles[idx:idx + COLS]))
+
+        saved = db.mylist()
+        if saved:
+            _add_chunked('My List', [entry_item(e) for e in saved], max_rows=3)
+        unfinished = db.continue_watching(5, fold=True)
+        if unfinished:
+            rows.append(('items', 'Continue Watching', [watched_item(e) for e in unfinished]))
+        played = db.recent(120)
+        vod = [e for e in played if not cat.is_live(e['item'])]
+        if vod:
+            _add_chunked('Recently Watched', [entry_item(e, meta=e.get('note')) for e in vod], max_rows=4)
+        chans = [e for e in played if cat.is_live(e['item'])]
+        if chans:
+            chan_tiles = []
+            for e in chans[:24]:
+                li = entry_item(e, meta=e.get('note') or e.get('group') or 'Live TV')
+                li.setProperty('card', '1')
+                li.setProperty('logo', '1')
+                chan_tiles.append(li)
+            _add_chunked('Channels Watched', chan_tiles, max_rows=3)
+        return rows[:ROWS]
 
     def history_rows(self):
         """Everything played on this profile: unfinished titles first, then the full history, newest first."""
@@ -3740,9 +3768,7 @@ class Home(xbmcgui.WindowXML):
                                                          'Add-ons > Install from repository > Video add-ons, then come back here.')])]
             return self.youtube_rows()
         if key == 'mylist':
-            saved = db.mylist()
-            rows = [('items', 'My List', [entry_item(e) for e in saved])] if saved else []
-            return rows + self.history_rows()
+            return self.mystuff_rows()
         if key == 'settings':
             return [('items', 'Settings', self.settings_tiles())]
         if key == 'live':
