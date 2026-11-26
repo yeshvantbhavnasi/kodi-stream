@@ -341,73 +341,81 @@ def item_of(li):
 def follow(key, name, group, kind, live):
     """While a title plays: save the position every 5 seconds, and stop the stream when the viewer backs out of the video."""
     player, monitor = xbmc.Player(), xbmc.Monitor()
+    hw = xbmcgui.Window(10000)
+    live_tok = str(time.time()) if live else ''
+    if live_tok:
+        hw.setProperty('stream.live', live_tok)
     position = duration = 0
     seen_fullscreen, away, tick, applied_prefs = False, 0, 0, False
     PLAY['ended'] = ''
-    for _ in range(40):
-        if player.isPlayingVideo() or PLAY['cancel'] or monitor.waitForAbort(0.5):
-            break
-    while player.isPlayingVideo():
-        if PLAY['cancel']:
-            PLAY['ended'] = 'user'
-            player.stop()
-            break
-        if xbmc.getCondVisibility('Window.IsActive(fullscreenvideo) | !String.IsEmpty(Window(Home).Property(stream.guide))'):
-            seen_fullscreen, away = True, 0
-            PLAY['since'] = 0  # on screen now: Back is handled by the rule below
-            if not live and not applied_prefs:
-                applied_prefs = True
-                # Restore saved subtitle on/off preference
-                pref_sub = db.meta('subtitles_on')
-                if pref_sub is not None:
-                    try:
-                        player.showSubtitles(bool(pref_sub))
-                    except Exception:
-                        pass
-                # Restore saved preferred audio language on multi-audio streams (e.g. Telugu vs Hindi)
-                pref_audio = (db.meta('audio_lang') or '').lower()
-                if pref_audio:
-                    try:
-                        props = cat.rpc('Player.GetProperties', {
-                            'playerid': 1, 'properties': ['audiostreams', 'currentaudiostream']
-                        }) or {}
-                        cur_lang = ((props.get('currentaudiostream') or {}).get('language') or '').lower()
-                        streams = props.get('audiostreams') or []
-                        if len(streams) > 1 and cur_lang != pref_audio:
-                            match = next((s for s in streams if (s.get('language') or '').lower() == pref_audio), None)
-                            if match is not None:
-                                cat.rpc('Player.SetAudioStream', {'playerid': 1, 'stream': match['index']})
-                    except Exception:
-                        pass
-        else:
-            # Not on screen: either Back was pressed on the video, or it never came to the front
-            # (Back pressed in the first instant). Either way, end the stream so browsing continues in silence.
-            away += 1
-            if away >= (2 if seen_fullscreen else 6):
+    try:
+        for _ in range(40):
+            if player.isPlayingVideo() or PLAY['cancel'] or monitor.waitForAbort(0.5):
+                break
+        while player.isPlayingVideo():
+            if PLAY['cancel']:
                 PLAY['ended'] = 'user'
                 player.stop()
                 break
-        if not live and tick % 5 == 0:
-            try:
-                position, duration = player.getTime(), player.getTotalTime()
-                db.update_progress(key, position, duration)
-                if seen_fullscreen and tick >= 10:
-                    sub_now = bool(xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled'))
-                    if db.meta('subtitles_on') != sub_now:
-                        db.set_meta('subtitles_on', sub_now)
-                    if tick % 15 == 0:
-                        props = cat.rpc('Player.GetProperties', {
-                            'playerid': 1, 'properties': ['audiostreams', 'currentaudiostream']
-                        }) or {}
-                        if len(props.get('audiostreams') or []) > 1:
+            if xbmc.getCondVisibility('Window.IsActive(fullscreenvideo) | !String.IsEmpty(Window(Home).Property(stream.guide))'):
+                seen_fullscreen, away = True, 0
+                PLAY['since'] = 0  # on screen now: Back is handled by the rule below
+                if not live and not applied_prefs:
+                    applied_prefs = True
+                    # Restore saved subtitle on/off preference
+                    pref_sub = db.meta('subtitles_on')
+                    if pref_sub is not None:
+                        try:
+                            player.showSubtitles(bool(pref_sub))
+                        except Exception:
+                            pass
+                    # Restore saved preferred audio language on multi-audio streams (e.g. Telugu vs Hindi)
+                    pref_audio = (db.meta('audio_lang') or '').lower()
+                    if pref_audio:
+                        try:
+                            props = cat.rpc('Player.GetProperties', {
+                                'playerid': 1, 'properties': ['audiostreams', 'currentaudiostream']
+                            }) or {}
                             cur_lang = ((props.get('currentaudiostream') or {}).get('language') or '').lower()
-                            if cur_lang and cur_lang != 'und' and db.meta('audio_lang') != cur_lang:
-                                db.set_meta('audio_lang', cur_lang)
-            except Exception:
-                break
-        tick += 1
-        if monitor.waitForAbort(1):
-            return
+                            streams = props.get('audiostreams') or []
+                            if len(streams) > 1 and cur_lang != pref_audio:
+                                match = next((s for s in streams if (s.get('language') or '').lower() == pref_audio), None)
+                                if match is not None:
+                                    cat.rpc('Player.SetAudioStream', {'playerid': 1, 'stream': match['index']})
+                        except Exception:
+                            pass
+            else:
+                # Not on screen: either Back was pressed on the video, or it never came to the front
+                # (Back pressed in the first instant). Either way, end the stream so browsing continues in silence.
+                away += 1
+                if away >= (2 if seen_fullscreen else 6):
+                    PLAY['ended'] = 'user'
+                    player.stop()
+                    break
+            if not live and tick % 5 == 0:
+                try:
+                    position, duration = player.getTime(), player.getTotalTime()
+                    db.update_progress(key, position, duration)
+                    if seen_fullscreen and tick >= 10:
+                        sub_now = bool(xbmc.getCondVisibility('VideoPlayer.SubtitlesEnabled'))
+                        if db.meta('subtitles_on') != sub_now:
+                            db.set_meta('subtitles_on', sub_now)
+                        if tick % 15 == 0:
+                            props = cat.rpc('Player.GetProperties', {
+                                'playerid': 1, 'properties': ['audiostreams', 'currentaudiostream']
+                            }) or {}
+                            if len(props.get('audiostreams') or []) > 1:
+                                cur_lang = ((props.get('currentaudiostream') or {}).get('language') or '').lower()
+                                if cur_lang and cur_lang != 'und' and db.meta('audio_lang') != cur_lang:
+                                    db.set_meta('audio_lang', cur_lang)
+                except Exception:
+                    break
+            tick += 1
+            if monitor.waitForAbort(1):
+                return
+    finally:
+        if live_tok and hw.getProperty('stream.live') == live_tok:
+            hw.clearProperty('stream.live')
     if not PLAY['ended']:
         # Leaving fullscreenvideo as playback stops is a normal user Stop; only flag 'broken' if playback died
         # unexpectedly while fullscreenvideo was still active (or never reached 30s of a long video).
@@ -4254,7 +4262,7 @@ class LiveGuideDialog(xbmcgui.WindowXMLDialog):
         # 1. Most-watched live channels first
         for e in db.recent(60):
             it = e.get('item') or {}
-            if not cat.is_live(it):
+            if not (cat.is_live(it) or (e.get('kind') or '').lower() == 'live'):
                 continue
             k = (it.get('name') or '').strip().lower()
             if not k or k in seen:
@@ -4300,7 +4308,7 @@ class LiveGuideDialog(xbmcgui.WindowXMLDialog):
                 start(li)
 
     def onAction(self, action):
-        if action.getId() in ACTION_BACK:
+        if action.getId() in ACTION_BACK or action.getId() == 4:  # Back or Down dismisses the bottom overlay
             self.close()
 
 
@@ -4330,7 +4338,18 @@ if __name__ == '__main__':
     if sys.argv[1:2] == ['youtube']:
         yt.open_settings()  # RunScript(script.stream,youtube): the YouTube sign-in and API key helper on its own
     elif sys.argv[1:2] == ['guide']:
-        open_live_guide()   # RunScript(script.stream,guide): in-player Quick Channel Switcher overlay
+        direction = sys.argv[2] if len(sys.argv) > 2 else ''
+        is_live = bool(home.getProperty('stream.live'))
+        if not is_live:
+            try:
+                is_live = xbmc.Player().isPlayingVideo() and xbmc.Player().getTotalTime() <= 10
+            except Exception:
+                pass
+        if direction in ('up', 'down') and not is_live:
+            # During movies/shows, keep normal Kodi Up/Down big-step seeking; during Live TV, open Quick Channel Switcher.
+            xbmc.executebuiltin('Action(BigStepForward)' if direction == 'up' else 'Action(BigStepBackward)')
+        else:
+            open_live_guide()   # RunScript(script.stream,guide): in-player Quick Channel Switcher overlay
     elif not sasta:
         xbmcgui.Dialog().ok('Stream', 'Install the Sasta TV addon and sign in to it first.')
     elif opened and time.time() - float(opened) < 12 * 3600:

@@ -39,6 +39,11 @@ def service_url():
     return _setting('recs_url').rstrip('/')
 
 
+def service_key():
+    """Shared API key for Stream's backend (recommendations, sync, EPG)."""
+    return _setting('recs_key')
+
+
 def provider():
     """'bedrock', 'service', 'ollama' or '' for what answers. A Bedrock key is an explicit choice, so it wins over the
     service address (which has a built-in default); Ollama is used when both are blank."""

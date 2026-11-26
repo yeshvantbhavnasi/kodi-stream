@@ -166,9 +166,46 @@ def _apply_staged_yt_keys():
         xbmc.log('[script.stream] staged YouTube keys skipped: %s' % e, xbmc.LOGINFO)
 
 
+def _ensure_live_keymap():
+    """Install FullscreenVideo Up/Down/Guide keymap so pressing Up/Down during Live TV opens the Quick Channel Switcher."""
+    try:
+        km_dir = xbmcvfs.translatePath('special://userdata/keymaps')
+        km_path = os.path.join(km_dir, 'stream_live.xml')
+        desired = (
+            '<keymap>\n'
+            '  <FullscreenVideo>\n'
+            '    <keyboard>\n'
+            '      <up>RunScript(script.stream,guide,up)</up>\n'
+            '      <down>RunScript(script.stream,guide,down)</down>\n'
+            '      <g>RunScript(script.stream,guide)</g>\n'
+            '    </keyboard>\n'
+            '    <remote>\n'
+            '      <up>RunScript(script.stream,guide,up)</up>\n'
+            '      <down>RunScript(script.stream,guide,down)</down>\n'
+            '      <guide>RunScript(script.stream,guide)</guide>\n'
+            '      <channelplus>RunScript(script.stream,guide)</channelplus>\n'
+            '      <channelminus>RunScript(script.stream,guide)</channelminus>\n'
+            '    </remote>\n'
+            '  </FullscreenVideo>\n'
+            '</keymap>\n'
+        )
+        if os.path.exists(km_path):
+            with open(km_path, 'r', encoding='utf-8') as f:
+                if f.read() == desired:
+                    return
+        os.makedirs(km_dir, exist_ok=True)
+        with open(km_path, 'w', encoding='utf-8') as f:
+            f.write(desired)
+        xbmc.executebuiltin('Action(reloadkeymaps)')
+        xbmc.log('[script.stream] installed Live TV Quick Channel Switcher keymap', xbmc.LOGINFO)
+    except Exception as e:
+        xbmc.log('[script.stream] keymap install skipped: %s' % e, xbmc.LOGINFO)
+
+
 _tune_advanced_settings()
 _tune_kodi_cache()
 _ensure_stream_skin()
+_ensure_live_keymap()
 _apply_staged_yt_keys()
 
 monitor = xbmc.Monitor()
