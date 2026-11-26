@@ -3305,7 +3305,7 @@ class Home(xbmcgui.WindowXML):
         titles = ('dir', 'Movies and Shows', cat.URLS['kids'], 'Kids', None)
         if key == 'home':
             rows = []
-            for title, entries in (('Continue Watching', db.continue_watching(fold=True)), ('Recently Played', db.recent(30, fold=True))):
+            for title, entries in (('Continue Watching', db.continue_watching(5, fold=True)), ('Recently Played', db.recent(30, fold=True))):
                 if entries:
                     rows.append(('items', title, [watched_item(e) for e in entries]))
             picks = db.suggestions()
@@ -3333,7 +3333,7 @@ class Home(xbmcgui.WindowXML):
     def history_rows(self):
         """Everything played on this profile: unfinished titles first, then the full history, newest first."""
         rows = []
-        unfinished = db.continue_watching(40)
+        unfinished = db.continue_watching(5)
         if unfinished:
             rows.append(('items', 'Continue Watching', [entry_item(e, meta=e.get('note')) for e in unfinished]))
         played = db.recent(120)
@@ -3450,7 +3450,7 @@ class Home(xbmcgui.WindowXML):
         english_tv = [('dir', 'English TV Shows', u['english_tv'], 'English', None)] if english else []
         if key == 'home':
             rows = []
-            resume = db.continue_watching(fold=True)
+            resume = db.continue_watching(5, fold=True)
             if resume:
                 rows.append(('items', 'Continue Watching', [watched_item(e) for e in resume]))
             for title, entries in recs.rows(fetch=True):  # every visit to Home asks the service for new lists and rebuilds

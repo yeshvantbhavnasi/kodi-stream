@@ -338,12 +338,14 @@ def recent(limit=30, fold=False):
     return [_entry(r) for r in (_fold(rows, limit) if fold else rows)]
 
 
-def continue_watching(limit=20, fold=False):
-    """Titles stopped part-way: past the first 30 seconds and not yet watched to the end. With fold, one per show."""
+def continue_watching(limit=5, fold=False, max_age_days=7):
+    """Titles stopped part-way in the last `max_age_days` days: past 30s and not yet finished. With fold, one per show."""
+    cutoff = time.time() - max_age_days * 86400
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM watched WHERE position > 30 AND duration > 0 AND done = 0 AND key NOT LIKE 'live:%' "
-            'ORDER BY played_at DESC LIMIT ?', (limit * 8 if fold else limit,)).fetchall()
+            "SELECT * FROM watched WHERE position > 30 AND duration > 0 AND done = 0 "
+            "AND played_at >= ? AND key NOT LIKE 'live:%' "
+            'ORDER BY played_at DESC LIMIT ?', (cutoff, limit * 8 if fold else limit)).fetchall()
     return [_entry(r) for r in (_fold(rows, limit) if fold else rows)]
 
 
