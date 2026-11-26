@@ -524,44 +524,31 @@ def start(li, restart=False):
     db.log_event('played', label, group, kind)
     audit.event('play_request', title=label, kind=kind, free_memory=audit.memory())
 
-    # Wait for the stream with a clean Stream progress card that Back can cancel.
+    # Wait for the stream with ONLY the clean Stream loading spinner — no text box or progress bar.
     # Poll every 150ms for near-instant handoff to fullscreen video.
     home_win = xbmcgui.Window(10000)
     home_win.setProperty('stream.starting', '1')
-    text = '{0} {1}…\nPress Back to cancel.'.format(
-        'Resuming' if resume else 'Starting', label + (' from ' + clock(resume) if resume else ''))
-    progress = xbmcgui.DialogProgress()
-    progress.create('Stream', text)
-    started = cancelled = False
-    grace = time.time() + CANCEL_GRACE
+    xbmc.executebuiltin('ActivateWindow(busydialognocancel)')
+    started = False
     steps = START_TIMEOUT * 7
     try:
-        for step in range(steps):
-            if progress.iscanceled():
-                if time.time() < grace:
-                    progress.close()
-                    progress = xbmcgui.DialogProgress()
-                    progress.create('Stream', text)
-                    audit.event('play_cancel_ignored', title=label)
-                else:
-                    cancelled = True
-                    break
+        for _ in range(steps):
+            if PLAY['cancel']:
+                break
             if player.isPlayingVideo() and xbmc.getCondVisibility('Player.HasVideo'):
                 started = True
                 break
-            progress.update(min(95, int(100 * step / steps)))
             if monitor.waitForAbort(0.15):
                 break
     finally:
-        progress.close()
+        xbmc.executebuiltin('Dialog.Close(busydialognocancel)')
         home_win.clearProperty('stream.starting')
-    if cancelled or progress.iscanceled():
+    if PLAY['cancel']:
         PLAY['cancel'], PLAY['since'] = True, 0
         if player.isPlaying():
             player.stop()
         threading.Thread(target=stop_late_arrival, daemon=True).start()
         audit.event('play_cancelled', title=label)
-        notify('Cancelled')
         return
     if not started:
         PLAY['cancel'], PLAY['since'] = True, 0
@@ -3453,7 +3440,13 @@ class Home(xbmcgui.WindowXML):
             resume = db.continue_watching(5, fold=True)
             if resume:
                 rows.append(('items', 'Continue Watching', [watched_item(e) for e in resume]))
-            for title, entries in recs.rows(fetch=True):  # every visit to Home asks the service for new lists and rebuilds
+            # Render cached Home recommendations instantly (<50ms) and refresh from the server in the background
+            cached_recs = recs.rows(fetch=False)
+            if cached_recs:
+                threading.Thread(target=lambda: recs.rows(fetch=True), daemon=True).start()
+            else:
+                cached_recs = recs.rows(fetch=True)
+            for title, entries in cached_recs:
                 tiles = []
                 for e in entries:
                     li = entry_item(e, meta=e.get('meta'), suggestion=bool(e.get('suggestion')))
@@ -3569,6 +3562,19 @@ class Home(xbmcgui.WindowXML):
         self.setProperty('youtube_tab', '1' if key == 'youtube' else '')
         self.token += 1
         self.setProperty('status', 'Loading…')
+        # Clear previous tab's rows immediately so switching (e.g. Movies -> Home) never lingers on the old page.
+        with self.ui_lock:
+            self.row_browse = {}
+            for n in range(ROWS):
+                self.setProperty('row{0}.title'.format(n), '')
+                self.setProperty('row{0}.wide'.format(n), '')
+                self.setProperty('row{0}.top10'.format(n), '')
+                self.setProperty('row{0}.browse'.format(n), '')
+                try:
+                    self.getControl(FIRST_ROW + n).reset()
+                except Exception:
+                    pass
+            self.show_filters(key)
         self.spawn(self.fill, key, self.token, focus)
 
     def focus_rows(self, token):

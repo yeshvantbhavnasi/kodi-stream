@@ -260,6 +260,8 @@ def poster_tile(rid, focused, offset=0):
         '<!-- subtle Apple TV show badge in top-right corner on Series/Shows in Recs & Continue Watching -->',
         '<control type="image"><left>{l}</left><top>8</top><width>34</width><height>28</height><texture colordiffuse="D6141418" border="10">round.png</texture><visible>{c} + !String.IsEmpty(ListItem.Property(is_show)) + String.IsEmpty(ListItem.Property(number))</visible></control>'.format(l=o + 158, c=nocard),
         '<control type="image"><left>{l}</left><top>13</top><width>18</width><height>18</height><aspectratio>keep</aspectratio><texture colordiffuse="FFFFFFFF">tab-shows.png</texture><visible>{c} + !String.IsEmpty(ListItem.Property(is_show)) + String.IsEmpty(ListItem.Property(number))</visible></control>'.format(l=o + 166, c=nocard),
+        '<control type="label"><left>{l}</left><top>306</top><width>200</width><height>32</height><font>{f}</font><textcolor>{tc}</textcolor><scroll>false</scroll><label>{lb}</label><visible>{c}</visible></control>'.format(
+            l=o, c=nocard, f='font12' if focused else 'font10', tc='FFFFFFFF' if focused else 'FFD4D4DC', lb='[B]$INFO[ListItem.Label][/B]' if focused else '$INFO[ListItem.Label]'),
         '<!-- square cards: channels, languages, settings -->',
         '<control type="image"><left>{l}</left><top>50</top><width>200</width><height>200</height><texture colordiffuse="FF1E1E28" border="14">round.png</texture><visible>{c}</visible></control>'.format(l=o, c=card),
         '<control type="image"><left>{l}</left><top>72</top><width>156</width><height>156</height><aspectratio>keep</aspectratio><texture background="true">$INFO[ListItem.Art(thumb)]</texture><visible>{c}</visible></control>'.format(l=o + 22, c=card),
@@ -309,26 +311,26 @@ def layouts(n, rid):
 {wide_focus}
                         </control>
                     </focusedlayout>
-                    <itemlayout width="216" height="330" condition="{poster_if}">
+                    <itemlayout width="216" height="352" condition="{poster_if}">
                         <control type="group"><left>10</left><top>14</top>
 {poster_item}
                         </control>
                     </itemlayout>
-                    <focusedlayout width="216" height="330" condition="{poster_if}">
+                    <focusedlayout width="216" height="352" condition="{poster_if}">
                         <control type="group"><left>10</left><top>14</top>
                             {zoom}
 {poster_focus}
                         </control>
                     </focusedlayout>
                     <!-- Top 10: a big numeral beside each poster (tighter scale for 2-digit "10" so it never clips or overflows) -->
-                    <itemlayout width="312" height="330" condition="!String.IsEmpty({top10})">
+                    <itemlayout width="312" height="352" condition="!String.IsEmpty({top10})">
                         <control type="group"><left>10</left><top>14</top>
                             <control type="label"><left>0</left><top>145</top><width>104</width><height>90</height><font>font60</font><align>right</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF5A5A5A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><visible>!String.IsEqual(ListItem.Property(rank),10)</visible><animation effect="zoom" start="100" end="220" center="104,205" time="0" condition="true">Conditional</animation></control>
                             <control type="label"><left>-6</left><top>155</top><width>110</width><height>90</height><font>font60</font><align>right</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF5A5A5A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><visible>String.IsEqual(ListItem.Property(rank),10)</visible><animation effect="zoom" start="100" end="165" center="104,212" time="0" condition="true">Conditional</animation></control>
 {top10_item}
                         </control>
                     </itemlayout>
-                    <focusedlayout width="312" height="330" condition="!String.IsEmpty({top10})">
+                    <focusedlayout width="312" height="352" condition="!String.IsEmpty({top10})">
                         <control type="group"><left>10</left><top>14</top>
                             {zoom}
                             <control type="label"><left>0</left><top>145</top><width>104</width><height>90</height><font>font60</font><align>right</align><aligny>center</aligny><scroll>false</scroll><textcolor>FF8A8A8A</textcolor><label>[B]$INFO[ListItem.Property(rank)][/B]</label><visible>!String.IsEqual(ListItem.Property(rank),10)</visible><animation effect="zoom" start="100" end="220" center="104,205" time="0" condition="true">Conditional</animation></control>
@@ -361,7 +363,7 @@ def row(n):
     rid = FIRST + n
     bid = BROWSE_FIRST + n
     down = rid + 1 if n < ROWS - 1 else 'noop'
-    tiles = int(round(330 * SCALE)) if TOUCH['on'] else 330
+    tiles = int(round(352 * SCALE)) if TOUCH['on'] else 352
     if n == 0:  # Up from the first row reaches the genre strip when it is shown, otherwise the tabs
         ups = '<onup condition="Control.IsVisible({flt})">{flt}</onup>\n                    <onup>{tabs}</onup>'.format(flt=FILTER, tabs=TABS)
     else:
@@ -585,8 +587,8 @@ def grid_xml():
             '<control type="image"><left>8</left><top>262</top><width>84</width><height>28</height><texture colordiffuse="D0000000" border="14">round.png</texture><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>',
             '<control type="label"><left>8</left><top>262</top><width>84</width><height>28</height><font>font10</font><align>center</align><aligny>center</aligny><textcolor>FFF5C518</textcolor><label>[B]$INFO[ListItem.Property(rating)][/B]</label><visible>!String.IsEmpty(ListItem.Property(rating))</visible></control>',
             progress(10, 286, 180, 6),
-            '<control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>{f}</font><textcolor>{tc}</textcolor><label>{lb}</label><visible>!String.IsEmpty(ListItem.Property(logo)) | !String.IsEmpty(ListItem.Property(series))</visible></control>'.format(
-                f='font13' if focused else 'font12', tc='FFFFFFFF' if focused else 'FFB8B8B8', lb='[B]$INFO[ListItem.Label][/B]' if focused else '$INFO[ListItem.Label]'),
+            '<control type="label"><left>0</left><top>306</top><width>200</width><height>34</height><font>{f}</font><textcolor>{tc}</textcolor><scroll>false</scroll><label>{lb}</label></control>'.format(
+                f='font12' if focused else 'font10', tc='FFFFFFFF' if focused else 'FFD4D4DC', lb='[B]$INFO[ListItem.Label][/B]' if focused else '$INFO[ListItem.Label]'),
         ]
         return indent('\n'.join(parts), 24)
 
@@ -787,6 +789,8 @@ def title_xml():
 <!-- Generated by tools/make_skin.py; edit that file, not this one. -->
 <window>
     <defaultcontrol always="true">{play}</defaultcontrol>
+    <animation effect="fade" start="0" end="100" time="160">WindowOpen</animation>
+    <animation effect="fade" start="100" end="0" time="120">WindowClose</animation>
     <controls>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg.png</texture></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>1080</height><texture>bg_kids.png</texture><visible>!String.IsEmpty(Window.Property(kids))</visible></control>
@@ -868,19 +872,19 @@ def title_xml():
         <!-- the highlighted episode's length and synopsis -->
         <control type="textbox"><left>60</left><top>850</top><width>1800</width><height>150</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[B][COLOR FFFFFFFF]$INFO[Container({episodes}).ListItem.Label][/COLOR][/B]  [COLOR FF46D369]$INFO[Container({episodes}).ListItem.Property(meta)][/COLOR][CR]$INFO[Container({episodes}).ListItem.Property(plot)]</label><visible>{is_show}</visible></control>
         <control type="list" id="{alike}">
-            <left>50</left><top>576</top><width>1870</width><height>330</height>
+            <left>50</left><top>576</top><width>1870</width><height>352</height>
             <orientation>horizontal</orientation>
             <scrolltime tween="quadratic">200</scrolltime>
             <onleft>noop</onleft><onright>noop</onright>
             <onup condition="!String.IsEmpty(Window.Property(langs))">{langs}</onup><onup>{play}</onup>
             <ondown>noop</ondown>
             <visible>{not_show}</visible>
-            <itemlayout width="216" height="330">
+            <itemlayout width="216" height="352">
                 <control type="group"><left>10</left><top>14</top>
 {poster_item}
                 </control>
             </itemlayout>
-            <focusedlayout width="216" height="330">
+            <focusedlayout width="216" height="352">
                 <control type="group"><left>10</left><top>14</top>
                     {zoom_alike}
 {poster_focus}

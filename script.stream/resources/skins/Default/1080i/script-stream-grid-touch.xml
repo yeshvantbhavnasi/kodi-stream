@@ -106,7 +106,7 @@
                         <control type="image"><left>170</left><top>358</top><width>22</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>Integer.IsGreater(ListItem.Property(progress),64)</visible></control>
                         <control type="image"><left>192</left><top>358</top><width>22</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>Integer.IsGreater(ListItem.Property(progress),74)</visible></control>
                         <control type="image"><left>215</left><top>358</top><width>22</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
-                        <control type="label"><left>0</left><top>382</top><width>250</width><height>42</height><font>font12</font><textcolor>FFB8B8B8</textcolor><label>$INFO[ListItem.Label]</label><visible>!String.IsEmpty(ListItem.Property(logo)) | !String.IsEmpty(ListItem.Property(series))</visible></control>
+                        <control type="label"><left>0</left><top>382</top><width>250</width><height>42</height><font>font10</font><textcolor>FFD4D4DC</textcolor><scroll>false</scroll><label>$INFO[ListItem.Label]</label></control>
                 </control>
             </itemlayout>
             <focusedlayout width="280" height="412" condition="String.IsEmpty(Window.Property(wide))">
@@ -133,7 +133,7 @@
                         <control type="image"><left>170</left><top>358</top><width>22</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>Integer.IsGreater(ListItem.Property(progress),64)</visible></control>
                         <control type="image"><left>192</left><top>358</top><width>22</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>Integer.IsGreater(ListItem.Property(progress),74)</visible></control>
                         <control type="image"><left>215</left><top>358</top><width>22</width><height>8</height><texture colordiffuse="FFE50914">white.png</texture><visible>Integer.IsGreater(ListItem.Property(progress),84)</visible></control>
-                        <control type="label"><left>0</left><top>382</top><width>250</width><height>42</height><font>font13</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[ListItem.Label][/B]</label><visible>!String.IsEmpty(ListItem.Property(logo)) | !String.IsEmpty(ListItem.Property(series))</visible></control>
+                        <control type="label"><left>0</left><top>382</top><width>250</width><height>42</height><font>font12</font><textcolor>FFFFFFFF</textcolor><scroll>false</scroll><label>[B]$INFO[ListItem.Label][/B]</label></control>
                 </control>
             </focusedlayout>
         </control>
