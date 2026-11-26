@@ -553,6 +553,7 @@ class LoadingOverlay(xbmcgui.WindowXMLDialog):
     def onAction(self, action):
         if action.getId() in ACTION_BACK:
             self.cancelled = True
+            PLAY['cancel'] = True
             self.close()
 
 
@@ -1005,9 +1006,10 @@ def watch_trailer(li):
     monitor = xbmc.Monitor()
     try:
         for _ in range(54):  # 8 seconds max lookup so a slow network never freezes the screen
-            if result['done'] or busy.cancelled or monitor.waitForAbort(0.15):
+            if result['done'] or busy.cancelled or PLAY['cancel'] or monitor.waitForAbort(0.15):
                 break
-        if busy.cancelled:
+        if busy.cancelled or PLAY['cancel']:
+            PLAY['cancel'] = False
             return
         if not result['key']:
             notify('No trailer found for ' + name, 2500)
@@ -2223,9 +2225,13 @@ class TitlePage(xbmcgui.WindowXML):
                 self.close()
 
     def onAction(self, action):
-        if self.closed or BUSY['on']:
+        if self.closed:
             return
         code = action.getId()
+        if BUSY['on']:
+            if code in ACTION_BACK:
+                PLAY['cancel'] = True  # allow Back to cancel an in-flight Play or Trailer load immediately
+            return
         if code in ACTION_BACK:
             if not stop_if_playing_behind():
                 NAV['home'] = True  # Back always returns straight to Home (no deep page history stack)
@@ -2612,7 +2618,11 @@ class Grid(xbmcgui.WindowXML):
             self.loading = False
 
     def onAction(self, action):
-        if self.closed or BUSY['on']:
+        if self.closed:
+            return
+        if BUSY['on']:
+            if action.getId() in ACTION_BACK:
+                PLAY['cancel'] = True  # allow Back to cancel an in-flight Play or Trailer load immediately
             return
         if action.getId() in ACTION_BACK:
             if not stop_if_playing_behind():
@@ -4287,7 +4297,11 @@ class Home(xbmcgui.WindowXML):
             NAV['home'] = False  # a "go Home" request has been dealt with once control is back here
 
     def onAction(self, action):
-        if getattr(self, 'closed', False) or BUSY['on']:
+        if getattr(self, 'closed', False):
+            return
+        if BUSY['on']:
+            if action.getId() in ACTION_BACK:
+                PLAY['cancel'] = True  # allow Back to cancel an in-flight Play or Trailer load immediately
             return
         try:
             focus = self.getFocusId()
