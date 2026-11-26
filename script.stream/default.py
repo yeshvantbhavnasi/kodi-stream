@@ -174,9 +174,63 @@ def exclusive(handler):
 # The open home screen, so it can refresh its Continue Watching row when something finishes playing.
 HOME = {'window': None}
 
-# Set when the viewer chooses "Home" inside a nested screen; every open grid closes on seeing it.
-NAV = {'home': False}
+# Set when the viewer chooses a top-bar tab or "Home" inside a nested screen; every open grid/title closes on seeing it.
+NAV = {'home': False, 'tab': None}
 OPEN = {'grids': 0}  # how many inner screens are open above the home screen
+
+
+def populate_top_tabs(win):
+    """Populate the persistent top navigation bar (Home, Movies, Shows, Live TV, Sports, YouTube, My List) on any screen."""
+    try:
+        ctrl = win.getControl(TABS_ID)
+    except Exception:
+        return
+    names = [('home', 'Home'), ('movies', 'Movies'), ('shows', 'Shows'), ('live', 'Live TV'),
+             ('sports', 'Sports'), ('youtube', 'YouTube'), ('mylist', 'My List')]
+    if db.KIDS:
+        names = [('home', 'Home'), ('movies', 'Movies'), ('live', 'Channels'), ('youtube', 'YouTube')]
+    if TOUCH:
+        names = [t for t in names if t[0] not in ('mylist', 'history')] + [('downloads', 'Downloads')]
+    tabs = []
+    for key, label in names:
+        li = xbmcgui.ListItem(label=label)
+        li.setProperty('key', key)
+        li.setProperty('icon', 'tab-{0}.png'.format(key))
+        tabs.append(li)
+    ctrl.reset()
+    ctrl.addItems(tabs)
+
+
+def handle_top_bar_click(win, control_id):
+    """Handle clicks on the persistent top bar from TitlePage or Grid: jump cleanly to the chosen tab/action."""
+    if control_id == TABS_ID:
+        li = win.getControl(TABS_ID).getSelectedItem()
+        key = li.getProperty('key') if li else 'home'
+        NAV['tab'] = key
+        NAV['home'] = True
+        win.close()
+        return True
+    if control_id == SEARCH_ID:
+        NAV['tab'] = '__search__'
+        NAV['home'] = True
+        win.close()
+        return True
+    if control_id == GEAR_ID:
+        NAV['tab'] = 'settings'
+        NAV['home'] = True
+        win.close()
+        return True
+    if control_id == PROFILE_ID:
+        NAV['tab'] = '__profile__'
+        NAV['home'] = True
+        win.close()
+        return True
+    if control_id == CLOSE_ID:
+        NAV['tab'] = '__close__'
+        NAV['home'] = True
+        win.close()
+        return True
+    return False
 
 
 def clock(seconds):
@@ -1574,6 +1628,7 @@ class TitlePage(xbmcgui.WindowXML):
             return
         self.ready = True
         self.setProperty('kids', '1' if db.KIDS else '')
+        populate_top_tabs(self)
         self.setProperty('show', '1' if self.show else '')
         self.setProperty('section', 'Episodes' if self.show else 'More like this')
         self.describe()
@@ -2028,6 +2083,8 @@ class TitlePage(xbmcgui.WindowXML):
 
     @exclusive
     def onClick(self, control_id):
+        if handle_top_bar_click(self, control_id):
+            return
         if control_id == BACK_ID:
             if not stop_if_playing_behind():
                 self.close()
@@ -2198,6 +2255,7 @@ class Grid(xbmcgui.WindowXML):
             return
         self.ready = True
         self.setProperty('kids', '1' if db.KIDS else '')
+        populate_top_tabs(self)
         self.setProperty('title', ' · '.join(self.trail) if self.trail else self.title)
         self.panel = self.getControl(PANEL)
         self.view = PANEL
@@ -2401,6 +2459,8 @@ class Grid(xbmcgui.WindowXML):
 
     @exclusive
     def onClick(self, control_id):
+        if handle_top_bar_click(self, control_id):
+            return
         if control_id == BACK_ID:
             if not stop_if_playing_behind():
                 self.close()
@@ -2934,8 +2994,29 @@ class Home(xbmcgui.WindowXML):
 
     def go_home(self, focus=True):
         NAV['home'] = False
-        self.getControl(TABS_ID).selectItem(0)
-        self.load_tab('home', focus)
+        target = NAV.get('tab')
+        NAV['tab'] = None
+        if target == '__search__':
+            self.search()
+            return
+        if target == '__profile__':
+            if self.may_leave():
+                self.switch = True
+                self.close()
+            return
+        if target == '__close__':
+            if self.may_leave():
+                self.close()
+            return
+        tab = target or 'home'
+        ctrl = self.getControl(TABS_ID)
+        for i in range(ctrl.size()):
+            if ctrl.getListItem(i).getProperty('key') == tab:
+                ctrl.selectItem(i)
+                break
+        else:
+            ctrl.selectItem(0)
+        self.load_tab(tab, focus)
 
     def grouped_rows(self, heading, entries):
         """Entries grouped into one row per language (Telugu first, Hindi/dubbed secondary), with header Browse all & See all ›."""

@@ -187,14 +187,8 @@ def _render_svg_icon(svg, out_path, width, height=None):
 
 
 def make_modern_icons():
-    """Generate crisp 2x DPI Lucide-style vector PNG icons for top bar, search, and YouTube TV."""
+    """Generate crisp 2x DPI PNG icons for pills, chips, and YouTube badge; Apple SF Symbols are rendered via Swift."""
     svgs = {
-        'search-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7.5"/><path d="m20 20-3.8-3.8"/></svg>'),
-        'person-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>'),
-        'gear-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'),
-        'close-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'),
-        'mic-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5 10.5a7 7 0 0 0 14 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>'),
-        'backspace-thin.png': (96, 96, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="m17 9-6 6"/><path d="m11 9 6 6"/></svg>'),
         'yt-badge.png': (120, 84, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 84"><rect x="2" y="2" width="116" height="80" rx="22" fill="#FF0000"/><path d="M48 25v34l30-17z" fill="#FFFFFF"/></svg>'),
         'tab-youtube.png': (128, 128, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><path fill-rule="evenodd" clip-rule="evenodd" d="M114.2 38.4c-1.2-4.6-4.8-8.2-9.4-9.4C96.4 26.8 64 26.8 64 26.8s-32.4 0-40.8 2.2c-4.6 1.2-8.2 4.8-9.4 9.4C11.6 46.8 11.6 64 11.6 64s0 17.2 2.2 25.6c1.2 4.6 4.8 8.2 9.4 9.4 8.4 2.2 40.8 2.2 40.8 2.2s32.4 0 40.8-2.2c4.6-1.2 8.2-4.8 9.4-9.4 2.2-8.4 2.2-25.6 2.2-25.6s0-17.2-2.2-25.6zM53.5 80.2V47.8L81.4 64 53.5 80.2z" fill="#FFFFFF"/></svg>'),
         'chip_glass.png': (264, 72, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 264 72"><rect x="2" y="2" width="260" height="68" rx="34" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.24" stroke-width="2.5"/></svg>'),
@@ -204,6 +198,12 @@ def make_modern_icons():
     }
     for name, (w, h, svg) in svgs.items():
         _render_svg_icon(svg, os.path.join(MEDIA, name), w, h)
+    # Render native Apple SF Symbols (search, profile, settings, close, tabs, etc.) so they are never blank
+    sf_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'render_sf_symbols.swift')
+    if os.path.isfile(sf_script):
+        import subprocess
+        osd_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'skin.stream', 'media', 'stream_osd')
+        subprocess.run(['swift', sf_script, MEDIA, osd_dir], check=True)
 
 
 def make_images():
@@ -468,7 +468,7 @@ def filter_strip():
 '''.format(f=f, tabs=TABS, first=FIRST, chosen=chosen, other=other)
 
 
-def top_bar():
+def top_bar(downs=None):
     # Pixel-aligned Apple TV / tvOS top bar: all elements share a strict Y=52px optical centerline
     # with symmetrical 56px left & right screen margins.
     if TOUCH['on']:
@@ -477,7 +477,8 @@ def top_bar():
     else:
         bar = dict(tabs_l=292, tabs_w=1326, tab_w=188, pill_w=176, search_l=1652, profile_l=1708,
                    gear_l=1764, close_l=1820, btn=44, btn_t=30, ico=24, ico_off=10)
-    downs = '<ondown condition="Control.IsVisible({flt})">{flt}</ondown>\n            <ondown>{first}</ondown>'.format(flt=FILTER, first=FIRST)
+    if downs is None:
+        downs = '<ondown condition="Control.IsVisible({flt})">{flt}</ondown>\n            <ondown>{first}</ondown>'.format(flt=FILTER, first=FIRST)
 
     def util_btn(cid, left, icon_png, onleft, onright):
         ix = left + bar['ico_off']
@@ -623,17 +624,18 @@ def grid_xml():
         <control type="image"><left>700</left><top>0</top><width>720</width><height>460</height><texture>fade_left.png</texture><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(mode)) + !String.IsEmpty(Container(50).ListItem.Art(fanart))</visible></control>
         <control type="image"><left>700</left><top>180</top><width>1220</width><height>280</height><texture>fade_bottom.png</texture><visible>String.IsEmpty(Window.Property(kids)) + String.IsEmpty(Window.Property(mode)) + !String.IsEmpty(Container(50).ListItem.Art(fanart))</visible></control>
         <control type="image"><left>0</left><top>0</top><width>1920</width><height>180</height><texture>top_fade.png</texture></control>
-        <control type="label"><left>60</left><top>30</top><width>1100</width><height>60</height><font>font36_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
-        <control type="label"><left>1180</left><top>30</top><width>360</width><height>60</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
+{top_nav}
+        <control type="label"><left>60</left><top>98</top><width>1100</width><height>52</height><font>font32_title</font><textcolor>FFFFFFFF</textcolor><label>[B]$INFO[Window.Property(title)][/B]</label></control>
+        <control type="label"><left>1180</left><top>98</top><width>680</width><height>52</height><font>font13</font><align>right</align><aligny>center</aligny><textcolor>FFA3A3A3</textcolor><label>$INFO[Window.Property(status)]</label></control>
         <!-- the highlighted title's name, facts and synopsis -->
-        <control type="textbox"><left>60</left><top>94</top><width>1340</width><height>84</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[B][COLOR FFFFFFFF]$INFO[Container(50).ListItem.Label][/COLOR][/B]  [COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR][CR]$INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
+        <control type="textbox"><left>60</left><top>152</top><width>1340</width><height>80</height><font>font12</font><textcolor>FFB3B3B3</textcolor><label>[B][COLOR FFFFFFFF]$INFO[Container(50).ListItem.Label][/COLOR][/B]  [COLOR FF46D369]$INFO[Container(50).ListItem.Property(meta)][/COLOR][CR]$INFO[Container(50).ListItem.Property(plot)]</label><visible>String.IsEmpty(Window.Property(mode))</visible></control>
         <control type="panel" id="50">
             <visible>String.IsEmpty(Window.Property(mode))</visible>
             <onleft>noop</onleft>
             <onright>noop</onright>
-            <onup>noop</onup>
+            <onup>100</onup>
             <ondown>noop</ondown>
-            <left>60</left><top>190</top><width>1810</width><height>890</height>
+            <left>60</left><top>238</top><width>1810</width><height>842</height>
             <orientation>vertical</orientation>
             <scrolltime tween="quadratic">200</scrolltime>
             <!-- wide tiles: a listing of YouTube videos (Window.Property(wide) is set by the script) -->
@@ -662,10 +664,10 @@ def grid_xml():
         </control>
         <control type="list" id="51">
             <visible>!String.IsEmpty(Window.Property(mode))</visible>
-            <left>60</left><top>120</top><width>1800</width><height>936</height>
+            <left>60</left><top>164</top><width>1800</width><height>892</height>
             <orientation>vertical</orientation>
             <scrolltime tween="quadratic">160</scrolltime>
-            <onleft>noop</onleft><onright>noop</onright><onup>noop</onup><ondown>noop</ondown>
+            <onleft>noop</onleft><onright>noop</onright><onup>100</onup><ondown>noop</ondown>
             <itemlayout width="1800" height="72">
                 <control type="image"><left>0</left><top>3</top><width>1800</width><height>66</height><texture colordiffuse="33000000" border="14">round.png</texture></control>
                 <control type="label"><left>30</left><top>3</top><width>1150</width><height>66</height><font>font13</font><aligny>center</aligny><textcolor>FFE0E0E0</textcolor><label>$INFO[ListItem.Label]</label></control>
@@ -680,7 +682,7 @@ def grid_xml():
         </control>
     </controls>
 </window>
-'''.format(z=z, wide_item=wide(False), wide_focus=wide(True), poster_item=poster(False), poster_focus=poster(True))
+'''.format(z=z, top_nav=top_bar(downs='<ondown>50</ondown>'), wide_item=wide(False), wide_focus=wide(True), poster_item=poster(False), poster_focus=poster(True))
     if not TOUCH['on']:
         return out
     # Touch: bigger tiles, taller episode rows, and a Back button (a phone has no remote) with the title moved right.
@@ -769,7 +771,7 @@ def title_xml():
         nav = ('<onleft>{p}</onleft><onright>{x}</onright><onup>{b}</onup>'
                '<ondown condition="!String.IsEmpty(Window.Property(langs))">{langs}</ondown>'
                '<ondown condition="{s}">{seasons}</ondown><ondown>{alike}</ondown>').format(
-            p=prev, x=nxt, b=BACK if TOUCH['on'] else cid, s=is_show, seasons=SEASONS, alike=ALIKE, langs=LANGS)
+            p=prev, x=nxt, b=BACK if TOUCH['on'] else TABS, s=is_show, seasons=SEASONS, alike=ALIKE, langs=LANGS)
         rows.append(pill_button(cid, left, width, label, nav, primary=(cid == PLAY_B)))
     back = ''
     if TOUCH['on']:
@@ -800,7 +802,8 @@ def title_xml():
         <control type="image"><left>440</left><top>0</top><width>820</width><height>780</height><texture>fade_left.png</texture></control>
         <control type="image"><left>440</left><top>340</top><width>1480</width><height>440</height><texture>fade_bottom.png</texture></control>
         <control type="image"><left>1520</left><top>96</top><width>250</width><height>360</height><aspectratio>keep</aspectratio><texture background="true" diffuse="mask_poster.png">$INFO[Window.Property(poster)]</texture><visible>String.IsEmpty(Window.Property(fanart)) + !String.IsEmpty(Window.Property(poster))</visible></control>
-{back}        <control type="label"><left>60</left><top>96</top><width>1180</width><height>80</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Window.Property(title)][/B]</label></control>
+{top_nav}
+{back}        <control type="label"><left>60</left><top>104</top><width>1180</width><height>76</height><font>font52_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll><label>[B]$INFO[Window.Property(title)][/B]</label></control>
         <control type="label"><left>60</left><top>182</top><width>1180</width><height>36</height><font>font13</font><textcolor>FF46D369</textcolor><label>$INFO[Window.Property(meta)]</label></control>
         <control type="textbox"><left>60</left><top>226</top><width>900</width><height>130</height><font>font12</font><textcolor>FFE5E5E5</textcolor><autoscroll time="3000" delay="4000" repeat="8000">true</autoscroll><label>$INFO[Window.Property(plot)]</label></control>
         <control type="label"><left>60</left><top>366</top><width>1180</width><height>32</height><font>font10</font><textcolor>FFB3B3B3</textcolor><label>$INFO[Window.Property(cast)]</label></control>
@@ -896,6 +899,7 @@ def title_xml():
     </controls>
 </window>
 '''.format(play=PLAY_B, seasons=SEASONS, episodes=EPISODES, alike=ALIKE, langs=LANGS, is_show=is_show, not_show=not_show, back=back,
+           top_nav=top_bar(downs='<ondown>{0}</ondown>'.format(PLAY_B)),
            buttons=''.join(rows).rstrip('\n'), chosen=chosen, other=other, lang_on=lang_on, lang_off=lang_off,
            zoom=zoom(EPISODES), zoom_alike=zoom(ALIKE),
            episode_item=indent(scaled(episode_tile(False)), 20), episode_focus=indent(scaled(episode_tile(True)), 20),
